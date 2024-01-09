@@ -132,7 +132,7 @@ export const AdminRoute = (app) => {
         try {
             const { userName, oldPassword, password } = req.body;
             await AdminController.PasswordResetCode(userName, oldPassword, password);
-            res.status(200).send({ code: 200, message: "Password reset successful!" });
+            res.status(200).send({ code: 200, message: "Password Reset Successful!" });
         } catch (e) {
             console.error(e);
             res.status(e.code).send({ message: e.message });
@@ -373,7 +373,7 @@ export const AdminRoute = (app) => {
                 const updatedAdmin = await AdminController.editCreditRef(adminId, creditRef, password);
 
                 if (updatedAdmin) {
-                    res.status(200).send({ message: "creditRef Edit successfully" });
+                    res.status(200).send({ message: "CreditRef Edit successfully" });
                 } else {
                     res.status(404).send({ message: "Data not found" });
                 }
@@ -425,7 +425,7 @@ export const AdminRoute = (app) => {
                 const id = req.params.id;
                 const result = await Trash.deleteOne({ _id: id });
                 if (result.deletedCount === 1) {
-                    res.status(200).send({ message: "Data deleted successfully" });
+                    res.status(200).send({ message: "Data Deleted Successfully" });
                 } else {
                     res.status(404).send({ message: "Data not found" });
                 }
@@ -508,9 +508,9 @@ export const AdminRoute = (app) => {
 
                 const updatedAdmin = await AdminController.editPartnership(adminId, partnership, password);
                 if (updatedAdmin) {
-                    res.status(200).send({ message: "Partnership Edit successfully" });
+                    res.status(200).send({ message: "Partnership Edit Successfully" });
                 } else {
-                    res.status(404).send({ message: "Data not found" });
+                    res.status(404).send({ message: "Data Not Found" });
                 }
             } catch (error) {
                 console.error(error.message);
@@ -526,7 +526,7 @@ export const AdminRoute = (app) => {
                 const admin = await Admin.findById(id);
 
                 if (!admin) {
-                    res.status(404).json({ code: 404, message: "Admin not found" });
+                    res.status(404).json({ code: 404, message: "Admin Not Found" });
                     return;
                 }
 
@@ -551,7 +551,7 @@ export const AdminRoute = (app) => {
                 const admin = await Admin.findById(id);
 
                 if (!admin) {
-                    res.status(404).json({ code: 404, message: "Admin not found" });
+                    res.status(404).json({ code: 404, message: "Admin Not Found" });
                     return;
                 }
 

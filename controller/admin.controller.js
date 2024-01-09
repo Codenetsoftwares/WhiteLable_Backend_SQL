@@ -129,11 +129,11 @@ export const AdminController = {
         }
 
         if (existingUser.locked === false) {
-            throw { code: 401, message: "User account is locked" };
+            throw { code: 401, message: "User Account is Locked" };
         }
         const passwordValid = await bcrypt.compare(password, existingUser.password);
         if (!passwordValid) {
-            throw { code: 401, message: "Invalid User Name or password" };
+            throw { code: 401, message: "Invalid User Name or Password" };
         }
 
     const accessTokenResponse = {
@@ -203,7 +203,7 @@ export const AdminController = {
           if (passwordIsDuplicate) {
             throw {
               code: 409,
-              message: "New Password cannot be the same as existing password",
+              message: "New Password Cannot Be The Same As Existing Password",
             };
           }
           const passwordSalt = await bcrypt.genSalt();
@@ -306,7 +306,7 @@ export const AdminController = {
     
             if (withdrawlAmt && withdrawlAmt > 0) {
                 if (receiver.balance < withdrawlAmt) {
-                    throw { code: 400, message: "Insufficient balance for withdrawal" };
+                    throw { code: 400, message: "Insufficient Balance For Withdrawal" };
                 }
     
                 const withdrawalRecord = {
@@ -324,7 +324,7 @@ export const AdminController = {
                 sender.transferAmount.push(withdrawalRecord);
             } else {
                 if (sender.balance < trnsfAmnt) {
-                    throw { code: 400, message: "Insufficient balance for the transfer" };
+                    throw { code: 400, message: "Insufficient Balance For Transfer" };
                 }
     
                 const transferRecordDebit = {
@@ -638,7 +638,7 @@ export const AdminController = {
             await Promise.all(submasterAgent.map(data => data.save()));
             await Promise.all(subwhiteLabel.map(data => data.save()));
             await Promise.all(subsuperAgent.map(data => data.save()));
-            return { message: "Admin activated successfully" };
+            return { message: "Admin Activated Successfully" };
         }
         else if (isActive === false) {
             if (locked === false) {
@@ -926,7 +926,7 @@ export const AdminController = {
                 await Promise.all(submasterAgent.map(data => data.save()));
                 await Promise.all(subwhiteLabel.map(data => data.save()));
                 await Promise.all(subsuperAgent.map(data => data.save()));
-                return { message: "Admin locked successfully" };
+                return { message: "Admin Locked Successfully" };
             } else {
             
                 admin.isActive = false;
@@ -1094,7 +1094,7 @@ export const AdminController = {
                 await Promise.all(subwhiteLabel.map(data => data.save()));
                 await Promise.all(subsuperAgent.map(data => data.save()));
         
-                return { message: "Admin Suspended successfully" };
+                return { message: "Admin Suspended Successfully" };
             }
         } 
         
@@ -1138,7 +1138,7 @@ export const AdminController = {
         const updatedAdmin = await admin.save();
 
         if (!updatedAdmin) {
-            throw { code: 500, message: 'Cannot update admin creditRef' };
+            throw { code: 500, message: 'Cannot Update Admin CreditRef' };
         }
 
         return updatedAdmin;
@@ -1163,7 +1163,7 @@ export const AdminController = {
             // }
             
             if (existingAdminUser.balance !== 0) {
-                throw { code: 400, message: `Balance should be 0 to move the Admin User to trash` };
+                throw { code: 400, message: `Balance Should Be 0 To Move The Admin User To Trash` };
             }
             if (existingAdminUser.isActive === false) {
                 throw { code: 404, message: "Admin Is IsActive Or Lock" }
@@ -1206,7 +1206,7 @@ export const AdminController = {
             const isPasswordValid = await bcrypt.compare(password, existingAdminUser.password);
 
             if (!isPasswordValid) {
-                throw { code: 401, message: "Invalid password" };
+                throw { code: 401, message: "Invalid Password" };
             }
             const restoreRemoveData = {
                 roles: existingAdminUser.roles,
@@ -1263,7 +1263,7 @@ export const AdminController = {
             const updatedAdmin = await admin.save();
 
             if (!updatedAdmin) {
-                throw { code: 500, message: 'Cannot update admin partnership' };
+                throw { code: 500, message: 'Cannot Update Admin Partnership' };
             }
 
             return updatedAdmin;
