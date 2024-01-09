@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { Admin } from "../models/admin.model.js";
 import { User } from "../models/user.model.js";
 import { Trash } from "../models/trash.model.js";
-
+import { SubAdmin } from '../models/subAdmin.model.js'
 
 const globalUsernames = [];
 
@@ -72,7 +72,7 @@ export const AdminController = {
             throw { code: 400, message: "Account is in Inactive Mode" };
         }
     
-        const existingAdmin = await Admin.findOne({ userName: data.userName });
+        const existingAdmin = await SubAdmin.findOne({ userName: data.userName });
         if (existingAdmin) {
             throw { code: 409, message: "Admin Already Exist" };
         }
@@ -98,7 +98,7 @@ export const AdminController = {
             }
         }
     
-        const newAdmin = new Admin({
+        const newASubAdmin = new SubAdmin({
             userName: data.userName,
             password: encryptedPassword,
             roles: [{ role: subRole, permission: data.permission }],
@@ -106,8 +106,8 @@ export const AdminController = {
             createUser : user.username,
         });
         try {
-            await newAdmin.save();
-            return newAdmin;
+            await newASubAdmin.save();
+            return newASubAdmin;
         } catch (err) {
             console.error(err);
             throw { code: 500, message: "Failed to save user" };
@@ -121,51 +121,97 @@ export const AdminController = {
         if (!password) {
             throw { code: 400, message: "Invalid value for: password" };
         }
+        
         const existingUser = await AdminController.findAdmin({
             userName: userName,
         });
+    
         if (!existingUser) {
-            throw { code: 401, message: "Invalid User Name or password" };
+            const subAdminUser = await AdminController.findSubAdmin({
+                userName: userName,
+            });
+            if (!subAdminUser) {
+                throw { code: 401, message: "Invalid User Name or password" };
+            }
+    
+            if (subAdminUser.locked === false) {
+                throw { code: 401, message: "User Account is Locked" };
+            }
+    
+            const passwordValid = await bcrypt.compare(password, subAdminUser.password);
+            if (!passwordValid) {
+                throw { code: 401, message: "Invalid User Name or Password" };
+            }
+    
+            const accessTokenResponse = {
+                id: subAdminUser._id,
+                createBy: subAdminUser.createBy,
+                userName: subAdminUser.userName,
+                roles: subAdminUser.roles.map(role => ({
+                    role: role.role,
+                    permission: role.permission
+                }))
+            };
+            const accessToken = jwt.sign(
+                accessTokenResponse,
+                process.env.JWT_SECRET_KEY,
+                {
+                    expiresIn: persist ? "1y" : "8h",
+                }
+            );
+            return {
+                userName: subAdminUser.userName,
+                accessToken: accessToken,
+                roles: subAdminUser.roles.map(role => ({
+                    role: role.role,
+                    permission: role.permission
+                })),
+                balance: subAdminUser.balance,
+                loadBalance: subAdminUser.loadBalance,
+                isActive: subAdminUser.isActive
+            };
+    
+        } else {
+            if (existingUser.locked === false) {
+                throw { code: 401, message: "User Account is Locked" };
+            }
+            const passwordValid = await bcrypt.compare(password, existingUser.password);
+            if (!passwordValid) {
+                throw { code: 401, message: "Invalid User Name or Password" };
+            }
+    
+            const accessTokenResponse = {
+                id: existingUser._id,
+                createBy: existingUser.createBy,
+                userName: existingUser.userName,
+                roles: existingUser.roles.map(role => ({
+                    role: role.role,
+                    permission: role.permission
+                }))
+            };
+    
+            const accessToken = jwt.sign(
+                accessTokenResponse,
+                process.env.JWT_SECRET_KEY,
+                {
+                    expiresIn: persist ? "1y" : "8h",
+                }
+            );
+    
+            return {
+                userName: existingUser.userName,
+                accessToken: accessToken,
+                roles: existingUser.roles.map(role => ({
+                    role: role.role,
+                    permission: role.permission
+                })),
+                balance: existingUser.balance,
+                loadBalance: existingUser.loadBalance,
+                isActive: existingUser.isActive
+            };
         }
-
-        if (existingUser.locked === false) {
-            throw { code: 401, message: "User Account is Locked" };
-        }
-        const passwordValid = await bcrypt.compare(password, existingUser.password);
-        if (!passwordValid) {
-            throw { code: 401, message: "Invalid User Name or Password" };
-        }
-
-    const accessTokenResponse = {
-        id: existingUser._id,
-        createBy:existingUser.createBy,
-        userName: existingUser.userName,
-        roles: existingUser.roles.map(role => ({
-            role: role.role,
-            permission: role.permission
-        }))
-    };
-
-    const accessToken = jwt.sign(
-        accessTokenResponse,
-        process.env.JWT_SECRET_KEY,
-        {
-            expiresIn: persist ? "1y" : "8h",
-        }
-    );
-
-    return {
-        userName: existingUser.userName,
-        accessToken: accessToken,
-        roles: existingUser.roles.map(role => ({
-            role: role.role,
-            permission: role.permission
-        })),
-        balance: existingUser.balance,
-        loadBalance: existingUser.loadBalance,
-        isActive: existingUser.isActive
-    };
-},
+    },
+    
 
     findAdminById: async (id) => {
         if (!id) {
@@ -175,11 +221,26 @@ export const AdminController = {
         return Admin.findById(id).exec();
     },
 
+    findSubAdminById: async (id) => {
+        if (!id) {
+            throw { code: 409, message: "Required parameter: id" };
+        }
+
+        return SubAdmin.findById(id).exec();
+    },
+
     findAdmin: async (filter) => {
         if (!filter) {
             throw { code: 409, message: "Required parameter: filter" };
         }
         return Admin.findOne(filter).exec();
+    },
+
+    findSubAdmin: async (filter) => {
+        if (!filter) {
+            throw { code: 409, message: "Required parameter: filter" };
+        }
+        return SubAdmin.findOne(filter).exec();
     },
 
     PasswordResetCode: async (userName, oldPassword, password) => {

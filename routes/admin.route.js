@@ -2,9 +2,7 @@ import { AdminController } from "../controller/admin.controller.js";
 import { Admin } from "../models/admin.model.js";
 import { Authorize } from "../middleware/auth.js";
 import bcrypt from "bcrypt"
-import { WhiteLabelController } from "../controller/whiteLabel.controller.js";
-import { HyperAgentController } from "../controller/hyperAgent.controller.js";
-import { SuperAgentController } from "../controller/superAgent.controller.js";
+import { SubAdmin } from '../models/subAdmin.model.js'
 import { Trash } from "../models/trash.model.js";
 import axios from "axios";
 import * as http from 'http';
@@ -54,13 +52,18 @@ export const AdminRoute = (app) => {
         try {
             const { userName, password } = req.body;
             const admin = await Admin.findOne({ userName: userName });
-            const accesstoken = await AdminController.GenerateAdminAccessToken(userName, password);
+            const subAdmin = await SubAdmin.findOne({ userName: userName });
+    
+            // Check credentials for Admin
+            const adminAccessToken = await AdminController.GenerateAdminAccessToken(userName, password);
             const loginTime = new Date();
-            await Admin.findOneAndUpdate({ userName: userName }, { $set: { lastLoginTime: loginTime } });
-
-            // const user = { accesstoken, loginTime, ipAddress, location };
-            if (admin && accesstoken) {
-                res.status(200).send({ code: 200, message: "Login Successfully", token: accesstoken });
+    
+            if (admin && adminAccessToken) {
+                await Admin.findOneAndUpdate({ userName: userName }, { $set: { lastLoginTime: loginTime } });
+                res.status(200).send({ code: 200, message: "Admin Login Successfully", token: adminAccessToken });
+            } else if (subAdmin && adminAccessToken) {
+                await SubAdmin.findOneAndUpdate({ userName: userName }, { $set: { lastLoginTime: loginTime } });
+                res.status(200).send({ code: 200, message: "SubAdmin Login Successfully", token: adminAccessToken });
             } else {
                 res.status(404).json({ code: 404, message: 'Invalid Access Token or Admin' });
             }
@@ -128,7 +131,7 @@ export const AdminRoute = (app) => {
 
     // reset password
 
-    app.post("/api/admin/reset-password", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent",]), async (req, res) => {
+    app.post("/api/admin/reset-password", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", ]), async (req, res) => {
         try {
             const { userName, oldPassword, password } = req.body;
             await AdminController.PasswordResetCode(userName, oldPassword, password);

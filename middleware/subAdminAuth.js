@@ -1,9 +1,8 @@
 import jwt from "jsonwebtoken";
-import { Admin } from "../models/admin.model.js";
 import { SubAdmin } from '../models/subAdmin.model.js'
 import { User } from "../models/user.model.js";
 
-export const Authorize = (roles) => {
+export const AuthorizeSubAdmin = (roles) => {
   return async (req, res, next) => {
     try {
       const authToken = req.headers.authorization;
@@ -33,17 +32,8 @@ export const Authorize = (roles) => {
 
       let existingUser;
       
-      if (roles.includes("superAdmin")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res
-            .status(401)
-            .send({ code: 401, message: "Invalid login attempt for user (1)" });
-        }
-      }
-      // console.log("first", existingUser)
       if (roles.includes("SubAdmin")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -52,59 +42,8 @@ export const Authorize = (roles) => {
         }
       }
 
-      if (roles.includes("All-Access")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res.status(401).send({
-            code: 401,
-            message: "Invalid login attempt for admin (3)",
-          });
-        }
-      }
-
-      if (roles.includes("WhiteLabel")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res.status(401).send({
-            code: 401,
-            message: "Invalid login attempt for admin (3)",
-          });
-        }
-      }
-
-      if (roles.includes("HyperAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res.status(401).send({
-            code: 401,
-            message: "Invalid login attempt for admin (3)",
-          });
-        }
-      }
-
-      if (roles.includes("SuperAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res.status(401).send({
-            code: 401,
-            message: "Invalid login attempt for admin (3)",
-          });
-        }
-      }
-
-      if (roles.includes("MasterAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser) {
-          return res.status(401).send({
-            code: 401,
-            message: "Invalid login attempt for admin (3)",
-          });
-        }
-      }
-      
-
       if (roles.includes("SubWhiteLabel")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -114,7 +53,7 @@ export const Authorize = (roles) => {
       }
 
       if (roles.includes("SubHyperAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -124,7 +63,7 @@ export const Authorize = (roles) => {
       }
 
       if (roles.includes("SubSuperAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -134,7 +73,7 @@ export const Authorize = (roles) => {
       }
 
       if (roles.includes("SubMasterAgent")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -143,7 +82,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("TransferBalance")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -152,7 +91,7 @@ export const Authorize = (roles) => {
         } 
       }
       if (roles.includes("Status")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -161,7 +100,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("CreditRef-Edit")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -170,7 +109,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Partnership-Edit")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -179,7 +118,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("CreditRef-View")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -188,7 +127,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Partnership-View")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -197,7 +136,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("User-Profile-View")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -206,7 +145,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Profile-View")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -215,7 +154,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Create-Admin")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -224,7 +163,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Create-subAdmin")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -242,7 +181,7 @@ export const Authorize = (roles) => {
       //   }
       // }
       if (roles.includes("AccountStatement")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -251,7 +190,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("ActivityLog")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -260,7 +199,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Delete-Admin")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -269,7 +208,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Restore-Admin")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -278,7 +217,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Move-To-Trash")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -287,7 +226,7 @@ export const Authorize = (roles) => {
         }
       }
       if (roles.includes("Trash-View")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,
@@ -305,7 +244,7 @@ export const Authorize = (roles) => {
       //   }
       // }
       if (roles.includes("View-Admin-Data")) {
-        existingUser = await Admin.findById(user.id).exec();
+        existingUser = await SubAdmin.findById(user.id).exec();
         if (!existingUser) {
           return res.status(401).send({
             code: 401,

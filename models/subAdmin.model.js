@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import mongoose from "mongoose";
 
-export const Admin = new mongoose.model("Admin", new mongoose.Schema({
+export const SubAdmin = new mongoose.model("SubAdmin", new mongoose.Schema({
     userName: { type: String, required: true },
     password: { type: String, },
     tokens: { ResetPassword: { type: String } },
@@ -63,4 +63,4 @@ export const Admin = new mongoose.model("Admin", new mongoose.Schema({
     Path:[{ type: String}],
 
 
-}), 'Admin');
+}), 'SubAdmin');
