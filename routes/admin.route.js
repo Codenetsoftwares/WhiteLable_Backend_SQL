@@ -4,7 +4,6 @@ import { Authorize } from "../middleware/auth.js";
 import bcrypt from "bcrypt"
 import { SubAdmin } from '../models/subAdmin.model.js'
 import { Trash } from "../models/trash.model.js";
-import { AuthorizeSubAdmin } from "../middleware/subAdminAuth.js";
 import axios from "axios";
 import * as http from 'http';
 
@@ -326,7 +325,7 @@ export const AdminRoute = (app) => {
         try {
             const id = req.params.id;
             console.log("id", id)
-            const admin = await SubAdmin.findById(id);
+            const admin = await Admin.findById(id);
 
             if (!admin) {
                 return res.status(404).send({ code: 404, message: `Not Found` });
