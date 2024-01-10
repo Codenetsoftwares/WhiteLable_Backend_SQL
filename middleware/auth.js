@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Admin } from "../models/admin.model.js";
 import { SubAdmin } from '../models/subAdmin.model.js'
-import { User } from "../models/user.model.js";
+
 
 export const Authorize = (roles) => {
   return async (req, res, next) => {
@@ -38,7 +38,8 @@ export const Authorize = (roles) => {
         roles.includes("WhiteLabel") ||
         roles.includes("HyperAgent") ||
         roles.includes("SuperAgent") ||
-        roles.includes("MasterAgent")
+        roles.includes("MasterAgent") ||
+        roles.includes("superAdmin")
       ) {
         existingUser = await Admin.findById(user.id).exec();
         if (!existingUser && roles.includes("SubAdmin")) {
