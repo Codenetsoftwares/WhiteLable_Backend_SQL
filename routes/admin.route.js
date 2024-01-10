@@ -4,6 +4,7 @@ import { Authorize } from "../middleware/auth.js";
 import bcrypt from "bcrypt"
 import { SubAdmin } from '../models/subAdmin.model.js'
 import { Trash } from "../models/trash.model.js";
+import { AuthorizeSubAdmin } from "../middleware/subAdminAuth.js";
 import axios from "axios";
 import * as http from 'http';
 
@@ -321,13 +322,11 @@ export const AdminRoute = (app) => {
 
     // view balance
 
-    app.get("/api/view-balance/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "SubAdmin",
-        "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent",
-    ]), async (req, res) => {
+    app.get("/api/view-balance/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "SubAdmin"]), async (req, res) => {
         try {
             const id = req.params.id;
-
-            const admin = await Admin.findById(id);
+            console.log("id", id)
+            const admin = await SubAdmin.findById(id);
 
             if (!admin) {
                 return res.status(404).send({ code: 404, message: `Not Found` });
