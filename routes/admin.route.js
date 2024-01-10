@@ -585,4 +585,89 @@ export const AdminRoute = (app) => {
         });
 
 
+        // Renew Permission
+
+        app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin"]), async (req, res) => {
+            const id = req.params.id;
+            const ITEMS_PER_PAGE = 5;
+            const page = parseInt(req.query.page) || 1;
+          
+            try {
+              const totalCount = await SubAdmin.countDocuments({ createBy: id });
+              const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+          
+              const subAdmin = await SubAdmin.find({ createBy: id })
+                .skip((page - 1) * ITEMS_PER_PAGE)
+                .limit(ITEMS_PER_PAGE);
+            if (subAdmin.length === 0) {
+            return res.status(404).json({ message: "No data found" });
+            }
+              res.status(200).json({
+                data: subAdmin,
+                currentPage: page,
+                totalPages: totalPages,
+                totalCount: totalCount
+              });
+            } catch (e) {
+              console.error(e);
+              res.status(500).send({ message: "Internal Server Error" });
+            }
+          });
+
+          app.post(
+            "/api/admin/single-sub-admin/:id",
+            Authorize(["superAdmin"]),
+            async (req, res) => {
+              try {
+                if (!req.params.id) {
+                  throw { code: 400, message: "Sub Admin's Id not present" };
+                }
+                const subAdminId = req.params.id;
+                const subAdmin = await SubAdmin.findById(subAdminId).exec();
+                if (!subAdmin) {
+                  throw { code: 500, message: "Sub Admin not found with the given Id" };
+                }
+                res.status(200).send(subAdmin);
+              } catch (e) {
+                console.error(e);
+                res.status(e.code).send({ message: e.message });
+              }
+            }
+          );
+
+        app.put(
+            "/admin/edit-subadmin-permissions/:id",
+            Authorize(["superAdmin"]),
+            async (req, res) => {
+                try {
+                    const subAdminId = req.params.id;
+                    const { permissions } = req.body;
+                    if (!subAdminId) {
+                        throw { code: 400, message: "Id not found" };
+                    }
+                    const subAdmin = await SubAdmin.findById(subAdminId);
+                    if (!subAdmin) {
+                        throw { code: 400, message: "Sub Admin not found" };
+                    }
+                    subAdmin.roles.forEach((role) => {
+                        permissions.forEach((permission) => {
+                            role.permission.push(permission);
+                        });
+                    });
+            
+                    await subAdmin.save();
+                    res.status(200).send(`${subAdmin.userName} permissions edited successfully`);
+                } catch (e) {
+                    console.error(e);
+                    res.status(e.code || 500).send({ message: e.message || "Internal Server Error" });
+                }
+            }
+        );
+        
+        
+        
+          
+          
+          
+          
 }
