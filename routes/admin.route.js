@@ -587,18 +587,19 @@ export const AdminRoute = (app) => {
 
     // Renew Permission
 
-    app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin"]), async (req, res) => {
+    app.get("/api/admin/view-sub-admins/:id/:pageSize", Authorize(["superAdmin"]), async (req, res) => {
         const id = req.params.id;
         const ITEMS_PER_PAGE = 5;
         const page = parseInt(req.query.page) || 1;
-
+        const pageSize = parseInt(req.params.pageSize) || 5;
         try {
             const totalCount = await SubAdmin.countDocuments({ createBy: id });
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
+    
             const subAdmin = await SubAdmin.find({ createBy: id })
                 .skip((page - 1) * ITEMS_PER_PAGE)
-                .limit(ITEMS_PER_PAGE);
+                .limit(pageSize);
+    
             if (subAdmin.length === 0) {
                 return res.status(404).json({ message: "No data found" });
             }
@@ -613,6 +614,7 @@ export const AdminRoute = (app) => {
             res.status(500).send({ message: "Internal Server Error" });
         }
     });
+    
 
     app.post(
         "/api/admin/single-sub-admin/:id",
