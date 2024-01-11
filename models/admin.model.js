@@ -31,6 +31,15 @@ export const Admin = new mongoose.model("Admin", new mongoose.Schema({
             debitBalance: { type: Number, default: 0 },
         }
     ],
+    selfTransaction: [
+        {
+            amount: { type: Number, default: 0 },
+            userName: { type: String },
+            date: { type: Date },
+            transactionType: { type: String },
+            remarks: { type: String },
+        }
+    ],
     loadBalance: { type: Number, default: 0 },
    
     creditRef: [
