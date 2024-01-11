@@ -627,7 +627,11 @@ export const AdminRoute = (app) => {
                 if (!subAdmin) {
                     throw { code: 500, message: "Sub Admin not found with the given Id" };
                 }
-                res.status(200).send(subAdmin);
+                const data = {
+                    userName: subAdmin.userName,
+                    roles: subAdmin.roles
+                }
+                res.status(200).send(data);
             } catch (e) {
                 console.error(e);
                 res.status(e.code).send({ message: e.message });
