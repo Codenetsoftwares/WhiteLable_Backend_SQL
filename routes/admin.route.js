@@ -592,12 +592,19 @@ export const AdminRoute = (app) => {
         const ITEMS_PER_PAGE = 5;
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 5;
-    
+        const searchName = req.query.searchName || "";
         try {
-            const totalCount = await SubAdmin.countDocuments({ createBy: id });
+            const query = { createBy: id };
+    
+            if (searchName) {
+                query.$or = [
+                    { userName: { $regex: new RegExp(searchName, "i") } },
+                ];
+            }
+            const totalCount = await SubAdmin.countDocuments(query);
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
     
-            const subAdmin = await SubAdmin.find({ createBy: id })
+            const subAdmin = await SubAdmin.find(query)
                 .skip((page - 1) * ITEMS_PER_PAGE)
                 .limit(pageSize);
     
@@ -616,6 +623,7 @@ export const AdminRoute = (app) => {
             res.status(500).send({ message: "Internal Server Error" });
         }
     });
+    
     
     
 
