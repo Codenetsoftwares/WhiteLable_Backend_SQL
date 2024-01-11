@@ -314,21 +314,21 @@ export const AdminController = {
     Deposit: async (adminId, depositAmount) => {
         try {
             const admin = await Admin.findById(adminId).exec();
-
+    
             if (!admin) {
                 throw { code: 404, message: "Admin Not Found For Deposit" };
             }
-            // const isPasswordValid = await bcrypt.compare(password, admin.password);
-
-            // if (!isPasswordValid) {
-            //     throw { code: 401, message: "Invalid password for the deposit" };
-            // }
-
+            const transactionDetails = {
+                amount: depositAmount,
+                userName: admin.userName,
+                date: new Date(),
+                transactionType: 'Deposit',
+                
+            };
             admin.depositBalance += depositAmount;
             admin.balance += depositAmount;
-
+            admin.selfTransaction.push(transactionDetails);
             await admin.save();
-
             return { message: "Balance Deposit Successfully" };
         } catch (err) {
             throw { code: err.code, message: err.message };

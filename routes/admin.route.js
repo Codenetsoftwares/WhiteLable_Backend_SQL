@@ -53,11 +53,11 @@ export const AdminRoute = (app) => {
             const { userName, password } = req.body;
             const admin = await Admin.findOne({ userName: userName });
             const subAdmin = await SubAdmin.findOne({ userName: userName });
-    
+
             // Check credentials for Admin
             const adminAccessToken = await AdminController.GenerateAdminAccessToken(userName, password);
             const loginTime = new Date();
-    
+
             if (admin && adminAccessToken) {
                 await Admin.findOneAndUpdate({ userName: userName }, { $set: { lastLoginTime: loginTime } });
                 res.status(200).send({ code: 200, message: "Admin Login Successfully", token: adminAccessToken });
@@ -131,7 +131,7 @@ export const AdminRoute = (app) => {
 
     // reset password
 
-    app.post("/api/admin/reset-password", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", ]), async (req, res) => {
+    app.post("/api/admin/reset-password", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent",]), async (req, res) => {
         try {
             const { userName, oldPassword, password } = req.body;
             await AdminController.PasswordResetCode(userName, oldPassword, password);
@@ -201,38 +201,38 @@ export const AdminRoute = (app) => {
             const page = parseInt(req.query.page) || 1;
             const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
             const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
-            endDate.setDate(endDate.getDate() + 1); 
+            endDate.setDate(endDate.getDate() + 1);
             const pageSize = parseInt(req.query.pageSize) || 5;
-    
+
             let balances = 0;
             let debitBalances = 0;
             let withdrawalBalances = 0;
-    
+
             const admin = await Admin.findOne({ userName }).exec();
-    
+
             if (!admin) {
                 return res.status(404).json({ message: "Admin not found" });
             }
-    
+
             let transactionData = admin.transferAmount;
-    
+
             transactionData = transactionData.filter(data => {
-                const transactionDate = new Date(data.date); 
+                const transactionDate = new Date(data.date);
                 return (!startDate || transactionDate >= startDate) && (transactionDate < endDate);
             });
-    
+
             transactionData.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
             const totalItems = transactionData.length;
             const totalPages = Math.ceil(totalItems / pageSize);
-    
+
             const skip = (page - 1) * pageSize;
             const endIndex = page * pageSize;
-    
+
             const paginatedData = transactionData.slice(skip, endIndex);
-    
+
             let allData = JSON.parse(JSON.stringify(paginatedData));
-    
+
             allData.map((data) => {
                 if (data.transactionType === "Credit") {
                     balances += data.amount;
@@ -243,18 +243,18 @@ export const AdminRoute = (app) => {
                 } else if (data.transactionType === "Withdrawal") {
                     withdrawalBalances += data.withdraw;
                     data.withdrawalBalance = withdrawalBalances;
-                } 
+                }
             });
-    
+
             res.status(200).json({ allData, totalPages, totalItems });
-    
+
         } catch (err) {
             res.status(500).json({ code: err.code, message: err.message });
         }
     });
-    
-    
-    
+
+
+
 
 
     // view creates
@@ -303,7 +303,7 @@ export const AdminRoute = (app) => {
                         partnership: users.partnership,
                         Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
                     };
-                    
+
                 });
 
                 const totalPages = Math.ceil(adminCount / pageSize);
@@ -313,7 +313,7 @@ export const AdminRoute = (app) => {
                     totalPages,
                     totalItems: adminCount
                 });
-                
+
             } catch (err) {
                 res.status(500).send({ code: err.code, message: err.message });
             }
@@ -347,7 +347,7 @@ export const AdminRoute = (app) => {
         async (req, res) => {
             try {
                 const { adminId } = req.params;
-                const { isActive, locked ,password } = req.body;
+                const { isActive, locked, password } = req.body;
                 const admin = await Admin.findById(adminId);
 
                 const isPasswordValid = await bcrypt.compare(password, admin.password);
@@ -355,7 +355,7 @@ export const AdminRoute = (app) => {
                     throw { code: 401, message: "Invalid password" };
                 }
                 // console.log("Password......", isPasswordValid)
-                const adminActive = await AdminController.activateAdmin(adminId, isActive, locked,password);
+                const adminActive = await AdminController.activateAdmin(adminId, isActive, locked, password);
                 res.status(200).send(adminActive);
             } catch (err) {
                 res.status(500).send({ code: err.code, message: err.message });
@@ -389,12 +389,12 @@ export const AdminRoute = (app) => {
     app.post("/api/admin/move-to-trash-user", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Move-To-Trash"]),
         async (req, res) => {
             try {
-                const { requestId,  } = req.body;
+                const { requestId, } = req.body;
                 const adminUser = await Admin.findById(requestId);
                 if (!adminUser) {
                     return res.status(404).send("Admin User not found");
                 }
-                const updateResult = await AdminController.trashAdminUser(adminUser, );
+                const updateResult = await AdminController.trashAdminUser(adminUser,);
 
                 if (updateResult) {
                     res.status(201).send("Admin User Moved To Trash");
@@ -585,89 +585,114 @@ export const AdminRoute = (app) => {
         });
 
 
-        // Renew Permission
+    // Renew Permission
 
-        app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin"]), async (req, res) => {
-            const id = req.params.id;
-            const ITEMS_PER_PAGE = 5;
-            const page = parseInt(req.query.page) || 1;
-          
-            try {
-              const totalCount = await SubAdmin.countDocuments({ createBy: id });
-              const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-          
-              const subAdmin = await SubAdmin.find({ createBy: id })
+    app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin"]), async (req, res) => {
+        const id = req.params.id;
+        const ITEMS_PER_PAGE = 5;
+        const page = parseInt(req.query.page) || 1;
+
+        try {
+            const totalCount = await SubAdmin.countDocuments({ createBy: id });
+            const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+            const subAdmin = await SubAdmin.find({ createBy: id })
                 .skip((page - 1) * ITEMS_PER_PAGE)
                 .limit(ITEMS_PER_PAGE);
             if (subAdmin.length === 0) {
-            return res.status(404).json({ message: "No data found" });
+                return res.status(404).json({ message: "No data found" });
             }
-              res.status(200).json({
+            res.status(200).json({
                 data: subAdmin,
                 currentPage: page,
                 totalPages: totalPages,
                 totalCount: totalCount
-              });
-            } catch (e) {
-              console.error(e);
-              res.status(500).send({ message: "Internal Server Error" });
-            }
-          });
+            });
+        } catch (e) {
+            console.error(e);
+            res.status(500).send({ message: "Internal Server Error" });
+        }
+    });
 
-          app.post(
-            "/api/admin/single-sub-admin/:id",
-            Authorize(["superAdmin"]),
-            async (req, res) => {
-              try {
+    app.post(
+        "/api/admin/single-sub-admin/:id",
+        Authorize(["superAdmin"]),
+        async (req, res) => {
+            try {
                 if (!req.params.id) {
-                  throw { code: 400, message: "Sub Admin's Id not present" };
+                    throw { code: 400, message: "Sub Admin's Id not present" };
                 }
                 const subAdminId = req.params.id;
                 const subAdmin = await SubAdmin.findById(subAdminId).exec();
                 if (!subAdmin) {
-                  throw { code: 500, message: "Sub Admin not found with the given Id" };
+                    throw { code: 500, message: "Sub Admin not found with the given Id" };
                 }
                 res.status(200).send(subAdmin);
-              } catch (e) {
+            } catch (e) {
                 console.error(e);
                 res.status(e.code).send({ message: e.message });
-              }
             }
-          );
+        }
+    );
 
-        app.put(
-            "/admin/edit-subadmin-permissions/:id",
-            Authorize(["superAdmin"]),
-            async (req, res) => {
-                try {
-                    const subAdminId = req.params.id;
-                    const { permissions } = req.body;
-                    if (!subAdminId) {
-                        throw { code: 400, message: "Id not found" };
-                    }
-                    const subAdmin = await SubAdmin.findById(subAdminId);
-                    if (!subAdmin) {
-                        throw { code: 400, message: "Sub Admin not found" };
-                    }
-                    subAdmin.roles.forEach((role) => {
-                        permissions.forEach((permission) => {
-                            role.permission.push(permission);
-                        });
-                    });
-            
-                    await subAdmin.save();
-                    res.status(200).send(`${subAdmin.userName} permissions edited successfully`);
-                } catch (e) {
-                    console.error(e);
-                    res.status(e.code || 500).send({ message: e.message || "Internal Server Error" });
+    app.put(
+        "/admin/edit-subadmin-permissions/:id",
+        Authorize(["superAdmin"]),
+        async (req, res) => {
+            try {
+                const subAdminId = req.params.id;
+                const { permissions } = req.body;
+                if (!subAdminId) {
+                    throw { code: 400, message: "Id not found" };
                 }
+                const subAdmin = await SubAdmin.findById(subAdminId);
+                if (!subAdmin) {
+                    throw { code: 400, message: "Sub Admin not found" };
+                }
+                subAdmin.roles.forEach((role) => {
+                    permissions.forEach((permission) => {
+                        role.permission.push(permission);
+                    });
+                });
+
+                await subAdmin.save();
+                res.status(200).send(`${subAdmin.userName} permissions edited successfully`);
+            } catch (e) {
+                console.error(e);
+                res.status(e.code || 500).send({ message: e.message || "Internal Server Error" });
             }
-        );
-        
-        
-        
-          
-          
-          
-          
+        }
+    );
+
+    app.get("/api/admin/account-statement/:id", Authorize(["superAdmin"]), async (req, res) => {
+        const id = req.params.id;
+        const ITEMS_PER_PAGE = 5;
+        const page = parseInt(req.query.page) || 1;
+        try {
+            const data = await Admin.findById(id).exec();
+            if (!data) {
+                return res.status(404).send({ message: 'Admin not found' });
+            }
+            const mergedData = data.transferAmount.concat(data.selfTransaction);
+            const totalCount = mergedData.length;
+            const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+    
+            const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    
+            res.status(200).json({
+                data: paginatedData,
+                currentPage: page,
+                totalPages: totalPages,
+                totalCount: totalCount
+            });
+        } catch (e) {
+            console.error(e);
+            res.status(500).send({ message: 'Internal Server Error' });
+        }
+    });
+    
+    
+      
+    
+
 }
