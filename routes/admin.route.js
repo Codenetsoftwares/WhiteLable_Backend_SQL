@@ -503,27 +503,38 @@ export const AdminRoute = (app) => {
     //   View Active Locked Status
 
     app.get("/api/admin/active-status/:adminId", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Status"]),
-        async (req, res) => {
-            try {
-                const adminId = req.params.adminId
-                const activateStatus = await Admin.findById(adminId).exec();
-                if (!activateStatus) {
+    async (req, res) => {
+        try {
+            const adminId = req.params.adminId;
+            // Check in Admin model
+            const activateStatus = await Admin.findById(adminId).exec();
+            // If not found in Admin model, check in SubAdmin model
+            if (!activateStatus) {
+                const subAdmin = await SubAdmin.findById(adminId).exec();
+                if (!subAdmin) {
                     return res.status(404).send({ code: 404, message: `Admin Not Found` });
                 }
-
                 const active = {
-                    id: activateStatus.id,
-                    isActive: activateStatus.isActive,
-                    locked: activateStatus.locked,
-                    Status: activateStatus.isActive ? "Active" : !activateStatus.locked ? "Locked" : !activateStatus.isActive ? "Suspended" : ""
+                    id: subAdmin.id,
+                    isActive: subAdmin.isActive,
+                    locked: subAdmin.locked,
+                    Status: subAdmin.isActive ? "Active" : !subAdmin.locked ? "Locked" : !subAdmin.isActive ? "Suspended" : ""
                 };
-
                 res.status(200).send(active);
-            } catch (err) {
-
-                res.status(500).send({ code: err.code, message: err.message });
+                return;
             }
-        });
+            const active = {
+                id: activateStatus.id,
+                isActive: activateStatus.isActive,
+                locked: activateStatus.locked,
+                Status: activateStatus.isActive ? "Active" : !activateStatus.locked ? "Locked" : !activateStatus.isActive ? "Suspended" : ""
+            };
+            res.status(200).send(active);
+        } catch (err) {
+            res.status(500).send({ code: err.code, message: err.message });
+        }
+    });
+
 
     //   Restore Transh Data
 
@@ -584,29 +595,38 @@ export const AdminRoute = (app) => {
         });
 
 
-    app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
+        app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
         async (req, res) => {
             try {
                 const id = req.params.id;
+
                 const admin = await SubAdmin.findById(id);
 
                 if (!admin) {
-                    res.status(404).json({ code: 404, message: "Admin Not Found" });
+                    const subAdmin = await SubAdmin.findById(id);
+                    if (!subAdmin) {
+                        res.status(404).json({ code: 404, message: "Admin Not Found" });
+                        return;
+                    }
+                    const last10Partnerships = subAdmin.partnership.slice(-10);
+                    const transferData = {
+                        partnership: last10Partnerships,
+                        userName: subAdmin.userName,
+                    };
+                    res.status(200).json(transferData);
                     return;
                 }
-
                 const last10Partnerships = admin.partnership.slice(-10);
-
                 const transferData = {
                     partnership: last10Partnerships,
                     userName: admin.userName,
                 };
-
                 res.status(200).json(transferData);
             } catch (err) {
                 res.status(500).json({ code: err.code, message: err.message });
             }
         });
+    
 
 
     app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]),
