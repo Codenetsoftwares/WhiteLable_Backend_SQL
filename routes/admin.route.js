@@ -599,7 +599,9 @@ export const AdminRoute = (app) => {
         async (req, res) => {
             try {
                 const id = req.params.id;
-                const admin = await Admin.findById(id);
+
+                const admin = await SubAdmin.findById(id);
+
                 if (!admin) {
                     const subAdmin = await SubAdmin.findById(id);
                     if (!subAdmin) {
