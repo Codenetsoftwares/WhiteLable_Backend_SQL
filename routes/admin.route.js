@@ -319,27 +319,94 @@ export const AdminRoute = (app) => {
             }
         });
 
+        app.get("/api/view-all-subAdmin-creates/:createdBy",
+        Authorize(["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent", "TransferBalance",
+            "Status", "CreditRef-Edit", "Partnership-Edit", "CreditRef-View", "Partnership-View", "User-Profile-View",
+            "Profile-View", "View-Admin-Data", "Create-Admin", "Create-User", "AccountStatement", "ActivityLog",
+            "Delete-Admin", "Restore-Admin", "Move-To-Trash", "Trash-View",]),
+        async (req, res) => {
+            try {
+                const createdBy = req.params.createdBy;
+                const page = parseInt(req.query.page) || 1;
+                const searchName = req.query.searchName || "";
+                const pageSize = parseInt(req.query.pageSize) || 5;
+
+                const skip = (page - 1) * pageSize;
+
+                let query = { createBy: createdBy };
+
+                if (searchName) {
+                    query.$or = [
+                        { userName: { $regex: new RegExp(searchName, "i") } },
+                        //   { roles: { $elemMatch: { role: { $regex: new RegExp(searchName, "i") } } } }
+                    ];
+                }
+
+                const adminCount = await SubAdmin.countDocuments(query);
+                const admin = await SubAdmin.find(query)
+                    .skip(skip)
+                    .limit(pageSize);
+                    console.log("sub", admin)
+
+                if (!admin || admin.length === 0) {
+                    return res.status(404).send({ code: 404, message: `No records found` });
+                }
+
+                const user = admin.map((users) => {
+                    return {
+                        id: users.id,
+                        userName: users.userName,
+                        roles: users.roles,
+                        balance: users.balance,
+                        loadBalance: users.loadBalance,
+                        creditRef: users.creditRef,
+                        refProfitLoss: users.refProfitLoss,
+                        createBy: users.createBy,
+                        partnership: users.partnership,
+                        Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
+                    };
+
+                });
+
+                const totalPages = Math.ceil(adminCount / pageSize);
+
+                res.status(200).send({
+                    user,
+                    totalPages,
+                    totalItems: adminCount
+                });
+
+            } catch (err) {
+                res.status(500).send({ code: err.code, message: err.message });
+            }
+        });
+
     // view balance
 
     app.get("/api/view-balance/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "SubAdmin"]), async (req, res) => {
         try {
             const id = req.params.id;
-            console.log("id", id)
             const admin = await Admin.findById(id);
-
             if (!admin) {
-                return res.status(404).send({ code: 404, message: `Not Found` });
+                const subAdmin = await SubAdmin.findById(id);
+                if (!subAdmin) {
+                    return res.status(404).send({ code: 404, message: `Not Found` });
+                }
+                const amount = {
+                    balance: subAdmin.balance
+                };
+                return res.status(200).send({ amount });
             }
-
             const amount = {
                 balance: admin.balance
             };
-
             res.status(200).send({ amount });
         } catch (err) {
             res.status(500).send({ code: err.code, message: err.message });
         }
     });
+    
+    
 
     // active status
 
