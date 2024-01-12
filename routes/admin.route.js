@@ -595,63 +595,69 @@ export const AdminRoute = (app) => {
         });
 
 
-        app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
-        async (req, res) => {
-            try {
-                const id = req.params.id;
-
-                const admin = await SubAdmin.findById(id);
-
-                if (!admin) {
-                    const subAdmin = await SubAdmin.findById(id);
-                    if (!subAdmin) {
-                        res.status(404).json({ code: 404, message: "Admin Not Found" });
-                        return;
-                    }
-                    const last10Partnerships = subAdmin.partnership.slice(-10);
-                    const transferData = {
-                        partnership: last10Partnerships,
-                        userName: subAdmin.userName,
-                    };
-                    res.status(200).json(transferData);
-                    return;
-                }
-                const last10Partnerships = admin.partnership.slice(-10);
-                const transferData = {
-                    partnership: last10Partnerships,
-                    userName: admin.userName,
-                };
-                res.status(200).json(transferData);
-            } catch (err) {
-                res.status(500).json({ code: err.code, message: err.message });
-            }
-        });
-    
-
-
-    app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]),
-        async (req, res) => {
-            try {
-                const id = req.params.id;
-                const admin = await Admin.findById(id);
-
-                if (!admin) {
+app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
+    async (req, res) => {
+        try {
+            const id = req.params.id;
+            const admin = await Admin.findById(id);
+            if (!admin) {
+                const subAdmin = await SubAdmin.findById(id);
+                if (!subAdmin) {
                     res.status(404).json({ code: 404, message: "Admin Not Found" });
                     return;
                 }
+                const last10Partnerships = subAdmin.partnership.slice(-10);
+                const transferData = {
+                    partnership: last10Partnerships,
+                    userName: subAdmin.userName,
+                };
+                res.status(200).json(transferData);
+                return;
+            }
+            const last10Partnerships = admin.partnership.slice(-10);
+            const transferData = {
+                partnership: last10Partnerships,
+                userName: admin.userName,
+            };
+            res.status(200).json(transferData);
+        } catch (err) {
+            res.status(500).json({ code: err.code, message: err.message });
+        }
+    });
 
-                const last10creditRef = admin.creditRef.slice(-10);
+    
 
+
+app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]),
+    async (req, res) => {
+        try {
+            const id = req.params.id;
+            const admin = await Admin.findById(id);
+            if (!admin) {
+                const subAdmin = await SubAdmin.findById(id);
+                if (!subAdmin) {
+                    res.status(404).json({ code: 404, message: "Admin Not Found" });
+                    return;
+                }
+                const last10creditRef = subAdmin.creditRef.slice(-10);
                 const transferData = {
                     creditRef: last10creditRef,
-                    userName: admin.userName,
+                    userName: subAdmin.userName,
                 };
-
                 res.status(200).json(transferData);
-            } catch (err) {
-                res.status(500).json({ code: err.code, message: err.message });
+                return;
             }
-        });
+            const last10creditRef = admin.creditRef.slice(-10);
+            const transferData = {
+                creditRef: last10creditRef,
+                userName: admin.userName,
+            };
+            res.status(200).json(transferData);
+        } catch (err) {
+            res.status(500).json({ code: err.code, message: err.message });
+        }
+    });
+
 
     app.post('/api/Root-Path/:userName/:action',
         async (req, res) => {
