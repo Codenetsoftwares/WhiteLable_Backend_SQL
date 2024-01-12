@@ -588,7 +588,7 @@ export const AdminRoute = (app) => {
         async (req, res) => {
             try {
                 const id = req.params.id;
-                const admin = await Admin.findById(id);
+                const admin = await SubAdmin.findById(id);
 
                 if (!admin) {
                     res.status(404).json({ code: 404, message: "Admin Not Found" });

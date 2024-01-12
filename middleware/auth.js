@@ -30,27 +30,33 @@ export const Authorize = (roles) => {
           .status(401)
           .send({ code: 401, message: "Invalid login attempt (3)" });
       }
-
       let existingUser;
+      existingUser = await Admin.findById(user.id).exec();;
+      console.log('existingAdmin', existingUser)
+      if (existingUser) {
+        if (
+          roles.includes("All-Access") ||
+          roles.includes("WhiteLabel") ||
+          roles.includes("HyperAgent") ||
+          roles.includes("SuperAgent") ||
+          roles.includes("MasterAgent") ||
+          roles.includes("superAdmin")
+        ) {
+          existingUser = await Admin.findById(user.id).exec();
+          console.log('exist', existingUser)
 
-      if (
-        roles.includes("All-Access") ||
-        roles.includes("WhiteLabel") ||
-        roles.includes("HyperAgent") ||
-        roles.includes("SuperAgent") ||
-        roles.includes("MasterAgent") ||
-        roles.includes("superAdmin")
-      ) {
-        existingUser = await Admin.findById(user.id).exec();
-        if (!existingUser && roles.includes("SubAdmin")) {
-          existingUser = await SubAdmin.findById(user.id).exec();
+          if (!existingUser && roles.includes("SubAdmin")) {
+            existingUser = await SubAdmin.findById(user.id).exec();
+            console.log('exis48', existingUser)
+          }
+          if (!existingUser) {
+            return res
+              .status(401)
+              .send({ code: 401, message: "Unauthorized access" });
+          }
         }
-        if (!existingUser) {
-          return res
-            .status(401)
-            .send({ code: 401, message: "Unauthorized access" });
-        }
-      } else if (
+      }
+      else if (
         roles.includes("SubWhiteLabel") ||
         roles.includes("SubHyperAgent") ||
         roles.includes("SubSuperAgent") ||
@@ -73,7 +79,9 @@ export const Authorize = (roles) => {
         roles.includes("Trash-View") ||
         roles.includes("View-Admin-Data")
       ) {
+        console.log('res')
         existingUser = await SubAdmin.findById(user.id).exec();
+        console.log('existinguser', existingUser)
         if (!existingUser) {
           return res
             .status(401)
@@ -84,21 +92,22 @@ export const Authorize = (roles) => {
           .status(401)
           .send({ code: 401, message: "Unauthorized access" });
       }
-
       if (roles && roles.length > 0) {
+        console.log('roles',roles)
         let userHasRequiredRole = false;
         let userHasRequiredPermission = false;
         roles.forEach((role) => {
-          const rolesArray = existingUser.roles;
-          for (let i = 0; i < rolesArray.length; i++) {
+          console.log('role',role)
+          const rolesArray = existingUser.roles[0];
+          console.log('rolesArray', rolesArray.role === role ||
+          rolesArray.permission.includes(role))
             if (
-              rolesArray[i].role === role ||
-              rolesArray[i].permission.includes(role)
+              rolesArray.role === role ||
+              rolesArray.permission.includes(role)
             ) {
               userHasRequiredRole = true;
               userHasRequiredPermission = true;
             }
-          }
         });
         if (!userHasRequiredRole && !userHasRequiredPermission) {
           return res.status(401).send({ code: 401, message: "Unauthorized access" });
