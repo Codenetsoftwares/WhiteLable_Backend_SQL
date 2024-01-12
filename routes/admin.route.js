@@ -4,9 +4,6 @@ import { Authorize } from "../middleware/auth.js";
 import bcrypt from "bcrypt"
 import { SubAdmin } from '../models/subAdmin.model.js'
 import { Trash } from "../models/trash.model.js";
-import axios from "axios";
-import * as http from 'http';
-
 
 export const AdminRoute = (app) => {
 
@@ -725,7 +722,8 @@ export const AdminRoute = (app) => {
         async (req, res) => {
             try {
                 const subAdminId = req.params.id;
-                const { permissions } = req.body;
+                const { permission } = req.body;
+                console.log('permis',req.body)
                 if (!subAdminId) {
                     throw { code: 400, message: "Id not found" };
                 }
@@ -733,11 +731,7 @@ export const AdminRoute = (app) => {
                 if (!subAdmin) {
                     throw { code: 400, message: "Sub Admin not found" };
                 }
-                subAdmin.roles.forEach((role) => {
-                    permissions.forEach((permission) => {
-                        role.permission.push(permission);
-                    });
-                });
+                    subAdmin.roles[0].permission = permission
 
                 await subAdmin.save();
                 res.status(200).send(`${subAdmin.userName} permissions edited successfully`);
