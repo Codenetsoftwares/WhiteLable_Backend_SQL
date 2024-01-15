@@ -768,12 +768,14 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
         }
     );
 
-    app.get("/api/admin/account-statement/:id", Authorize(["superAdmin"]), async (req, res) => {
+    app.get("/api/admin/account-statement/:id", Authorize(["superAdmin","AccountStatement"]), async (req, res) => {
         const id = req.params.id;
+        console.log('id',id)
         const ITEMS_PER_PAGE = 5;
         const page = parseInt(req.query.page) || 1;
         try {
             const data = await Admin.findById(id).exec();
+            console.log('data',data)
             if (!data) {
                 return res.status(404).send({ message: 'Admin not found' });
             }

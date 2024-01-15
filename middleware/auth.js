@@ -77,7 +77,8 @@ export const Authorize = (roles) => {
         roles.includes("Restore-Admin") ||
         roles.includes("Move-To-Trash") ||
         roles.includes("Trash-View") ||
-        roles.includes("View-Admin-Data")
+        roles.includes("View-Admin-Data") ||
+        roles.includes("Account-Statement")
       ) {
         console.log('res')
         existingUser = await SubAdmin.findById(user.id).exec();
