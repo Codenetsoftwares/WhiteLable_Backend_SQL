@@ -1264,11 +1264,11 @@ export const AdminController = {
             if (!existingAdminUser) {
                 throw { code: 404, message: `Admin not found in trash` };
             }
-            const isPasswordValid = await bcrypt.compare(password, existingAdminUser.password);
+            // const isPasswordValid = await bcrypt.compare(password, existingAdminUser.password);
 
-            if (!isPasswordValid) {
-                throw { code: 401, message: "Invalid Password" };
-            }
+            // if (!isPasswordValid) {
+            //     throw { code: 401, message: "Invalid Password" };
+            // }
             const restoreRemoveData = {
                 roles: existingAdminUser.roles,
                 userName: existingAdminUser.userName,
