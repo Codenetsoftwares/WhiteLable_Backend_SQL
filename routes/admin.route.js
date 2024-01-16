@@ -316,7 +316,7 @@ export const AdminRoute = (app) => {
             }
         });
 
-        app.get("/api/view-all-subAdmin-creates/:createdBy",
+    app.get("/api/view-all-subAdmin-creates/:createdBy",
         Authorize(["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent", "TransferBalance",
             "Status", "CreditRef-Edit", "Partnership-Edit", "CreditRef-View", "Partnership-View", "User-Profile-View",
             "Profile-View", "View-Admin-Data", "Create-Admin", "Create-User", "AccountStatement", "ActivityLog",
@@ -343,7 +343,7 @@ export const AdminRoute = (app) => {
                 const admin = await SubAdmin.find(query)
                     .skip(skip)
                     .limit(pageSize);
-                    console.log("sub", admin)
+                console.log("sub", admin)
 
                 if (!admin || admin.length === 0) {
                     return res.status(404).send({ code: 404, message: `No records found` });
@@ -402,8 +402,8 @@ export const AdminRoute = (app) => {
             res.status(500).send({ code: err.code, message: err.message });
         }
     });
-    
-    
+
+
 
     // active status
 
@@ -503,37 +503,37 @@ export const AdminRoute = (app) => {
     //   View Active Locked Status
 
     app.get("/api/admin/active-status/:adminId", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Status"]),
-    async (req, res) => {
-        try {
-            const adminId = req.params.adminId;
-            // Check in Admin model
-            const activateStatus = await Admin.findById(adminId).exec();
-            // If not found in Admin model, check in SubAdmin model
-            if (!activateStatus) {
-                const subAdmin = await SubAdmin.findById(adminId).exec();
-                if (!subAdmin) {
-                    return res.status(404).send({ code: 404, message: `Admin Not Found` });
+        async (req, res) => {
+            try {
+                const adminId = req.params.adminId;
+                // Check in Admin model
+                const activateStatus = await Admin.findById(adminId).exec();
+                // If not found in Admin model, check in SubAdmin model
+                if (!activateStatus) {
+                    const subAdmin = await SubAdmin.findById(adminId).exec();
+                    if (!subAdmin) {
+                        return res.status(404).send({ code: 404, message: `Admin Not Found` });
+                    }
+                    const active = {
+                        id: subAdmin.id,
+                        isActive: subAdmin.isActive,
+                        locked: subAdmin.locked,
+                        Status: subAdmin.isActive ? "Active" : !subAdmin.locked ? "Locked" : !subAdmin.isActive ? "Suspended" : ""
+                    };
+                    res.status(200).send(active);
+                    return;
                 }
                 const active = {
-                    id: subAdmin.id,
-                    isActive: subAdmin.isActive,
-                    locked: subAdmin.locked,
-                    Status: subAdmin.isActive ? "Active" : !subAdmin.locked ? "Locked" : !subAdmin.isActive ? "Suspended" : ""
+                    id: activateStatus.id,
+                    isActive: activateStatus.isActive,
+                    locked: activateStatus.locked,
+                    Status: activateStatus.isActive ? "Active" : !activateStatus.locked ? "Locked" : !activateStatus.isActive ? "Suspended" : ""
                 };
                 res.status(200).send(active);
-                return;
+            } catch (err) {
+                res.status(500).send({ code: err.code, message: err.message });
             }
-            const active = {
-                id: activateStatus.id,
-                isActive: activateStatus.isActive,
-                locked: activateStatus.locked,
-                Status: activateStatus.isActive ? "Active" : !activateStatus.locked ? "Locked" : !activateStatus.isActive ? "Suspended" : ""
-            };
-            res.status(200).send(active);
-        } catch (err) {
-            res.status(500).send({ code: err.code, message: err.message });
-        }
-    });
+        });
 
 
     //   Restore Transh Data
@@ -595,68 +595,68 @@ export const AdminRoute = (app) => {
         });
 
 
-app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
-    async (req, res) => {
-        try {
-            const id = req.params.id;
-            const admin = await Admin.findById(id);
-            if (!admin) {
-                const subAdmin = await SubAdmin.findById(id);
-                if (!subAdmin) {
-                    res.status(404).json({ code: 404, message: "Admin Not Found" });
+    app.get("/api/partnershipView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "Partnership-View"]),
+        async (req, res) => {
+            try {
+                const id = req.params.id;
+                const admin = await Admin.findById(id);
+                if (!admin) {
+                    const subAdmin = await SubAdmin.findById(id);
+                    if (!subAdmin) {
+                        res.status(404).json({ code: 404, message: "Admin Not Found" });
+                        return;
+                    }
+                    const last10Partnerships = subAdmin.partnership.slice(-10);
+                    const transferData = {
+                        partnership: last10Partnerships,
+                        userName: subAdmin.userName,
+                    };
+                    res.status(200).json(transferData);
                     return;
                 }
-                const last10Partnerships = subAdmin.partnership.slice(-10);
+                const last10Partnerships = admin.partnership.slice(-10);
                 const transferData = {
                     partnership: last10Partnerships,
-                    userName: subAdmin.userName,
+                    userName: admin.userName,
                 };
                 res.status(200).json(transferData);
-                return;
+            } catch (err) {
+                res.status(500).json({ code: err.code, message: err.message });
             }
-            const last10Partnerships = admin.partnership.slice(-10);
-            const transferData = {
-                partnership: last10Partnerships,
-                userName: admin.userName,
-            };
-            res.status(200).json(transferData);
-        } catch (err) {
-            res.status(500).json({ code: err.code, message: err.message });
-        }
-    });
-
-    
+        });
 
 
-app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]),
-    async (req, res) => {
-        try {
-            const id = req.params.id;
-            const admin = await Admin.findById(id);
-            if (!admin) {
-                const subAdmin = await SubAdmin.findById(id);
-                if (!subAdmin) {
-                    res.status(404).json({ code: 404, message: "Admin Not Found" });
+
+
+    app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]),
+        async (req, res) => {
+            try {
+                const id = req.params.id;
+                const admin = await Admin.findById(id);
+                if (!admin) {
+                    const subAdmin = await SubAdmin.findById(id);
+                    if (!subAdmin) {
+                        res.status(404).json({ code: 404, message: "Admin Not Found" });
+                        return;
+                    }
+                    const last10creditRef = subAdmin.creditRef.slice(-10);
+                    const transferData = {
+                        creditRef: last10creditRef,
+                        userName: subAdmin.userName,
+                    };
+                    res.status(200).json(transferData);
                     return;
                 }
-                const last10creditRef = subAdmin.creditRef.slice(-10);
+                const last10creditRef = admin.creditRef.slice(-10);
                 const transferData = {
                     creditRef: last10creditRef,
-                    userName: subAdmin.userName,
+                    userName: admin.userName,
                 };
                 res.status(200).json(transferData);
-                return;
+            } catch (err) {
+                res.status(500).json({ code: err.code, message: err.message });
             }
-            const last10creditRef = admin.creditRef.slice(-10);
-            const transferData = {
-                creditRef: last10creditRef,
-                userName: admin.userName,
-            };
-            res.status(200).json(transferData);
-        } catch (err) {
-            res.status(500).json({ code: err.code, message: err.message });
-        }
-    });
+        });
 
 
     app.post('/api/Root-Path/:userName/:action',
@@ -685,7 +685,7 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
         const searchName = req.query.searchName || "";
         try {
             const query = { createBy: id };
-    
+
             if (searchName) {
                 query.$or = [
                     { userName: { $regex: new RegExp(searchName, "i") } },
@@ -693,15 +693,15 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
             }
             const totalCount = await SubAdmin.countDocuments(query);
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-    
+
             const subAdmin = await SubAdmin.find(query)
                 .skip((page - 1) * ITEMS_PER_PAGE)
                 .limit(pageSize);
-    
+
             if (subAdmin.length === 0) {
                 return res.status(404).json({ message: "No data found" });
             }
-    
+
             res.status(200).json({
                 data: subAdmin,
                 currentPage: page,
@@ -713,9 +713,9 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
             res.status(500).send({ message: "Internal Server Error" });
         }
     });
-    
-    
-    
+
+
+
 
     app.post(
         "/api/admin/single-sub-admin/:id",
@@ -749,7 +749,7 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
             try {
                 const subAdminId = req.params.id;
                 const { permission } = req.body;
-                console.log('permis',req.body)
+                console.log('permis', req.body)
                 if (!subAdminId) {
                     throw { code: 400, message: "Id not found" };
                 }
@@ -757,7 +757,7 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
                 if (!subAdmin) {
                     throw { code: 400, message: "Sub Admin not found" };
                 }
-                    subAdmin.roles[0].permission = permission
+                subAdmin.roles[0].permission = permission
 
                 await subAdmin.save();
                 res.status(200).send(`${subAdmin.userName} permissions edited successfully`);
@@ -768,37 +768,41 @@ app.get("/api/creditRefView/:id", Authorize(["superAdmin", "WhiteLabel", "HyperA
         }
     );
 
-    app.get("/api/admin/account-statement/:id", Authorize(["superAdmin","AccountStatement"]), async (req, res) => {
-        const id = req.params.id;
-        console.log('id',id)
-        const ITEMS_PER_PAGE = 5;
-        const page = parseInt(req.query.page) || 1;
-        try {
-            const data = await Admin.findById(id).exec();
-            console.log('data',data)
-            if (!data) {
-                return res.status(404).send({ message: 'Admin not found' });
+    app.get("/api/admin/account-statement/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "TransferBalance",
+        "Status", "CreditRef-Edit", "Partnership-Edit", "CreditRef-View", "Partnership-View", "User-Profile-View",
+        "Profile-View", "View-Admin-Data", "Create-Admin", "Create-User", "AccountStatement", "ActivityLog",
+        "Delete-Admin", "Restore-Admin", "Move-To-Trash", "Trash-View", "AccountStatement"]), async (req, res) => {
+            const id = req.params.id;
+            console.log('id', id)
+            const ITEMS_PER_PAGE = 5;
+            const page = parseInt(req.query.page) || 1;
+            try {
+                const data = await Admin.findById(id).exec();
+                console.log('data', data)
+                if (!data) {
+                    return res.status(404).send({ message: 'Admin not found' });
+                }
+                const mergedData = data.transferAmount.concat(data.selfTransaction);
+                console.log('mergedData', mergedData)
+                const totalCount = mergedData.length;
+                const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+                const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+                res.status(200).json({
+                    data: paginatedData,
+                    currentPage: page,
+                    totalPages: totalPages,
+                    totalCount: totalCount
+                });
+            } catch (e) {
+                console.error(e);
+                res.status(500).send({ message: 'Internal Server Error' });
             }
-            const mergedData = data.transferAmount.concat(data.selfTransaction);
-            const totalCount = mergedData.length;
-            const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-    
-            const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    
-            res.status(200).json({
-                data: paginatedData,
-                currentPage: page,
-                totalPages: totalPages,
-                totalCount: totalCount
-            });
-        } catch (e) {
-            console.error(e);
-            res.status(500).send({ message: 'Internal Server Error' });
-        }
-    });
-    
-    
-      
-    
+        });
+
+
+
+
 
 }
