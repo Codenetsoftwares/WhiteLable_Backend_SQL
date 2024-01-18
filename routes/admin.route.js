@@ -694,16 +694,25 @@ export const AdminRoute = (app) => {
             const totalCount = await SubAdmin.countDocuments(query);
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-            const subAdmin = await SubAdmin.find(query)
-                .skip((page - 1) * ITEMS_PER_PAGE)
-                .limit(pageSize);
+            const subAdmin = await SubAdmin.find(query).skip((page - 1) * ITEMS_PER_PAGE).limit(pageSize);
 
-            if (subAdmin.length === 0) {
+            const user = subAdmin.map((users) => {
+                return {
+                    id: users.id,
+                    userName: users.userName,
+                    roles: users.roles,
+                    Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
+                };
+
+            });
+
+            
+            if (user.length === 0) {
                 return res.status(404).json({ message: "No data found" });
             }
 
             res.status(200).json({
-                data: subAdmin,
+                data: user,
                 currentPage: page,
                 totalPages: totalPages,
                 totalCount: totalCount

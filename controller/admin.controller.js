@@ -448,11 +448,12 @@ export const AdminController = {
         const subhyperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubHyperAgent" } } }).exec();
         const submasterAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubMasterAgent" } } }).exec();
         const subsuperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubSuperAgent" } } }).exec();
+        const subAdmin = await SubAdmin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubAdmin" } } }).exec();
         
         
         
         if (whiteLabel.length == 0 && hyperAgent.length == 0 && masterAgent.length == 0 && superAgent.length == 0
-             && subwhiteLabel.length == 0 && subhyperAgent.length == 0 && submasterAgent.length == 0 && subsuperAgent.length == 0) {
+             && subwhiteLabel.length == 0 && subhyperAgent.length == 0 && submasterAgent.length == 0 && subsuperAgent.length == 0 && subAdmin.length === 0) {
             if (isActive === true) {
                 admin.isActive = true;
                 admin.locked = true;
@@ -477,6 +478,7 @@ export const AdminController = {
             await Promise.all(submasterAgent.map(data => data.save()));
             await Promise.all(subwhiteLabel.map(data => data.save()));
             await Promise.all(subsuperAgent.map(data => data.save()));
+            await Promise.all(subAdmin.map(data => data.save()));
             return
         }
         if (!admin) {
@@ -577,6 +579,32 @@ export const AdminController = {
                     data.isActive = true;
                     data.locked = true;
                     data.whiteActive = false;
+                    data.checkActive = false;
+                } //checked
+                AdminController.activateAdmin(data._id, data.isActive, data.locked)
+        
+        
+        
+            })
+
+            subAdmin.forEach((data) => {
+                if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
+                
+                    data.isActive = true;
+                    data.locked = true;
+                    data.subAdminActive = false;
+                    data.checkActive = false;
+                } //checked
+                else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
+                
+                    data.locked = true;
+                    data.subAdminActive = false;
+                } //checked
+                else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {
+                
+                    data.isActive = true;
+                    data.locked = true;
+                    data.subAdminActive = false;
                     data.checkActive = false;
                 } //checked
                 AdminController.activateAdmin(data._id, data.isActive, data.locked)
@@ -699,6 +727,7 @@ export const AdminController = {
             await Promise.all(submasterAgent.map(data => data.save()));
             await Promise.all(subwhiteLabel.map(data => data.save()));
             await Promise.all(subsuperAgent.map(data => data.save()));
+            await Promise.all(subAdmin.map(data => data.save()));
             return { message: "Admin Activated Successfully" };
         }
         else if (isActive === false) {
@@ -835,6 +864,39 @@ export const AdminController = {
                         data.isActive = true;
                         data.locked = true;
                         data.whiteActive = false;
+                        data.checkActive === false
+                    }
+                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
+        
+                });
+                subAdmin.forEach((data) => {
+                    if (data.isActive === true && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
+                
+                        data.isActive = false;
+                        data.locked = false;
+                        data.subAdminActive = true;
+                        data.checkActive = true
+                    } //checked
+        
+                    else if (data.isActive === false && data.locked === true && data.subAdminActive === true) { ///not use
+                        data.isActive = false;
+                        data.locked = false;
+                        data.checkActive = true;
+                
+                    }
+                    else if (data.isActive === false && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
+                        data.locked = false;
+                        data.subAdminActive = true;
+                
+                    } //checked
+                    else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {///not use
+                        data.locked = false;
+                    
+                    } //checked
+                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
+                        data.isActive = true;
+                        data.locked = true;
+                        data.subAdminActive = false;
                         data.checkActive === false
                     }
                     AdminController.activateAdmin(data._id, data.isActive, data.locked)
@@ -987,6 +1049,7 @@ export const AdminController = {
                 await Promise.all(submasterAgent.map(data => data.save()));
                 await Promise.all(subwhiteLabel.map(data => data.save()));
                 await Promise.all(subsuperAgent.map(data => data.save()));
+                await Promise.all(subAdmin.map(data => data.save()));
                 return { message: "Admin Locked Successfully" };
             } else {
             
@@ -1060,6 +1123,24 @@ export const AdminController = {
                         data.whiteActive = false;
                     }
                     else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
+                        data.locked = true;
+                    }
+                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
+        
+        
+                });
+                subAdmin.forEach((data) => {
+                    if (data.isActive === true && data.locked === true && data.subAdminActive === false) {
+                        data.isActive = false;
+                        data.locked = true;
+                        data.subAdminActive = true;
+                        data.checkActive = true
+                    }
+                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
+                        data.locked = true;
+                        data.subAdminActive = false;
+                    }
+                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
                         data.locked = true;
                     }
                     AdminController.activateAdmin(data._id, data.isActive, data.locked)
@@ -1150,6 +1231,7 @@ export const AdminController = {
                 await Promise.all(masterAgent.map(data => data.save()));
                 await Promise.all(whiteLabel.map(data => data.save()));
                 await Promise.all(superAgent.map(data => data.save()));
+                await Promise.all(subAdmin.map(data => data.save()));
                 await Promise.all(subhyperAgent.map(data => data.save()));
                 await Promise.all(submasterAgent.map(data => data.save()));
                 await Promise.all(subwhiteLabel.map(data => data.save()));

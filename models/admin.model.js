@@ -65,6 +65,7 @@ export const Admin = new mongoose.model("Admin", new mongoose.Schema({
     superActive: { type: Boolean, default: false, required: false },
     whiteActive: { type: Boolean, default: false, required: false },
     subhyperActive: { type: Boolean, default: false, required: false },
+    subAdminActive: { type: Boolean, default: false, required: false },
     submasterActive: { type: Boolean, default: false, required: false },
     subsuperActive: { type: Boolean, default: false, required: false },
     subwhiteActive: { type: Boolean, default: false, required: false },
