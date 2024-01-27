@@ -1446,6 +1446,7 @@ export const AdminController = {
                 $or: [
                     { userName: { $regex: new RegExp(searchName, "i") } },
                 ],
+                roles: { $elemMatch: { role: { $in: ["WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent"] } } }
             };
             
           const createdUsers = await Admin.find(query)
