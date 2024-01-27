@@ -260,61 +260,64 @@ export const AdminRoute = (app) => {
             "Status", "CreditRef-Edit", "Partnership-Edit", "CreditRef-View", "Partnership-View", "User-Profile-View",
             "Profile-View", "View-Admin-Data", "Create-Admin", "Create-User", "AccountStatement", "ActivityLog",
             "Delete-Admin", "Restore-Admin", "Move-To-Trash", "Trash-View",]),
-        async (req, res) => {
-            try {
-                const createdBy = req.params.createdBy;
-                const page = parseInt(req.query.page) || 1;
-                const searchName = req.query.searchName || "";
-                const pageSize = parseInt(req.query.pageSize) || 5;
-
-                const skip = (page - 1) * pageSize;
-
-                let query = { createBy: createdBy };
-
-                if (searchName) {
-                    query.$or = [
-                        { userName: { $regex: new RegExp(searchName, "i") } },
-                        //   { roles: { $elemMatch: { role: { $regex: new RegExp(searchName, "i") } } } }
-                    ];
-                }
-
-                const adminCount = await Admin.countDocuments(query);
-                const admin = await Admin.find(query)
-                    .skip(skip)
-                    .limit(pageSize);
-
-                if (!admin || admin.length === 0) {
-                    return res.status(404).send({ code: 404, message: `No records found` });
-                }
-
-                const user = admin.map((users) => {
-                    return {
-                        id: users.id,
-                        userName: users.userName,
-                        roles: users.roles,
-                        balance: users.balance,
-                        loadBalance: users.loadBalance,
-                        creditRef: users.creditRef,
-                        refProfitLoss: users.refProfitLoss,
-                        createBy: users.createBy,
-                        partnership: users.partnership,
-                        Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
+            async (req, res) => {
+                try {
+                    const createdBy = req.params.createdBy;
+                    const page = parseInt(req.query.page) || 1;
+                    const searchName = req.query.searchName || "";
+                    const pageSize = parseInt(req.query.pageSize) || 5;
+        
+                    const skip = (page - 1) * pageSize;
+        
+                    let query = {
+                        createBy: createdBy,
+                        roles: { $elemMatch: { role: { $in: ["WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent"] } } }
                     };
+        
+                    if (searchName) {
+                        query.$or = [
+                            { userName: { $regex: new RegExp(searchName, "i") } },
+                        ];
+                    }
+        
+                    const adminCount = await Admin.countDocuments(query);
+                    const admin = await Admin.find(query)
+                        .skip(skip)
+                        .limit(pageSize);
+        
+                    if (!admin || admin.length === 0) {
+                        return res.status(404).send({ code: 404, message: `No records found` });
+                    }
+        
+                    const user = admin.map((users) => {
+                        return {
+                            id: users.id,
+                            userName: users.userName,
+                            roles: users.roles,
+                            balance: users.balance,
+                            loadBalance: users.loadBalance,
+                            creditRef: users.creditRef,
+                            refProfitLoss: users.refProfitLoss,
+                            createBy: users.createBy,
+                            partnership: users.partnership,
+                            Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
+                        };
+        
+                    });
+        
+                    const totalPages = Math.ceil(adminCount / pageSize);
+        
+                    res.status(200).send({
+                        user,
+                        totalPages,
+                        totalItems: adminCount
+                    });
+        
+                } catch (err) {
+                    res.status(500).send({ code: err.code, message: err.message });
+                }
+            });
 
-                });
-
-                const totalPages = Math.ceil(adminCount / pageSize);
-
-                res.status(200).send({
-                    user,
-                    totalPages,
-                    totalItems: adminCount
-                });
-
-            } catch (err) {
-                res.status(500).send({ code: err.code, message: err.message });
-            }
-        });
 
     app.get("/api/view-all-subAdmin-creates/:createdBy",
         Authorize(["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent", "TransferBalance",
@@ -330,7 +333,11 @@ export const AdminRoute = (app) => {
 
                 const skip = (page - 1) * pageSize;
 
-                let query = { createBy: createdBy };
+                let query = {
+                    createBy: createdBy,
+                    roles: { $elemMatch: { role: { $in: ["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent"] } } }
+                };
+    
 
                 if (searchName) {
                     query.$or = [
@@ -339,8 +346,8 @@ export const AdminRoute = (app) => {
                     ];
                 }
 
-                const adminCount = await SubAdmin.countDocuments(query);
-                const admin = await SubAdmin.find(query)
+                const adminCount = await Admin.countDocuments(query);
+                const admin = await Admin.find(query)
                     .skip(skip)
                     .limit(pageSize);
                 console.log("sub", admin)
@@ -684,17 +691,19 @@ export const AdminRoute = (app) => {
         const pageSize = parseInt(req.query.pageSize) || 5;
         const searchName = req.query.searchName || "";
         try {
-            const query = { createBy: id };
+            const query = {
+                 createBy: id,
+                 roles: { $elemMatch: { role: { $in: ["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent"] } } } };
 
             if (searchName) {
                 query.$or = [
                     { userName: { $regex: new RegExp(searchName, "i") } },
                 ];
             }
-            const totalCount = await SubAdmin.countDocuments(query);
+            const totalCount = await Admin.countDocuments(query);
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-            const subAdmin = await SubAdmin.find(query).skip((page - 1) * ITEMS_PER_PAGE).limit(pageSize);
+            const subAdmin = await Admin.find(query).skip((page - 1) * ITEMS_PER_PAGE).limit(pageSize);
 
             const user = subAdmin.map((users) => {
                 return {
@@ -728,14 +737,14 @@ export const AdminRoute = (app) => {
 
     app.post(
         "/api/admin/single-sub-admin/:id",
-        Authorize(["superAdmin"]),
+        Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent",]),
         async (req, res) => {
             try {
                 if (!req.params.id) {
                     throw { code: 400, message: "Sub Admin's Id not present" };
                 }
                 const subAdminId = req.params.id;
-                const subAdmin = await SubAdmin.findById(subAdminId).exec();
+                const subAdmin = await Admin.findById(subAdminId).exec();
                 if (!subAdmin) {
                     throw { code: 500, message: "Sub Admin not found with the given Id" };
                 }
@@ -762,7 +771,7 @@ export const AdminRoute = (app) => {
                 if (!subAdminId) {
                     throw { code: 400, message: "Id not found" };
                 }
-                const subAdmin = await SubAdmin.findById(subAdminId);
+                const subAdmin = await Admin.findById(subAdminId);
                 if (!subAdmin) {
                     throw { code: 400, message: "Sub Admin not found" };
                 }
