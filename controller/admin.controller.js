@@ -72,7 +72,7 @@ export const AdminController = {
             throw { code: 400, message: "Account is in Inactive Mode" };
         }
     
-        const existingAdmin = await SubAdmin.findOne({ userName: data.userName });
+        const existingAdmin = await Admin.findOne({ userName: data.userName });
         if (existingAdmin) {
             throw { code: 409, message: "Admin Already Exist" };
         }
@@ -98,7 +98,7 @@ export const AdminController = {
             }
         }
     
-        const newASubAdmin = new SubAdmin({
+        const newASubAdmin = new Admin({
             userName: data.userName,
             password: encryptedPassword,
             roles: [{ role: subRole, permission: data.permission }],
@@ -438,7 +438,7 @@ export const AdminController = {
     activateAdmin: async (adminId, isActive, locked) => {
         try {
         console.log("adminId:", adminId); 
-        const admin = await Admin.findById(adminId);
+        const admin = await Admin.findById(adminId)
         
         const whiteLabel = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "WhiteLabel" } } }).exec();
         const hyperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "HyperAgent" } } }).exec();
@@ -448,7 +448,7 @@ export const AdminController = {
         const subhyperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubHyperAgent" } } }).exec();
         const submasterAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubMasterAgent" } } }).exec();
         const subsuperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubSuperAgent" } } }).exec();
-        const subAdmin = await SubAdmin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubAdmin" } } }).exec();
+        const subAdmin = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubAdmin" } } }).exec();
         
         
         
