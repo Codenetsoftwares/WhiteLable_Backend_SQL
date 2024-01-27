@@ -392,7 +392,7 @@ export const AdminRoute = (app) => {
             const id = req.params.id;
             const admin = await Admin.findById(id);
             if (!admin) {
-                const subAdmin = await SubAdmin.findById(id);
+                const subAdmin = await Admin.findById(id);
                 if (!subAdmin) {
                     return res.status(404).send({ code: 404, message: `Not Found` });
                 }
@@ -684,7 +684,7 @@ export const AdminRoute = (app) => {
 
     // Renew Permission
 
-    app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin"]), async (req, res) => {
+    app.get("/api/admin/view-sub-admins/:id", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent",]), async (req, res) => {
         const id = req.params.id;
         const ITEMS_PER_PAGE = 5;
         const page = parseInt(req.query.page) || 1;
@@ -762,7 +762,7 @@ export const AdminRoute = (app) => {
 
     app.put(
         "/admin/edit-subadmin-permissions/:id",
-        Authorize(["superAdmin"]),
+        Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent",]),
         async (req, res) => {
             try {
                 const subAdminId = req.params.id;
