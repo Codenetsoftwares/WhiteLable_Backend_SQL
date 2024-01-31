@@ -207,7 +207,8 @@ export const AdminController = {
                 })),
                 balance: existingUser.balance,
                 loadBalance: existingUser.loadBalance,
-                isActive: existingUser.isActive
+                isActive: existingUser.isActive,
+                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
             };
         }
     },
