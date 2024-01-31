@@ -150,7 +150,8 @@ export const AdminController = {
                 roles: subAdminUser.roles.map(role => ({
                     role: role.role,
                     permission: role.permission
-                }))
+                })),
+                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
             };
             const accessToken = jwt.sign(
                 accessTokenResponse,
@@ -168,7 +169,8 @@ export const AdminController = {
                 })),
                 balance: subAdminUser.balance,
                 loadBalance: subAdminUser.loadBalance,
-                isActive: subAdminUser.isActive
+                isActive: subAdminUser.isActive,
+                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
             };
     
         } else {
@@ -187,7 +189,8 @@ export const AdminController = {
                 roles: existingUser.roles.map(role => ({
                     role: role.role,
                     permission: role.permission
-                }))
+                })),
+                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
             };
     
             const accessToken = jwt.sign(
