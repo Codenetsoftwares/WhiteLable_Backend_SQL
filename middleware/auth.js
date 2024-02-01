@@ -55,6 +55,13 @@ export const Authorize = (roles) => {
               .send({ code: 401, message: "Unauthorized access" });
           }
         }
+
+        if (!existingUser.isActive && !existingUser.locked) {
+          return res
+            .status(423)
+            .send({ code: 423, message: "" });
+        }
+      
       }
       else if (
         roles.includes("SubWhiteLabel") ||
@@ -111,7 +118,9 @@ export const Authorize = (roles) => {
             }
         });
         if (!userHasRequiredRole && !userHasRequiredPermission) {
-          return res.status(401).send({ code: 401, message: "Unauthorized access" });
+          return res
+          .status(401)
+          .send({ code: 401, message: "Unauthorized access" });
         }
       }
 
@@ -119,7 +128,9 @@ export const Authorize = (roles) => {
       next();
     } catch (err) {
       console.error("Authorization Error:", err.message);
-      return res.status(401).send({ code: 401, message: "Unauthorized access" });
+      return res
+      .status(401)
+      .send({ code: 401, message: "Unauthorized access" });
     }
   };
 };
