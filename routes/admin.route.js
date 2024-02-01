@@ -820,6 +820,22 @@ export const AdminRoute = (app) => {
         });
 
 
+app.get("/api/user-status/:userName",async (req, res) => {
+
+    const userName = req.params.userName;
+    const users =  await Admin.findOne({ userName: userName})
+   try{
+        const userStatus = {
+            Status: users.isActive ? "Active" : !users.locked ? "Locked" : !users.isActive ? "Suspended" : ""
+
+        };
+        res.status(200).json(userStatus);
+    } catch (err) {
+        res.status(500).json({ code: err.code, message: err.message });
+    }
+
+    });
+
 
 
 
