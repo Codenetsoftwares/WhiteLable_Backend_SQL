@@ -251,6 +251,11 @@ export const AdminController = {
         const existingUser = await AdminController.findAdmin({
             userName: userName,
         });
+
+        if (existingUser.isActive === false || existingUser.locked === false) {
+            throw { code: 400, message: "Account is Not Active" };
+        }
+
         const oldPasswordIsCorrect = await bcrypt.compare(
             oldPassword,
             existingUser.password
