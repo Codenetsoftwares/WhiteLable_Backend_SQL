@@ -184,6 +184,30 @@ export const AdminRoute = (app) => {
   // View All Sub Admins Creates ("DONE")
   app.get(
     '/api/view-all-subAdmin-creates/:createdById',
+    Authorize([
+      'SubAdmin',
+      'SubWhiteLabel',
+      'SubHyperAgent',
+      'SubSuperAgent',
+      'SubMasterAgent',
+      'TransferBalance',
+      'Status',
+      'CreditRef-Edit',
+      'Partnership-Edit',
+      'CreditRef-View',
+      'Partnership-View',
+      'User-Profile-View',
+      'Profile-View',
+      'View-Admin-Data',
+      'Create-Admin',
+      'Create-User',
+      'AccountStatement',
+      'ActivityLog',
+      'Delete-Admin',
+      'Restore-Admin',
+      'Move-To-Trash',
+      'Trash-View',
+    ]),
     viewAllSubAdminCreatesSchema,
     customErrorHandler,
     viewAllSubAdminCreates,
@@ -301,8 +325,14 @@ export const AdminRoute = (app) => {
   // Root Path API ("DONE")
   app.post('/api/Root-Path/:userName/:action', rootPathSchema, customErrorHandler, buildRootPath);
 
-  // View Sub Admins API ("Need To Test")
-  app.get('/api/admin/view-sub-admins/:adminId', viewSubAdminSchema, customErrorHandler, viewSubAdmis);
+  // View Sub Admins API ("DONE")
+  app.get(
+    '/api/admin/view-sub-admins/:adminId',
+    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent']),
+    viewSubAdminSchema,
+    customErrorHandler,
+    viewSubAdmis,
+  );
 
   // Single Sub Admin API ("DONE")
   app.post(

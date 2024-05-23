@@ -530,45 +530,57 @@ export const transactionView = async (req, res) => {
 export const viewAllCreates = async (req, res) => {
   try {
     const createdById = req.params.createdById;
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 5;
-    const offset = (page - 1) * pageSize;
-    const searchQuery = req.query.userName ? ` AND userName LIKE '%${req.query.userName}%'` : '';
+    const page = parseInt(req.query.page, 10) || 1;
+    const pageSize = parseInt(req.query.pageSize, 10) || 5;
 
-    const [totalRecordsResult] = await database.execute(
-      `
-            SELECT COUNT(*) as totalRecords FROM Admins 
-            WHERE createdById = ? ${searchQuery}
-        `,
-      [createdById],
-    );
+    const searchQuery = req.query.userName ? ` AND userName LIKE ?` : '';
+    const searchParams = req.query.userName ? [`%${req.query.userName}%`] : [];
+
+    const allowedRoles = ['WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent'];
+    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
+    const rolesParams = allowedRoles;
+
+    const totalRecordsParams = [createdById, ...rolesParams, ...searchParams];
+    const totalRecordsQuery = `
+      SELECT COUNT(*) as totalRecords
+      FROM Admins
+      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
+    `;
+    console.log('totalRecordsQuery:', totalRecordsQuery);
+    console.log('totalRecordsParams:', totalRecordsParams);
+    const [totalRecordsResult] = await database.execute(totalRecordsQuery, totalRecordsParams);
     const totalRecords = totalRecordsResult[0].totalRecords;
 
-    const query = `
-            SELECT * FROM Admins 
-            WHERE createdById = ? ${searchQuery}
-            LIMIT ${pageSize} OFFSET ${offset}
-        `;
-    const [admins] = await database.execute(query, [createdById]);
+    // Data query without pagination
+    const dataParams = [createdById, ...rolesParams, ...searchParams];
+    const dataQuery = `
+      SELECT *
+      FROM Admins
+      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
+    `;
+    console.log('dataQuery:', dataQuery);
+    console.log('dataParams (without pagination):', dataParams);
+    const [admins] = await database.execute(dataQuery, dataParams);
 
     if (!admins || admins.length === 0) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
     }
 
-    const users = admins.map((admin) => {
-      return {
-        adminId: admin.adminId,
-        userName: admin.userName,
-        roles: admin.roles,
-        balance: admin.balance,
-        loadBalance: admin.loadBalance,
-        CreditRefs: admin.CreditRefs || [],
-        createdById: admin.createdById,
-        createdByUser: admin.createdByUser,
-        Partnerships: admin.Partnerships || [],
-        Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
-      };
-    });
+    const offset = (page - 1) * pageSize;
+    const paginatedAdmins = admins.slice(offset, offset + pageSize);
+
+    const users = paginatedAdmins.map((admin) => ({
+      adminId: admin.adminId,
+      userName: admin.userName,
+      roles: admin.roles,
+      balance: admin.balance,
+      loadBalance: admin.loadBalance,
+      CreditRefs: admin.CreditRefs || [],
+      createdById: admin.createdById,
+      createdByUser: admin.createdByUser,
+      Partnerships: admin.Partnerships || [],
+      Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
+    }));
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 
@@ -587,88 +599,88 @@ export const viewAllCreates = async (req, res) => {
       ),
     );
   } catch (error) {
+    console.error('Error:', error);
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
-// Need To Test
 export const viewAllSubAdminCreates = async (req, res) => {
-    try {
-      const createdById = req.params.createdById;
-      const page = parseInt(req.query.page) || 1;
-      const pageSize = parseInt(req.query.pageSize) || 5;
-      const offset = (page - 1) * pageSize;
-      const searchQuery = req.query.userName ? ` AND userName LIKE ?` : '';
-      const searchParams = req.query.userName ? [`%${req.query.userName}%`] : [];
-  
-      const allowedRoles = ["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent"];
-      const rolesQuery = allowedRoles.map(role => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
-      const rolesParams = allowedRoles;
-  
-      // Combine the parameters for total records query
-      const totalRecordsParams = [createdById, ...rolesParams, ...searchParams];
-      const totalRecordsQuery = `
-          SELECT COUNT(*) as totalRecords FROM Admins 
-          WHERE createdById = ? AND (${rolesQuery}) ${searchQuery}
-      `;
-      const [totalRecordsResult] = await database.execute(totalRecordsQuery, totalRecordsParams);
-      const totalRecords = totalRecordsResult[0].totalRecords;
-  
-      // Combine the parameters for data query
-      const dataParams = [createdById, ...rolesParams, ...searchParams, pageSize, offset];
-      const dataQuery = `
-          SELECT * FROM Admins 
-          WHERE createdById = ? AND (${rolesQuery}) ${searchQuery}
-          LIMIT ? OFFSET ?
-      `;
-      const [admins] = await database.execute(dataQuery, dataParams);
-  
-      if (!admins || admins.length === 0) {
-        return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
-      }
-  
-      const users = admins.map((admin) => {
-        return {
-          adminId: admin.adminId,
-          userName: admin.userName,
-          roles: admin.roles,
-          balance: admin.balance,
-          loadBalance: admin.loadBalance,
-          CreditRefs: admin.CreditRefs || [],
-          createdById: admin.createdById,
-          createdByUser: admin.createdByUser,
-          Partnerships: admin.Partnerships || [],
-          Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
-        };
-      });
-  
-      const totalPages = Math.ceil(totalRecords / pageSize);
-  
-      return res.status(200).json(
-        apiResponseSuccess(
-          {
-            users,
-            totalRecords,
-            totalPages,
-            currentPage: page,
-            pageSize,
-          },
-          200,
-          true,
-          'Successfully',
-        ),
-      );
-    } catch (error) {
-      res
-        .status(500)
-        .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  try {
+    const createdById = req.params.createdById;
+    const page = parseInt(req.query.page, 10) || 1;
+    const pageSize = parseInt(req.query.pageSize, 10) || 5;
+
+    const searchQuery = req.query.userName ? ' AND userName LIKE ?' : '';
+    const searchParams = req.query.userName ? [`%${req.query.userName}%`] : [];
+
+    const allowedRoles = ['SubAdmin', 'SubWhiteLabel', 'SubHyperAgent', 'SubSuperAgent', 'SubMasterAgent'];
+    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
+    const rolesParams = allowedRoles;
+
+    const totalRecordsParams = [createdById, ...rolesParams, ...searchParams];
+    const totalRecordsQuery = `
+      SELECT COUNT(*) as totalRecords
+      FROM Admins
+      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
+    `;
+
+    const [totalRecordsResult] = await database.execute(totalRecordsQuery, totalRecordsParams);
+    const totalRecords = totalRecordsResult[0].totalRecords;
+
+    const dataParams = [createdById, ...rolesParams, ...searchParams];
+    const dataQuery = `
+      SELECT *
+      FROM Admins
+      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
+    `;
+
+    const [admins] = await database.execute(dataQuery, dataParams);
+
+    if (!admins || admins.length === 0) {
+      return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
     }
-  };
-  
-  
-  
+
+    const offset = (page - 1) * pageSize;
+    const paginatedAdmins = admins.slice(offset, offset + pageSize);
+
+    const users = paginatedAdmins.map((admin) => ({
+      adminId: admin.adminId,
+      userName: admin.userName,
+      roles: admin.roles,
+      balance: admin.balance,
+      loadBalance: admin.loadBalance,
+      CreditRefs: admin.CreditRefs || [],
+      createdById: admin.createdById,
+      createdByUser: admin.createdByUser,
+      Partnerships: admin.Partnerships || [],
+      Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
+    }));
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    return res.status(200).json(
+      apiResponseSuccess(
+        {
+          users,
+          totalRecords,
+          totalPages,
+          currentPage: page,
+          pageSize,
+        },
+        200,
+        true,
+        'Successfully',
+      ),
+    );
+  } catch (error) {
+    console.error('Error:', error);
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
 
 export const viewBalance = async (req, res) => {
   try {
@@ -1193,91 +1205,60 @@ export const buildRootPath = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-// Need To Test
+
 export const viewSubAdmis = async (req, res) => {
   try {
     const id = req.params.adminId;
-    const ITEMS_PER_PAGE = 5;
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 5;
+    const page = parseInt(req.query.page, 10) || 1;
+    const pageSize = parseInt(req.query.pageSize, 10) || 5;
     const searchName = req.query.searchName || '';
 
-    // Base query for counting total documents
-    let baseQuery = `
-            SELECT COUNT(*) as totalCount 
-            FROM Admins 
-            WHERE createdById = ? 
-              AND (
-                  JSON_CONTAINS(roles, JSON_QUOTE("SubAdmin")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubWhiteLabel")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubHyperAgent")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubSuperAgent")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubMasterAgent"))
-              )
-        `;
+    const allowedRoles = ['SubAdmin', 'SubWhiteLabel', 'SubHyperAgent', 'SubSuperAgent', 'SubMasterAgent'];
+    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
+    const rolesParams = allowedRoles;
 
-    let queryParams = [id];
-
-    // Modify query and parameters if searchName is provided
-    if (searchName) {
-      baseQuery += ` AND userName LIKE ?`;
-      queryParams.push(`%${searchName}%`);
-    }
-
-    // Execute count query
-    const [countResults] = await database.execute(baseQuery, queryParams);
-    const totalCount = countResults[0].totalCount;
-    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
-    // Base query for selecting sub-admins
     let subAdminsQuery = `
-            SELECT adminId, userName, roles, isActive, locked 
-            FROM Admins 
-            WHERE createdById = ? 
-              AND (
-                  JSON_CONTAINS(roles, JSON_QUOTE("SubAdmin")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubWhiteLabel")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubHyperAgent")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubSuperAgent")) 
-                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubMasterAgent"))
-              )
-        `;
+      SELECT adminId, userName, roles, isActive, locked 
+      FROM Admins 
+      WHERE createdById = ? 
+        AND (${rolesQuery})
+    `;
 
-    queryParams = [id]; // Reset query parameters
+    let queryParams = [id, ...rolesParams];
 
-    // Modify query and parameters if searchName is provided
     if (searchName) {
       subAdminsQuery += ` AND userName LIKE ?`;
       queryParams.push(`%${searchName}%`);
     }
 
-    // Add pagination parameters
-    subAdminsQuery += ` LIMIT ?, ?`;
-    queryParams.push((page - 1) * ITEMS_PER_PAGE, pageSize);
-
-    // Execute sub-admins query
+    console.log('subAdminsQuery:', subAdminsQuery);
+    console.log('queryParams:', queryParams);
     const [subAdminResults] = await database.execute(subAdminsQuery, queryParams);
+
+    if (!subAdminResults || subAdminResults.length === 0) {
+      return res.status(404).json(apiResponseErr(null, 404, false, 'No data found'));
+    }
 
     const users = subAdminResults.map((user) => ({
       adminId: user.adminId,
       userName: user.userName,
-      roles: JSON.parse(user.roles),
-      Status: user.isActive ? 'Active' : user.locked ? 'Locked' : 'Suspended',
+      roles: user.roles,
+      Status: user.isActive ? 'Active' : !user.locked ? 'Locked' : !user.isActive ? 'Suspended' : '',
     }));
 
-    if (users.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'No data found'));
-    }
+    const totalCount = users.length;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const paginatedUsers = users.slice((page - 1) * pageSize, page * pageSize);
 
-    return res.status(201).json(
+    return res.status(200).json(
       apiResponseSuccess(
         {
-          data: users,
+          data: paginatedUsers,
           currentPage: page,
           totalPages: totalPages,
           totalCount: totalCount,
         },
-        201,
+        200,
         true,
         'successfully',
       ),
