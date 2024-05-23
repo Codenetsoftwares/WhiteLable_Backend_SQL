@@ -16,7 +16,7 @@ export const createAdmin = async (req, res) => {
         }
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
-        const defaultPermission = "All-Access";
+        const defaultPermission = ["All-Access"];
         const adminId = uuidv4();
         const rolesWithDefaultPermission = Array.isArray(roles) ? roles.map((role) => ({ role, permission: defaultPermission })) : [{ role: roles, permission: defaultPermission }];
         const createdByUser = user.userName;
@@ -35,7 +35,7 @@ export const createSubAdmin = async (req, res) => {
    try {
     const { userName, password, roles} = req.body;
     const user = req.user;
-    if (user[0].isActive === false) {
+    if (user.isActive === false) {
         return res.status(400).json(apiResponseErr(null, 400, false, 'Account is in Inactive Mode'));
     } 
     const [existingAdmin]  =  await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]); 
@@ -45,24 +45,24 @@ export const createSubAdmin = async (req, res) => {
     const passwordSalt = await bcrypt.genSalt();
     const encryptedPassword = await bcrypt.hash(password, passwordSalt);
     let subRole = '';
-    for(let i=0; i<user[0].roles.length; i++){
-        if (user[0].roles[i].role.includes('superAdmin')) {
+    for(let i=0; i<user.roles.length; i++){
+        if (user.roles[i].role.includes('superAdmin')) {
             subRole = 'SubAdmin';
-        } else if (user[0].roles[i].role.includes('WhiteLabel')) {
+        } else if (user.roles[i].role.includes('WhiteLabel')) {
             subRole = 'SubWhiteLabel';
-        } else if (user[0].roles[i].role.includes('HyperAgent')) {
+        } else if (user.roles[i].role.includes('HyperAgent')) {
             subRole = 'SubHyperAgent';
-        } else if (user[0].roles[i].role.includes('SuperAgent')) {
+        } else if (user.roles[i].role.includes('SuperAgent')) {
             subRole = 'SubSuperAgent';
-        } else if (user[0].roles[i].role.includes('MasterAgent')) {
+        } else if (user.roles[i].role.includes('MasterAgent')) {
             subRole = 'SubMasterAgent';
         } else {
             throw { code: 400, message: "Invalid user role for creating sub-admin" };
         }
         }
     const adminId = uuidv4();
-    const createdByUser = user[0].userName;
-    const createdById = user[0].adminId
+    const createdByUser = user.userName;
+    const createdById = user.adminId
     const [result] = await database.execute(
         'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
         [adminId, userName, encryptedPassword, JSON.stringify([{ role: subRole, permission : roles[0].permission }]), createdById, createdByUser],
