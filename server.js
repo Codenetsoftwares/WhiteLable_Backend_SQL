@@ -1,12 +1,10 @@
-import express from "express";
-import dotenv from "dotenv"
+import express from 'express';
+import dotenv from 'dotenv';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 
 // Route Imports
-import { AdminRoute } from "./routes/admin.route.js";
-
-
+import { AdminRoute } from './routes/admin.route.js';
 
 dotenv.config();
 const app = express();
@@ -21,9 +19,8 @@ app.get('/', (req, res) => {
   res.send('Status : OK');
 });
 
-
 AdminRoute(app);
 
-app.listen(process.env.PORT, ()=>{
-    console.log(`App is running on  - http://localhost:${process.env.PORT || 8000}`)
-})
+app.listen(process.env.PORT, () => {
+  console.log(`App is running on  - http://localhost:${process.env.PORT || 8000}`);
+});
