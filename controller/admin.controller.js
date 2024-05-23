@@ -1,157 +1,104 @@
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken";
-import { Admin } from "../models/admin.model.js";
-import { User } from "../models/user.model.js";
-import { Trash } from "../models/trash.model.js";
-import { SubAdmin } from '../models/subAdmin.model.js'
+import { apiResponseErr, apiResponseSuccess } from "../helper/errorHandler.js"
+import { database } from "../dbConnection/database.service.js"
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const globalUsernames = [];
 
-export const AdminController = {
-    createAdmin: async (data, user) => {
-        try {
-            if (!data.userName) {
-                throw { message: "userName Is Required" };
-            }
-            if (!data.password) {
-                throw { message: "Password Is Required" };
-            }
-            if (!data.roles || !Array.isArray(data.roles) || data.roles.length === 0) {
-                throw { code: 400, message: "Roles is required" };
-            }
-
-            const existingAdmin = await Admin.findOne({ userName: data.userName });
-            if (existingAdmin) {
-                throw { code: 409, message: "Admin Already Exists" };
-            }
-            if (user.isActive === false || user.locked === false) {
-                throw { code: 400, message: "Account is Not Active" };
-            }
-            const Passwordsalt = await bcrypt.genSalt();
-            const encryptedPassword = await bcrypt.hash(data.password, Passwordsalt);
-    
-            const defaultPermission = "All Accesses";
-    
-            const rolesWithDefaultPermission = data.roles.map(role => ({
-                role,
-                permission: defaultPermission,
-            }));
-    
-            const newAdmin = new Admin({
-            userName: data.userName,
-            password: encryptedPassword,
-            roles: rolesWithDefaultPermission,
-            createBy: user._id, 
-            createUser: user.userName,
-        });
-
-        const isSubRole = ["SubAdmin", "SubWhiteLabel", "SubHyperAgent", "SubSuperAgent", "SubMasterAgent"].includes(user.roles[0].role);
-        if (isSubRole) {
-            newAdmin.createBy = user.createBy || user._id;
+export const createAdmin = async (req, res) => {
+    try {
+        const user = req.user;
+        const { userName, password, roles } = req.body;
+        const [existingAdmin]  =  await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+        if (existingAdmin.length > 0) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
         }
-
-        await newAdmin.save();
-    } catch (err) {
-        console.error(err);
-        throw { code: 500, message: "Failed to save user" };
+        const passwordSalt = await bcrypt.genSalt();
+        const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+        const defaultPermission = "All-Access";
+        const adminId = uuidv4();
+        const rolesWithDefaultPermission = Array.isArray(roles) ? roles.map((role) => ({ role, permission: defaultPermission })) : [{ role: roles, permission: defaultPermission }];
+        const createdByUser = user[0].userName;
+        const createdById = user[0].adminId
+        const [result] = await database.execute(
+            'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
+            [adminId, userName, encryptedPassword, JSON.stringify(rolesWithDefaultPermission), createdById, createdByUser],
+          );
+          return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin created successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
-},
-    
+};
 
-    createSubAdmin: async (data, user) => {
-        if (!data.userName) {
-            throw { message: "userName Is Required" };
+export const createSubAdmin = async (req, res) => {
+   try {
+    const { userName, password, roles} = req.body;
+    const user = req.user;
+    if (user[0].isActive === false) {
+        return res.status(400).json(apiResponseErr(null, 400, false, 'Account is in Inactive Mode'));
+    } 
+    const [existingAdmin]  =  await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]); 
+    if (existingAdmin.length > 0) {
+        return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
+    }
+    const passwordSalt = await bcrypt.genSalt();
+    const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+    let subRole = '';
+    for(let i=0; i<user[0].roles.length; i++){
+        if (user[0].roles[i].role.includes('superAdmin')) {
+            subRole = 'SubAdmin';
+        } else if (user[0].roles[i].role.includes('WhiteLabel')) {
+            subRole = 'SubWhiteLabel';
+        } else if (user[0].roles[i].role.includes('HyperAgent')) {
+            subRole = 'SubHyperAgent';
+        } else if (user[0].roles[i].role.includes('SuperAgent')) {
+            subRole = 'SubSuperAgent';
+        } else if (user[0].roles[i].role.includes('MasterAgent')) {
+            subRole = 'SubMasterAgent';
+        } else {
+            throw { code: 400, message: "Invalid user role for creating sub-admin" };
         }
-        if (!data.password) {
-            throw { message: "Password Is Required" };
         }
-        // if (!data.roles || !Array.isArray(data.roles) || data.roles.length === 0) {
-        //     throw { code: 400, message: "Roles is required" };
-        // }
-        if (user.isActive === false) {
-            throw { code: 400, message: "Account is in Inactive Mode" };
-        }
-    
-        const existingAdmin = await Admin.findOne({ userName: data.userName });
-        if (existingAdmin) {
-            throw { code: 409, message: "Admin Already Exist" };
-        }
-    
-        const Passwordsalt = await bcrypt.genSalt();
-        const encryptedPassword = await bcrypt.hash(data.password, Passwordsalt);
-    
-        let subRole = '';
-        console.log('userRoels',user.roles);
-        for(let i=0; i<user.roles.length; i++){
-            if (user.roles[i].role.includes('superAdmin')) {
-                subRole = 'SubAdmin';
-            } else if (user.roles[i].role.includes('WhiteLabel')) {
-                subRole = 'SubWhiteLabel';
-            } else if (user.roles[i].role.includes('HyperAgent')) {
-                subRole = 'SubHyperAgent';
-            } else if (user.roles[i].role.includes('SuperAgent')) {
-                subRole = 'SubSuperAgent';
-            } else if (user.roles[i].role.includes('MasterAgent')) {
-                subRole = 'SubMasterAgent';
-            } else {
-                throw { code: 400, message: "Invalid user role for creating sub-admin" };
-            }
-        }
-    
-        const newASubAdmin = new Admin({
-            userName: data.userName,
-            password: encryptedPassword,
-            roles: [{ role: subRole, permission: data.permission }],
-            createBy: user._id,
-            createUser : user.username,
-        });
-        try {
-            await newASubAdmin.save();
-            return newASubAdmin;
-        } catch (err) {
-            console.error(err);
-            throw { code: 500, message: "Failed to save user" };
-        }
-    },
+    const adminId = uuidv4();
+    const createdByUser = user[0].userName;
+    const createdById = user[0].adminId
+    const [result] = await database.execute(
+        'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
+        [adminId, userName, encryptedPassword, JSON.stringify([{ role: subRole, permission : roles[0].permission }]), createdById, createdByUser],
+      );
+      return res.status(201).json(apiResponseSuccess(true, 201, true, 'Sub Admin created successfully'));
+   } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+}
+};
 
-    GenerateAdminAccessToken: async (userName, password, persist) => {
-        if (!userName) {
-            throw { code: 400, message: "Invalid value for: User Name" };
-        }
-        if (!password) {
-            throw { code: 400, message: "Invalid value for: password" };
-        }
-        
-        const existingUser = await AdminController.findAdmin({
-            userName: userName,
-        });
-    
-        if (!existingUser) {
-            const subAdminUser = await AdminController.findSubAdmin({
-                userName: userName,
-            });
-            if (!subAdminUser) {
-                throw { code: 401, message: "Invalid User Name or password" };
+export const generateAdminAccessToken = async (req, res) => {
+    try {
+        const { userName, password, persist } = req.body;
+        const [existingAdmin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+        if(!existingAdmin) {
+            const subAdminUser = await database.execute('SELECT * FROM SubAdmin userName = ?', [userName]);
+            if(!subAdminUser) {
+                return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
             }
-    
-            if (subAdminUser.locked === false) {
-                throw { code: 401, message: "User Account is Locked" };
+            if(subAdminUser.locked === false) {
+                return res.status(400).json(apiResponseErr(null, 400, false, `${subAdminUser[0].userName} Account is Locked`));
             }
-    
             const passwordValid = await bcrypt.compare(password, subAdminUser.password);
             if (!passwordValid) {
-                throw { code: 401, message: "Invalid User Name or Password" };
+                return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
             }
-    
             const accessTokenResponse = {
-                id: subAdminUser._id,
-                createBy: subAdminUser.createBy,
-                userName: subAdminUser.userName,
-                roles: subAdminUser.roles.map(role => ({
+                subAdminId: subAdminUser[0].subAdminId,
+                createdById: subAdminUser[0].createdById,
+                createdByUser: subAdminUser[0].createdByUser,
+                userName: subAdminUser[0].userName,
+                roles: subAdminUser[0].roles.map(role => ({
                     role: role.role,
                     permission: role.permission
                 })),
-                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
+                Status: subAdminUser[0].isActive ? "Active" : !subAdminUser[0].locked ? "Locked" : !subAdminUser[0].isActive ? "Suspended" : ""
             };
             const accessToken = jwt.sign(
                 accessTokenResponse,
@@ -160,39 +107,31 @@ export const AdminController = {
                     expiresIn: persist ? "1y" : "8h",
                 }
             );
-            return {
-                userName: subAdminUser.userName,
-                accessToken: accessToken,
-                roles: subAdminUser.roles.map(role => ({
-                    role: role.role,
-                    permission: role.permission
-                })),
-                balance: subAdminUser.balance,
-                loadBalance: subAdminUser.loadBalance,
-                isActive: subAdminUser.isActive,
-                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
-            };
-    
-        } else {
-            if (existingUser.locked === false) {
-                throw { code: 401, message: "User Account is Locked" };
+            const loginTime = new Date();
+            await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
+            return res.status(200).send(apiResponseSuccess({Token:accessToken, SubAdminData:accessTokenResponse}, true, 200, 'Sub Admin login successfully'))
+        }  else {
+            if(!existingAdmin) {
+                return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
             }
-            const passwordValid = await bcrypt.compare(password, existingUser.password);
+            if (existingAdmin.locked === false) {
+                return res.status(400).json(apiResponseErr(null, 400, false, `${existingAdmin[0].userName} Account is Locked`));
+            }
+            const passwordValid = await bcrypt.compare(password, existingAdmin[0].password);
             if (!passwordValid) {
-                throw { code: 401, message: "Invalid User Name or Password" };
+                return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
             }
-    
             const accessTokenResponse = {
-                id: existingUser._id,
-                createBy: existingUser.createBy,
-                userName: existingUser.userName,
-                roles: existingUser.roles.map(role => ({
+                adminId: existingAdmin[0].adminId,
+                createdById: existingAdmin[0].createdById,
+                createdByUser: existingAdmin[0].createdByUser,
+                userName: existingAdmin[0].userName,
+                roles: existingAdmin[0].roles.map(role => ({
                     role: role.role,
                     permission: role.permission
                 })),
-                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
+                Status: existingAdmin[0].isActive ? "Active" : !existingAdmin[0].locked ? "Locked" : !existingAdmin[0].isActive ? "Suspended" : ""
             };
-    
             const accessToken = jwt.sign(
                 accessTokenResponse,
                 process.env.JWT_SECRET_KEY,
@@ -200,1317 +139,1050 @@ export const AdminController = {
                     expiresIn: persist ? "1y" : "8h",
                 }
             );
-    
-            return {
-                userName: existingUser.userName,
-                accessToken: accessToken,
-                roles: existingUser.roles.map(role => ({
-                    role: role.role,
-                    permission: role.permission
-                })),
-                balance: existingUser.balance,
-                loadBalance: existingUser.loadBalance,
-                isActive: existingUser.isActive,
-                Status: existingUser.isActive ? "Active" : !existingUser.locked ? "Locked" : !existingUser.isActive ? "Suspended" : ""
-            };
+            const loginTime = new Date();
+            await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
+           return res.status(200).send(apiResponseSuccess({Token:accessToken, AdminData:accessTokenResponse}, true, 200, 'Admin login successfully'))
         }
-    },
-    
-
-    findAdminById: async (id) => {
-        if (!id) {
-            throw { code: 409, message: "Required parameter: id" };
-        }
-
-        return Admin.findById(id).exec();
-    },
-
-    findSubAdminById: async (id) => {
-        if (!id) {
-            throw { code: 409, message: "Required parameter: id" };
-        }
-
-        return SubAdmin.findById(id).exec();
-    },
-
-    findAdmin: async (filter) => {
-        if (!filter) {
-            throw { code: 409, message: "Required parameter: filter" };
-        }
-        return Admin.findOne(filter).exec();
-    },
-
-    findSubAdmin: async (filter) => {
-        if (!filter) {
-            throw { code: 409, message: "Required parameter: filter" };
-        }
-        return SubAdmin.findOne(filter).exec();
-    },
-
-    PasswordResetCode: async (userName, oldPassword, password) => {
-        const existingUser = await AdminController.findAdmin({
-            userName: userName,
-        });
-
-        if (existingUser.isActive === false || existingUser.locked === false) {
-            throw { code: 400, message: "Account is Not Active" };
-        }
-
-        const oldPasswordIsCorrect = await bcrypt.compare(
-            oldPassword,
-            existingUser.password
-          );
-          if (!oldPasswordIsCorrect) {
-            throw {
-              code: 401,
-              message: "Invalid old password",
-            };
-          }
-          const passwordIsDuplicate = await bcrypt.compare(
-            password,
-            existingUser.password
-          );
-          if (passwordIsDuplicate) {
-            throw {
-              code: 409,
-              message: "New Password Cannot Be The Same As Existing Password",
-            };
-          }
-          const passwordSalt = await bcrypt.genSalt();
-          const encryptedPassword = await bcrypt.hash(password, passwordSalt);
-          existingUser.password = encryptedPassword;
-          existingUser.save().catch((err) => {
-            console.error(err);
-            throw { code: 500, message: "Failed to save new password" };
-          });
-      
-          return true;
-    },
-
-    //create user
-
-    CreateUser: async (data) => {
-        try {
-        const existingUser = await User.findOne({ userName: data.userName })
-   
-        if (existingUser) {
-            throw ({ code: 409, message: "User Already Exist" })
-        }
-        if (!data.userName) {
-            throw ({ message: "userName Is Required" })
-        }
-        if (!data.password) {
-            throw ({ message: "Password Is Required" })
-        }
-
-        const Passwordsalt = await bcrypt.genSalt();
-        const encryptedPassword = await bcrypt.hash(data.password, Passwordsalt);
-        const newUser = new User({
-            userName: data.userName,
-            password: encryptedPassword,
-
-        });
-        newUser.save()
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
-    catch(err) {
-            console.error(err);
-            throw { code: 500, message: "Failed to save User" };
-        };
-    },
-
-    // Deposit Amount 
-
-    Deposit: async (adminId, depositAmount) => {
-        try {
-            const admin = await Admin.findById(adminId).exec();
-    
-            if (!admin) {
-                throw { code: 404, message: "Admin Not Found For Deposit" };
-            }
-            const transactionDetails = {
-                amount: depositAmount,
-                userName: admin.userName,
-                date: new Date(),
-                transactionType: 'Deposit',
-                
-            };
-            admin.depositBalance += depositAmount;
-            admin.balance += depositAmount;
-            admin.selfTransaction.push(transactionDetails);
-            await admin.save();
-            return { message: "Balance Deposit Successfully" };
-        } catch (err) {
-            throw { code: err.code, message: err.message };
-        }
-    },
-
-// transfer amount
-    transferAmountadmin: async (userId, receiveUserId, trnsfAmnt, withdrawlAmt, remarks,password) => 
-    {
-        try {
-            const sender = await Admin.findById({ _id: userId }).exec();
-    
-            if (!sender) {
-                throw { code: 404, message: "Admin Not Found For Transfer" };
-            }
-    
-            const isPasswordValid = await bcrypt.compare(password, sender.password);
-    
-            if (!isPasswordValid) {
-                throw { code: 401, message: "Invalid password for the transaction" };
-            }
-    
-            const receiver = await Admin.findById({ _id: receiveUserId }).exec();
-    
-            if (!receiver) {
-                throw { code: 404, message: "Receive User Not Found" };
-            }
-    
-            if (!sender.isActive) {
-                throw { code: 404, message: 'Sender is inactive' };
-            }
-    
-            if (!receiver.isActive) {
-                throw { code: 404, message: 'Receiver is inactive' };
-            }
-    
-            if (withdrawlAmt && withdrawlAmt > 0) {
-                if (receiver.balance < withdrawlAmt) {
-                    throw { code: 400, message: "Insufficient Balance For Withdrawal" };
-                }
-    
-                const withdrawalRecord = {
-                    transactionType: "Withdrawal",
-                    withdraw: withdrawlAmt,
-                    From: receiver.userName,
-                    To: sender.userName,
-                    date: new Date(),
-                    remarks: remarks
-                };
-    
-                receiver.balance -= withdrawlAmt;
-                receiver.loadBalance -= withdrawlAmt;
-                sender.balance += withdrawlAmt;
-                sender.transferAmount.push(withdrawalRecord);
-            } else {
-                if (sender.balance < trnsfAmnt) {
-                    throw { code: 400, message: "Insufficient Balance For Transfer" };
-                }
-    
-                const transferRecordDebit = {
-                    transactionType: "Debit",
-                    amount: trnsfAmnt,
-                    From: sender.userName,
-                    To: receiver.userName,
-                    date: new Date(),
-                    remarks: remarks
-                };
-    
-                const transferRecordCredit = {
-                    transactionType: "Credit",
-                    amount: trnsfAmnt,
-                    From: sender.userName,
-                    To: receiver.userName,
-                    date: new Date(),
-                    remarks: remarks
-                };
-    
-                console.log("Transfer: " + trnsfAmnt);
-                console.log("Withdrawal: " + withdrawlAmt);
-    
-                sender.remarks = remarks;
-                sender.balance -= trnsfAmnt;
-                receiver.balance += trnsfAmnt;
-                receiver.loadBalance += trnsfAmnt;
-                // receiver.loadBalance -= trnsfAmnt;
-                receiver.transferAmount.push(transferRecordCredit);
-                sender.transferAmount.push(transferRecordDebit);
-            }
-    
-            if (!sender.transferAmount) {
-                sender.transferAmount = [];
-            }
-    
-            await sender.save();
-            await receiver.save();
-    
-            return { message: "Balance Transfer Successfully" };
-        } catch (err) {
-            throw { code: err.code, message: err.message };
-        }
-    },
-    
-
-
-    // User Active status
-
-    activateAdmin: async (adminId, isActive, locked) => {
-        try {
-        console.log("adminId:", adminId); 
-        const admin = await Admin.findById(adminId)
-        
-        const whiteLabel = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "WhiteLabel" } } }).exec();
-        const hyperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "HyperAgent" } } }).exec();
-        const masterAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "MasterAgent" } } }).exec();
-        const superAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SuperAgent" } } }).exec();
-        const subwhiteLabel = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubWhiteLabel" } } }).exec();
-        const subhyperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubHyperAgent" } } }).exec();
-        const submasterAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubMasterAgent" } } }).exec();
-        const subsuperAgent = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubSuperAgent" } } }).exec();
-        const subAdmin = await Admin.find({ createBy: adminId, roles: { $elemMatch: { role: "SubAdmin" } } }).exec();
-        
-        
-        
-        if (whiteLabel.length == 0 && hyperAgent.length == 0 && masterAgent.length == 0 && superAgent.length == 0
-             && subwhiteLabel.length == 0 && subhyperAgent.length == 0 && submasterAgent.length == 0 && subsuperAgent.length == 0 && subAdmin.length === 0) {
-            if (isActive === true) {
-                admin.isActive = true;
-                admin.locked = true;
-            }
-            else if (isActive === false) {
-                if (locked === false) {
-                    admin.locked = false;
-                    admin.isActive = false;
-                }
-                else {
-                    admin.isActive = false;  
-                    admin.locked = true;       
-                }
-            }
-            
-            await admin.save();
-            await Promise.all(hyperAgent.map(data => data.save()));
-            await Promise.all(masterAgent.map(data => data.save()));
-            await Promise.all(whiteLabel.map(data => data.save()));
-            await Promise.all(superAgent.map(data => data.save()));
-            await Promise.all(subhyperAgent.map(data => data.save()));
-            await Promise.all(submasterAgent.map(data => data.save()));
-            await Promise.all(subwhiteLabel.map(data => data.save()));
-            await Promise.all(subsuperAgent.map(data => data.save()));
-            await Promise.all(subAdmin.map(data => data.save()));
-            return
-        }
-        if (!admin) {
-            throw { code: 404, message: "Admin not found" };
-        }
-        if (isActive === true) {
-            admin.isActive = true;
-            admin.locked = true;
-            superAgent.map((data) => {
-                if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.superActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.superActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.superActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.superActive = false;
-                    data.checkActive = false;
-                } //checked
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-            })
-        
-            hyperAgent.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.hyperActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.hyperActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.hyperActive === true && data.checkActive === true) {
-                    
-                    data.isActive = true;
-                    data.locked = true;
-                    data.hyperActive = false;
-                    data.checkActive = false;
-                } //checked
-        
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-            })
-            masterAgent.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.masterActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.masterActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.masterActive === true && data.checkActive === true) {
-                    
-                    data.isActive = true;
-                    data.locked = true;
-                    data.masterActive = false;
-                    data.checkActive = false;
-                } //checked
-        
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-            })
-            whiteLabel.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.whiteActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.whiteActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.whiteActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.whiteActive = false;
-                    data.checkActive = false;
-                } //checked
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-        
-            })
-
-            subAdmin.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subAdminActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.subAdminActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subAdminActive = false;
-                    data.checkActive = false;
-                } //checked
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-        
-            })
-
-
-            // added sub
-
-
-            subsuperAgent.map((data) => {
-                if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subsuperActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.subsuperActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.subsuperActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subsuperActive = false;
-                    data.checkActive = false;
-                } //checked
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-            })
-        
-            subhyperAgent.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subhyperActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.subhyperActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.subhyperActive === true && data.checkActive === true) {
-                    
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subhyperActive = false;
-                    data.checkActive = false;
-                } //checked
-        
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-            })
-            submasterAgent.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.submasterActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.submasterActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.submasterActive === true && data.checkActive === true) {
-                    
-                    data.isActive = true;
-                    data.locked = true;
-                    data.submasterActive = false;
-                    data.checkActive = false;
-                } //checked
-        
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-            })
-            subwhiteLabel.forEach((data) => {
-                if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subwhiteActive = false;
-                    data.checkActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === false) {
-                
-                    data.locked = true;
-                    data.subwhiteActive = false;
-                } //checked
-                else if (data.isActive === false && data.locked === true && data.subwhiteActive === true && data.checkActive === true) {
-                
-                    data.isActive = true;
-                    data.locked = true;
-                    data.subwhiteActive = false;
-                    data.checkActive = false;
-                } //checked
-                AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-        
-            })
-        
-        
-            await admin.save();
-            await Promise.all(hyperAgent.map(data => data.save()));
-            await Promise.all(masterAgent.map(data => data.save()));
-            await Promise.all(whiteLabel.map(data => data.save()));
-            await Promise.all(superAgent.map(data => data.save()));
-            await Promise.all(subhyperAgent.map(data => data.save()));
-            await Promise.all(submasterAgent.map(data => data.save()));
-            await Promise.all(subwhiteLabel.map(data => data.save()));
-            await Promise.all(subsuperAgent.map(data => data.save()));
-            await Promise.all(subAdmin.map(data => data.save()));
-            return { message: "Admin Activated Successfully" };
-        }
-        else if (isActive === false) {
-            if (locked === false) {
-                admin.locked = false;
-                admin.isActive = false;
-            
-        
-                superAgent.forEach((data) => {
-        
-                    if (data.isActive === true && data.locked === true && data.superActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.superActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.superActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-            
-                    }
-                    else if (data.isActive === false && data.locked === true && data.superActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.superActive = true;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.superActive === true && data.checkActive === true) {
-                        data.locked = false;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.superActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                hyperAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.hyperActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.hyperActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.hyperActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                    
-                    }
-                    else if (data.isActive === false && data.locked === true && data.hyperActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.hyperActive = true;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.hyperActive === true && data.checkActive === true) {
-                        data.locked = false;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.hyperActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                masterAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.masterActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.masterActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.masterActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                
-                    }
-                    else if (data.isActive === false && data.locked === true && data.masterActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.masterActive = true;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.masterActive === true && data.checkActive === true) {
-                        data.locked = false;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.masterActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                whiteLabel.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.whiteActive === false && data.checkActive === false) {
-                
-                        data.isActive = false;
-                        data.locked = false;
-                        data.whiteActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.whiteActive === true) { ///not use
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                
-                    }
-                    else if (data.isActive === false && data.locked === true && data.whiteActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.whiteActive = true;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.whiteActive === true && data.checkActive === true) {///not use
-                        data.locked = false;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.whiteActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                subAdmin.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
-                
-                        data.isActive = false;
-                        data.locked = false;
-                        data.subAdminActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.subAdminActive === true) { ///not use
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                
-                    }
-                    else if (data.isActive === false && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.subAdminActive = true;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {///not use
-                        data.locked = false;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.subAdminActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-
-
-                // added sub 
-
-                subsuperAgent.forEach((data) => {
-        
-                    if (data.isActive === true && data.locked === true && data.subsuperActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.subsuperActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.subsuperActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-            
-                    }
-                    else if (data.isActive === false && data.locked === true && data.superActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.subsuperActive = true;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.subsuperActive === true && data.checkActive === true) {
-                        data.locked = false;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.subsuperActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                subhyperAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subhyperActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.subhyperActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.subhyperActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                    
-                    }
-                    else if (data.isActive === false && data.locked === true && data.subhyperActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.subhyperActive = true;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.subhyperActive === true && data.checkActive === true) {
-                        data.locked = false;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.subhyperActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                submasterAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.submasterActive === false && data.checkActive === false) {
-                    
-                        data.isActive = false;
-                        data.locked = false;
-                        data.submasterActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.submasterActive === true) {
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                
-                    }
-                    else if (data.isActive === false && data.locked === true && data.submasterActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.submasterActive = true;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.submasterActive === true && data.checkActive === true) {
-                        data.locked = false;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.submasterActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-                subwhiteLabel.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subwhiteActive === false && data.checkActive === false) {
-                
-                        data.isActive = false;
-                        data.locked = false;
-                        data.subwhiteActive = true;
-                        data.checkActive = true
-                    } //checked
-        
-                    else if (data.isActive === false && data.locked === true && data.subwhiteActive === true) { ///not use
-                        data.isActive = false;
-                        data.locked = false;
-                        data.checkActive = true;
-                
-                    }
-                    else if (data.isActive === false && data.locked === true && data.subwhiteActive === false && data.checkActive === false) {
-                        data.locked = false;
-                        data.subwhiteActive = true;
-                
-                    } //checked
-                    else if (data.isActive === false && data.locked === true && data.subwhiteActive === true && data.checkActive === true) {///not use
-                        data.locked = false;
-                    
-                    } //checked
-                    else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
-                        data.isActive = true;
-                        data.locked = true;
-                        data.subwhiteActive = false;
-                        data.checkActive === false
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-                });
-        
-                await admin.save();
-                await Promise.all(hyperAgent.map(data => data.save()));
-                await Promise.all(masterAgent.map(data => data.save()));
-                await Promise.all(whiteLabel.map(data => data.save()));
-                await Promise.all(superAgent.map(data => data.save()));
-                await Promise.all(subhyperAgent.map(data => data.save()));
-                await Promise.all(submasterAgent.map(data => data.save()));
-                await Promise.all(subwhiteLabel.map(data => data.save()));
-                await Promise.all(subsuperAgent.map(data => data.save()));
-                await Promise.all(subAdmin.map(data => data.save()));
-                return { message: "Admin Locked Successfully" };
-            } else {
-            
-                admin.isActive = false;
-                admin.locked = true;
-                superAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.superActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.superActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.superActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                hyperAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.hyperActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.hyperActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.hyperActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-        
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                masterAgent.forEach((data) => {
-            
-                    if (data.isActive === true && data.locked === true && data.masterActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.masterActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.masterActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                whiteLabel.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.whiteActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.whiteActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.whiteActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                subAdmin.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subAdminActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.subAdminActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.subAdminActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-
-
-                // added sub 
-
-                subsuperAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subsuperActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.subsuperActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.subsuperActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                subhyperAgent.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subhyperActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.subhyperActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.subhyperActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-        
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                submasterAgent.forEach((data) => {
-            
-                    if (data.isActive === true && data.locked === true && data.submasterActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.submasterActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.submasterActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-                subwhiteLabel.forEach((data) => {
-                    if (data.isActive === true && data.locked === true && data.subwhiteActive === false) {
-                        data.isActive = false;
-                        data.locked = true;
-                        data.subwhiteActive = true;
-                        data.checkActive = true
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === false) {
-                        data.locked = true;
-                        data.subwhiteActive = false;
-                    }
-                    else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
-                        data.locked = true;
-                    }
-                    AdminController.activateAdmin(data._id, data.isActive, data.locked)
-        
-        
-                });
-
-                await admin.save();
-                await Promise.all(hyperAgent.map(data => data.save()));
-                await Promise.all(masterAgent.map(data => data.save()));
-                await Promise.all(whiteLabel.map(data => data.save()));
-                await Promise.all(superAgent.map(data => data.save()));
-                await Promise.all(subAdmin.map(data => data.save()));
-                await Promise.all(subhyperAgent.map(data => data.save()));
-                await Promise.all(submasterAgent.map(data => data.save()));
-                await Promise.all(subwhiteLabel.map(data => data.save()));
-                await Promise.all(subsuperAgent.map(data => data.save()));
-        
-                return { message: "Admin Suspended Successfully" };
-            }
-        } 
-        
-        } catch (err) {
-        throw { code: err.code || 500, message: err.message || "Internal Server Error" };
-        }
-        },
-
-   editCreditRef: async (adminId, creditRef,password) => {
+};
+ 
+export const getIpDetail = async (req, res) => {
     try {
-        const admin = await Admin.findById(adminId);
-
+        const userName = req.params.userName;
+        console.log("userName", userName);
+        let [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
         if (!admin) {
-            throw { code: 404, message: "Admin not found" };
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
         }
-        const isPasswordValid = await bcrypt.compare(password, admin.password);
-
-        if (!isPasswordValid) {
-            throw { code: 401, message: "Invalid password " };
+        const loginTime = admin[0].lastLoginTime;
+        console.log("loginTime", loginTime);
+        let clientIP = req.ip;
+        const forwardedFor = req.headers['x-forwarded-for'];
+        if (forwardedFor) {
+            const forwardedIps = forwardedFor.split(',');
+            clientIP = forwardedIps[0].trim();
         }
-
-        if (!admin.locked){
-            throw { code: 404, message: 'Admin is Suspend or Locked' };
-        }
-        if( !admin.isActive) {
-            throw { code: 404, message: 'Admin is Suspend or Locked' };
-        }
-
-        const newcreditRefEntry = {
-            value: creditRef,
-            date: new Date(),
+        const data = await fetch(`http://ip-api.com/json/${clientIP}`);
+        const collect = await data.json();
+        await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
+        const responseObj = {
+            userName: admin[0].userName,
+            ip: {
+                IP: clientIP,
+                country: collect.country,
+                region: collect.regionName,
+                timezone: collect.timezone,
+            },
+            isActive: admin[0].isActive,
+            locked: admin[0].locked,
+            lastLoginTime: loginTime,
         };
 
-        admin.creditRef.push(newcreditRefEntry);
+        return res.status(201).json(apiResponseSuccess(responseObj, 201, true, 'Data Fetched'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
 
+export const AdminPasswordResetCode = async (req, res) => {
+    try {
+        const { userName, oldPassword, password } = req.body;
+        const [existingUser] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+        if (existingUser.isActive === false || existingUser.locked === false) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Account is Not Active'));
+        }
+        if (!existingUser) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+        }
+        const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, existingUser[0].password);
+        if (!oldPasswordIsCorrect) {
+            return res.status(400).json(apiResponseErr(null, 401, false, 'Invalid old password'));
+        }
+        const passwordIsDuplicate = await bcrypt.compare(password, existingUser[0].password);
+        if(passwordIsDuplicate) {
+            return res.status(400).json(apiResponseErr(null, 409, false, 'New Password Cannot Be The Same As Existing Password'));
+        }
+        const passwordSalt = await bcrypt.genSalt();
+        const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+        await database.execute('UPDATE Admins SET password = ? WHERE userName = ?',[encryptedPassword, userName])
+        return res.status(201).json(apiResponseSuccess(null, 201, true, 'Password Reset Successful!'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
 
-        if (admin.creditRef.length > 10) {
-            admin.creditRef.shift();
+export const depositTransaction = async (req, res) => {
+    try {
+        const { amount, remarks } = req.body;
+        const adminId = req.params.adminId;
+        const [admin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+
+        if (!admin.length) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found For Deposit'));
         }
 
-        const updatedAdmin = await admin.save();
+        const depositAmount = Math.round(parseFloat(amount));
+        const depositTransaction = {
+            amount: depositAmount,
+            userName: admin[0].userName,
+            date: new Date(),
+            transactionType: 'Deposit',
+            remarks: remarks
+        };
 
-        if (!updatedAdmin) {
+        console.log("depositTransaction", depositTransaction);
+
+        // Update balances correctly
+        const newDepositBalance = admin[0].depositBalance + depositAmount;
+        const newAdminBalance = admin[0].balance + depositAmount;
+
+        console.log("newDepositBalance", newDepositBalance);
+        console.log("newAdminBalance", newAdminBalance);
+
+        // First Update the balance in Admin Table
+        await database.execute('UPDATE Admins SET balance = ?, depositBalance = ? WHERE adminId = ?', [
+            newAdminBalance, newDepositBalance, adminId
+        ]);
+
+        // Now Create the transaction record in selfTransaction Table
+        const selfTransactionId = uuidv4();
+        await database.execute(
+            'INSERT INTO SelfTransactions (selfTransactionId, adminId, amount, userName, date, transactionType, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [selfTransactionId, adminId, depositTransaction.amount, depositTransaction.userName, depositTransaction.date, depositTransaction.transactionType, depositTransaction.remarks]
+        );
+
+        return res.status(201).json(apiResponseSuccess(depositTransaction, 201, true, 'Balance Deposit Successfully'));
+
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const transferAmount = async (req, res) => {
+    try {
+        const { receiveUserId, trnsferAmount, withdrawlAmt, remarks, password } = req.body;
+        const adminId = req.params.adminId;
+        const [senderAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        
+        if (!senderAdmin) {
+            return res.status(401).json(apiResponseErr(null, 400, false, 'Admin not found'));
+        }
+        const isPasswordValid = await bcrypt.compare(password, senderAdmin[0].password)
+        if (!isPasswordValid) {
+            return res.status(401).json(apiResponseErr(null, 400, false, 'Invalid password for the transaction'));
+        }
+        const [receiverAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [receiveUserId]);
+        if (!receiverAdmin) {
+            return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin not found'));
+        }
+        if (!senderAdmin[0].isActive) {
+            return res.status(401).json(apiResponseErr(null, 400, false, 'Sender Admin is inactive'));
+        }
+
+        if (!receiverAdmin[0].isActive) {
+            return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin is inactive'));
+        }
+        if (withdrawlAmt && withdrawlAmt > 0) {
+            if (receiverAdmin[0].balance < withdrawlAmt) {
+                return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Withdrawal'));
+            }
+            const withdrawalRecord = {
+                transactionType: "Withdrawal",
+                amount: Math.round(parseFloat(withdrawlAmt)),
+                transferFromUserAccount: receiverAdmin[0].userName,
+                transferToUserAccount: senderAdmin[0].userName,
+                date: new Date(),
+                remarks: remarks
+            };
+            // Calculation
+            const deductionBalance = receiverAdmin[0].balance -= Math.round(parseFloat(withdrawlAmt));
+            const deductionLoadBalance = receiverAdmin[0].loadBalance -= Math.round(parseFloat(withdrawlAmt));
+            const creditAmount = senderAdmin[0].balance += Math.round(parseFloat(withdrawlAmt));
+            // Updation in Table
+            await database.execute('UPDATE Admins SET balance = ?, loadBalance = ? WHERE adminId = ?',[
+            deductionBalance, deductionLoadBalance, receiverAdmin[0].adminId]);
+            await database.execute('UPDATE Admins SET balance = ?, WHERE adminId = ?',[creditAmount, senderAdmin[0].adminId]);
+            // Now Creating the transaction record in Table
+            const transactionId = uuidv4();
+            const [crateTransaction] = await database.execute(
+            'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [transactionId, adminId, withdrawalRecord.amount, withdrawalRecord.userName, withdrawalRecord.date, withdrawalRecord.transactionType,
+            withdrawalRecord.remarks, withdrawalRecord.transferFromUserAccount, withdrawalRecord.transferToUserAccount]); 
+            return res.status(201).json(apiResponseSuccess(crateTransaction, 201, true, 'Balance Deducted Successfully'));
+        } else {
+            if (senderAdmin[0].balance < trnsferAmount) {
+                return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
+            }
+            // console.log("senderAdmin", senderAdmin);
+
+            const transferRecordDebit = {
+                transactionType: "Debit",
+                amount: Math.round(parseFloat(trnsferAmount)),
+                transferFromUserAccount: senderAdmin[0].userName,
+                transferToUserAccount: receiverAdmin[0].userName,
+                date: new Date(),
+                remarks: remarks
+            };
+
+            const transferRecordCredit = {
+                transactionType: "Credit",
+                amount: Math.round(parseFloat(trnsferAmount)),
+                transferFromUserAccount: senderAdmin[0].userName,
+                transferToUserAccount: receiverAdmin[0].userName,
+                date: new Date(),
+                remarks: remarks
+            };
+
+            const senderBalance = senderAdmin[0].balance -= Math.round(parseFloat(trnsferAmount));
+            const receiverBalance = receiverAdmin[0].balance += Math.round(parseFloat(trnsferAmount));
+            const receiverLoadBalance = receiverAdmin[0].loadBalance += Math.round(parseFloat(trnsferAmount));
+
+            // Updation in Table
+            await database.execute('UPDATE Admins SET balance = ?, loadBalance = ? WHERE adminId = ?',[
+            receiverBalance, receiverLoadBalance, receiverAdmin[0].adminId]);
+
+            await database.execute('UPDATE Admins SET balance = ?  WHERE adminId = ?',[
+            senderBalance, senderAdmin[0].adminId]);
+
+            // Now Creating the transaction record in Table
+            const debitTransactionId = uuidv4();
+const [DebitTransaction] = await database.execute(
+    'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [debitTransactionId, adminId, transferRecordDebit.amount, transferRecordDebit.transferFromUserAccount, transferRecordDebit.date, transferRecordDebit.transactionType,
+        transferRecordDebit.remarks, transferRecordDebit.transferFromUserAccount, transferRecordDebit.transferToUserAccount]
+);
+            
+            // return res.status(201).json(apiResponseSuccess(DebitTransaction, 201, true, 'Balance Debited Successfully'));
+            const creditTransactionId = uuidv4();
+            const [CreditTransaction] = await database.execute(
+                'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [creditTransactionId, adminId, transferRecordCredit.amount, transferRecordCredit.transferFromUserAccount, transferRecordCredit.date, transferRecordCredit.transactionType,
+                    transferRecordCredit.remarks, transferRecordCredit.transferFromUserAccount, transferRecordCredit.transferToUserAccount]
+            );
+            console.log("CreditTransaction", CreditTransaction);
+            return res.status(201).json(apiResponseSuccess(true, 201, true, 'Balance Debited Successfully'));
+        }
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const transactionView = async (req, res) => {
+    try {
+        const userName = req.params.userName;
+        const page = parseInt(req.query.page) || 1;
+        const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+        const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+        endDate.setDate(endDate.getDate() + 1);
+        const pageSize = parseInt(req.query.pageSize) || 5;
+
+        let balances = 0;
+        let debitBalances = 0;
+        let withdrawalBalances = 0;
+
+        const [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+        if (!admin) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+        }
+
+        const adminId = admin[0].adminId;
+
+        let transactionQuery = `SELECT * FROM Transactions WHERE adminId = ?`;
+        const transactionValues = [adminId];
+
+        if (startDate) {
+            transactionQuery += " AND date >= ?";
+            transactionValues.push(startDate);
+        }
+
+        transactionQuery += " ORDER BY date DESC";
+
+        const [transactionData] = await database.execute(transactionQuery, transactionValues);
+
+        const totalItems = transactionData.length;
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const skip = (page - 1) * pageSize;
+        const endIndex = page * pageSize;
+
+        const paginatedData = transactionData.slice(skip, endIndex);
+        
+        let allData = JSON.parse(JSON.stringify(paginatedData));
+             console.log("allData", allData);
+        allData.map((data) => {
+            if (data.transactionType === "Credit") {
+                balances += data.amount;
+                data.balance = balances;
+            } else if (data.transactionType === "Debit") {
+                debitBalances += data.amount;
+                data.debitBalance = debitBalances;
+            } else if (data.transactionType === "Withdrawal") {
+                withdrawalBalances += data.withdraw;
+                data.withdrawalBalance = withdrawalBalances;
+            }
+        });
+
+        return res.status(201).json(apiResponseSuccess(allData, totalPages, totalItems, 201, true, 'Transactions fetched successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+// Need To Test
+export const viewAllCreates = async (req, res) => {
+    try {
+        const createdById = req.params.createdById;
+
+        const [admins] = await database.execute(`SELECT * FROM Admins WHERE createdById = ?`, [createdById]);
+         
+        if (!admins || admins.length === 0) {
+            return res.status(404).send({ code: 404, message: `No records found` });
+        }
+
+        const users = admins.map((admin) => {
+            
+            return {
+                adminId: admin.adminId,
+                userName: admin.userName,
+                roles: admin.roles,
+                balance: admin.balance,
+                loadBalance: admin.loadBalance,
+                CreditRefs: admin.CreditRefs,
+                createdById: admin.createdById,
+                createdByUser: admin.createdByUser,
+                Partnerships: admin.Partnerships,
+                Status: admin.isActive ? "Active" : admin.locked ? "Locked" : "Suspended"
+            };
+        });
+        console.log("users", users);
+        res.status(200).send(users);
+
+    } catch (err) {
+        res.status(500).send({ code: err.code || 500, message: err.message });
+    }
+};
+
+
+
+// Need To Test
+export const viewAllSubAdminCreates = async (req, res) => {
+    try {
+        const createdById = req.params.createdById;
+        const searchName = req.query.searchName || "";
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 5;
+
+        const skip = (page - 1) * pageSize;
+
+        let query = `SELECT * FROM Admin WHERE createdById = ? AND roles REGEXP ?`;
+        let countQuery = `SELECT COUNT(*) as count FROM Admin WHERE createdById = ? AND roles REGEXP ?`;
+        const values = [createdById, '(SubAdmin|SubWhiteLabel|SubHyperAgent|SubSuperAgent|SubMasterAgent)'];
+
+            // Add search filter if searchName is provided
+            if (searchName) {
+                query += ` AND (userName LIKE ? OR roles LIKE ?)`;
+                countQuery += ` AND (userName LIKE ? OR roles LIKE ?)`;
+                values.push(`%${searchName}%`, `%${searchName}%`);
+            }
+        
+            query += ` LIMIT ?, ?`;
+            values.push(skip, pageSize);
+
+            // Execute count query
+            const [countResult] = await database.execute(countQuery, values.slice(0, -2)); // exclude LIMIT params for count
+            const adminCount = countResult[0].count;
+
+            // Execute main query
+            const [admins] = await database.execute(query, values);
+            if (admins.length === 0) {
+                return res.status(404).json(apiResponseErr('No records found', false, 404, 'No records found'));
+            }
+
+            const user = admins.map((users) => {
+                return {
+                    id: users.id,
+                    userName: users.userName,
+                    roles: users.roles,
+                    balance: users.balance,
+                    loadBalance: users.loadBalance,
+                    creditRef: users.creditRef,
+                    refProfitLoss: users.refProfitLoss,
+                    createBy: users.createBy,
+                    partnership: users.partnership,
+                    Status: users.isActive ? "Active" : users.locked ? "Locked" : "Suspended"
+                };
+            });
+
+            const totalPages = Math.ceil(adminCount / pageSize);
+
+            return res.status(201).json(apiResponseSuccess({user, totalPages, totalItems: adminCount}, 201, true, 'successfully'));
+
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const viewBalance = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const [admin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        if (!admin) {
+            const [subAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+            if (!subAdmin) {
+                return res.status(400).json(apiResponseErr(null, 404, false, 'Admin Not Found'));
+            }
+            const amount = {
+                balance: subAdmin[0].balance
+            };
+            return res.status(201).json(apiResponseSuccess({amount}, 201, true, 'successfully'));
+        }
+        const amount = {
+            balance: admin[0].balance
+        };
+        return res.status(201).json(apiResponseSuccess(amount, 201, true, 'Successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const editCreditRef = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const { creditRef, password } = req.body;
+
+        // Retrieve the admin
+        const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        const admin = adminResult[0];
+        if (!admin) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'Admin Not Found'));
+        }
+
+        // Validate the password
+        const isPasswordValid = await bcrypt.compare(password, admin.password);
+        if (!isPasswordValid) {
+            return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
+        }
+
+        // Check if the admin is active and not locked
+        if (!admin.isActive || !admin.locked) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'Admin is Suspended or Locked'));
+        }
+
+        // Create a new credit reference entry
+        const newCreditRefEntry = {
+            value: creditRef,
+            date: new Date()
+        };
+
+        // Retrieve existing credit references
+        const [creditRefResult] = await database.execute('SELECT CreditRefs FROM Admins WHERE adminId = ?', [adminId]);
+        let creditRefList;
+
+        try {
+            creditRefList = JSON.parse(creditRefResult[0].CreditRefs) || [];
+        } catch (e) {
+            creditRefList = [];
+        }
+
+        // Update the credit reference list
+        creditRefList.push(newCreditRefEntry);
+
+        if (creditRefList.length > 10) {
+            creditRefList.shift();
+        }
+
+        // Update the credit reference field in the database
+        const [updateResult] = await database.execute('UPDATE Admins SET CreditRefs = ? WHERE adminId = ?', [JSON.stringify(creditRefList), adminId]);
+
+        if (updateResult.affectedRows === 0) {
             throw { code: 500, message: 'Cannot Update Admin CreditRef' };
         }
 
-        return updatedAdmin;
-    } catch (err) {
-        throw err;
+        return res.status(201).json(apiResponseSuccess({ ...admin, creditRef: creditRefList }, 201, true, 'CreditRef Edited successfully'));
+
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
-},
+};
 
+export const moveAdminToTrash = async (req, res) => {
+    try {
+        const { requestId } = req.body;
 
-    trashAdminUser: async (adminUserId) => {
-        try {
-            const existingAdminUser = await Admin.findById(adminUserId);
+        // Fetch the admin to be moved to trash
+        const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [requestId]);
 
-            if (!existingAdminUser) {
-                throw { code: 404, message: `Admin User not found with id: ${adminUserId}` };
-            }
-
-            // const isPasswordValid = await bcrypt.compare(password, existingAdminUser.password);
-
-            // if (!isPasswordValid) {
-            //     throw { code: 401, message: "Invalid password " };
-            // }
-            
-            if (existingAdminUser.balance !== 0) {
-                throw { code: 400, message: `Balance Should Be 0 To Move The Admin User To Trash` };
-            }
-            if (existingAdminUser.isActive === false) {
-                throw { code: 404, message: "Admin Is IsActive Or Lock" }
-            }
-
-            const updatedTransactionData = {
-                id: existingAdminUser._id,
-                roles: existingAdminUser.roles,
-                userName: existingAdminUser.userName,
-                password: existingAdminUser.password,
-                balance: existingAdminUser.balance,
-                loadBalance: existingAdminUser.loadBalance,
-                creditRef: existingAdminUser.creditRef,
-                refProfitLoss: existingAdminUser.refProfitLoss,
-                createBy: existingAdminUser.createBy
-            };
-
-            const backupTransaction = new Trash(updatedTransactionData);
-            await backupTransaction.save();
-
-            const deletedAdminUser = await Admin.findByIdAndDelete(adminUserId);
-
-            if (!deletedAdminUser) {
-                throw { code: 500, message: `Failed to delete Admin User with id: ${adminUserId}` };
-            }
-
-            return true;
-        } catch (error) {
-            throw error;
+        if (!adminResult || adminResult.length === 0) {
+            return res.status(404).json(apiResponseErr(null, 404, false, `Admin User not found with id: ${requestId}`));
         }
-    },
 
-    restoreUser: async (adminId) => {
-        try {
-            const existingAdminUser = await Trash.findById(adminId);
+        const admin = adminResult[0];
 
-            if (!existingAdminUser) {
-                throw { code: 404, message: `Admin not found in trash` };
-            }
-            // const isPasswordValid = await bcrypt.compare(password, existingAdminUser.password);
-
-            // if (!isPasswordValid) {
-            //     throw { code: 401, message: "Invalid Password" };
-            // }
-            const restoreRemoveData = {
-                roles: existingAdminUser.roles,
-                userName: existingAdminUser.userName,
-                password: existingAdminUser.password,
-                balance: existingAdminUser.balance,
-                loadBalance: existingAdminUser.loadBalance,
-                creditRef: existingAdminUser.creditRef,
-                refProfitLoss: existingAdminUser.refProfitLoss,
-                createBy: existingAdminUser.createBy,
-            };
-            const restoreTransaction = new Admin(restoreRemoveData);
-            await restoreTransaction.save();
-            await Trash.findByIdAndDelete(adminId);
-
-            return true;
-        } catch (err) {
-            console.error(err);
-            throw { code: 500, message: err.message };
+        if (admin.balance !== 0) {
+            return res.status(400).json(apiResponseErr(null, 400, false, `Balance should be 0 to move the Admin User to Trash`));
         }
-    },
 
-    editPartnership: async (adminId, partnership, password) => {
-        try {
-            const admin = await Admin.findById(adminId);
-
-            if (!admin) {
-                throw { code: 404, message: "Admin not found" };
-            }
-            const isPasswordValid = await bcrypt.compare(password, admin.password);
-
-            if (!isPasswordValid) {
-                throw { code: 401, message: "Invalid password " };
-            }
-            if (!admin.locked){
-                throw { code: 404, message: 'Admin is Suspend or Locked' };
-            }
-            if( !admin.isActive) {
-                throw { code: 404, message: 'Admin is Suspend or Locked' };
-            }
-
-            const newPartnershipEntry = {
-                value: partnership,
-                date: new Date(),
-            };
-
-            admin.partnership.push(newPartnershipEntry);
-
-
-            if (admin.partnership.length > 10) {
-                admin.partnership.shift();
-            }
-
-            const updatedAdmin = await admin.save();
-
-            if (!updatedAdmin) {
-                throw { code: 500, message: 'Cannot Update Admin Partnership' };
-            }
-
-            return updatedAdmin;
-        } catch (err) {
-            throw err;
+        if (!admin.isActive) {
+            return res.status(400).json(apiResponseErr(null, 400, false, `Admin is inactive or locked`));
         }
-    },
-    
-    buildRootPath: async (userName, action, page, searchName,pageSize ) => {
-        try {
-          let user;
-      
-          if (userName) {
-            user = await Admin.findOne({ userName: userName });
-      
-            if (!user) {
-              throw { code: 404, message: 'User not found' };
+
+        const updatedTransactionData = {
+            adminId: admin.adminId,
+            roles: admin.roles ? JSON.stringify(admin.roles) : null,
+            userName: admin.userName,
+            password: admin.password,
+            balance: admin.balance,
+            loadBalance: admin.loadBalance,
+            CreditRefs: admin.CreditRefs ? JSON.stringify(admin.CreditRefs) : null,
+            Partnerships: admin.Partnerships ? JSON.stringify(admin.Partnerships) : null,
+            createById: admin.createById
+        };
+
+        const trashId = uuidv4();
+
+        // Insert into Trash table
+        const [backupResult] = await database.execute(
+            `INSERT INTO Trash (trashId, roles, userName, password, balance, loadBalance, CreditRefs, Partnerships, createById, adminId) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                trashId,
+                updatedTransactionData.roles || null,
+                updatedTransactionData.userName || null,
+                updatedTransactionData.password || null,
+                updatedTransactionData.balance || null,
+                updatedTransactionData.loadBalance || null,
+                updatedTransactionData.CreditRefs || null,
+                updatedTransactionData.Partnerships || null,
+                updatedTransactionData.createById || null,
+                updatedTransactionData.adminId || null
+            ]
+        );
+
+        if (backupResult.affectedRows === 0) {
+            return res.status(500).json(apiResponseErr(null, 500, false, `Failed to backup Admin User`));
+        }
+
+        // Delete the admin user from the Admins table
+        const [deleteResult] = await database.execute('DELETE FROM Admins WHERE adminId = ?', [requestId]);
+
+        if (deleteResult.affectedRows === 0) {
+            return res.status(500).json(apiResponseErr(null, 500, false, `Failed to delete Admin User with id: ${requestId}`));
+        }
+
+        return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin User moved to Trash'));
+    } catch (error) {
+        console.error('Error in moveAdminToTrash:', error);
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const viewTrash = async (req, res) => {
+    try {
+        const [viewTrash] = await database.execute('SELECT * FROM Trash');
+        return res.status(200).json(apiResponseSuccess(viewTrash, 200, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const deleteTrashData = async (req, res) => {
+       try {
+           const trashId = req.params.trashId;
+           const [result] = await database.execute('DELETE FROM Trash WHERE trashId = ?', [trashId]);
+           if (result.affectedRows === 1) {
+            return res.status(201).json(apiResponseSuccess('Data Deleted Successfully', 201, true, 'Data Deleted Successfully'));
+        } else {
+            return res.status(404).json(apiResponseErr('Data not found', false, 404, 'Data not found'));
+        }
+       } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const activeStatus = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const [activateStatus] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        const active = {
+            adminId: activateStatus[0].adminId,
+            isActive: activateStatus[0].isActive,
+            locked: activateStatus[0].locked,
+            Status: activateStatus[0].isActive ? "Active" : !activateStatus[0].locked ? "Locked" : !activateStatus[0].isActive ? "Suspended" : ""
+        };
+        return res.status(201).json(apiResponseSuccess(active, 201, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const restoreAdminUser = async (req, res) => {
+    try {
+        const { adminId } = req.body;
+        const [existingAdminUser] = await database.execute('SELECT * FROM trash WHERE adminId = ?', [adminId]);
+
+        if (existingAdminUser.length === 0) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found in trash'));
+        }
+
+        const restoreRemoveData = {
+            roles: existingAdminUser[0].roles,
+            userName: existingAdminUser[0].userName,
+            password: existingAdminUser[0].password,
+            balance: existingAdminUser[0].balance,
+            loadBalance: existingAdminUser[0].loadBalance,
+            CreditRefs: existingAdminUser[0].CreditRefs,
+            Partnerships: existingAdminUser[0].Partnerships,
+            createdById: existingAdminUser[0].createById,
+            adminId: existingAdminUser[0].adminId,
+        };
+
+        const [restoreResult] = await database.execute(
+            `INSERT INTO admins (adminId, userName, password, roles, balance, loadBalance, createdById, CreditRefs, Partnerships)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                restoreRemoveData.adminId,
+                restoreRemoveData.userName,
+                restoreRemoveData.password,
+                JSON.stringify(restoreRemoveData.roles),
+                restoreRemoveData.balance,
+                restoreRemoveData.loadBalance,
+                restoreRemoveData.createdById,
+                JSON.stringify(restoreRemoveData.CreditRefs),
+                JSON.stringify(restoreRemoveData.Partnerships),
+            ]
+        );
+
+        if (restoreResult.affectedRows === 0) {
+            return res.status(500).json(apiResponseErr(null, 500, false, 'Failed to restore Admin User'));
+        }
+
+        // Delete the user from the trash table
+        const [deleteResult] = await database.execute('DELETE FROM trash WHERE adminId = ?', [adminId]);
+
+        if (deleteResult.affectedRows === 0) {
+            return res.status(500).json(apiResponseErr(null, 500, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+        }
+
+        return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin restored from trash successfully!'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+
+export const profileView = async (req, res) => {
+    try {
+        const userName = req.params.userName;
+        const [admin] =  await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+
+        if(!admin) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found'));
+        }
+
+        const transferData = {
+            adminId: admin[0].adminId,
+            Roles: admin[0].roles,
+            userName: admin[0].userName,
+
+        };
+        return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    }  catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const editPartnership = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const { partnership, password } = req.body;
+
+        const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        const admin = adminResult[0];
+
+        if (!admin) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, admin.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
+        }
+
+        if (!admin.locked || !admin.isActive) {
+            return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is suspended or locked'));
+        }
+
+        const newPartnershipEntry = {
+            value: partnership,
+            date: new Date(),
+        };
+
+        const [partnershipResult] = await database.execute('SELECT Partnerships FROM Admins WHERE adminId = ?', [adminId]);
+        let partnershipsList = JSON.parse(partnershipResult[0].Partnerships || '[]');
+
+        partnershipsList.push(newPartnershipEntry);
+
+        if (partnershipsList.length > 10) {
+            partnershipsList = partnershipsList.slice(-10);
+        }
+
+        const [updateResult] = await database.execute('UPDATE Admins SET Partnerships = ? WHERE adminId = ?', [JSON.stringify(partnershipsList), adminId]);
+
+        if (updateResult.affectedRows === 0) {
+            throw { code: 500, message: 'Cannot update Admin Partnerships' };
+        }
+
+        return res.status(201).json(apiResponseSuccess({ ...admin,  partnershipsList }, 201, true, 'Partnership added successfully'));
+
+    } catch (error) {
+        res.status(500).json(apiResponseErr(error.data ?? null, 500, false, error.errMessage ?? error.message));
+    }
+};
+
+export const partnershipView = async (req, res) => {
+    try {
+        const id = req.params.adminId;
+        const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [id]);
+
+        if (adminResult.length === 0) {
+            return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+        }
+
+        const admin = adminResult[0];
+        console.log("admin", admin);
+
+        if (!admin.Partnerships || !Array.isArray(admin.Partnerships)) {
+            return res.status(404).json(apiResponseErr(null, false, 404, 'Partnerships not found or not an array'));
+        }
+
+        const last10Partnerships = admin.Partnerships.slice(-10);
+        console.log("last10Partnerships", last10Partnerships);
+        const transferData = {
+            Partnerships: last10Partnerships,
+            userName: admin.userName,
+        };
+
+        return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+
+export const creditRefView = async (req, res) => {
+    try {
+        const id = req.params.adminId;
+        const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [id]);
+
+        if (adminResult.length === 0) {
+            return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+        }
+        
+        const admin = adminResult[0];
+
+        if (!admin.Partnerships || !Array.isArray(admin.CreditRefs)) {
+            return res.status(404).json(apiResponseErr(null, false, 404, 'CreditRefs not found or not an array'));
+        }
+
+        const last10CreditRefs = admin.CreditRefs.slice(-10);
+             const transferData = {
+                 CreditRefs: last10CreditRefs,
+                 userName: admin.userName,
+             };
+             return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+// Need To Test
+export const buildRootPath = async (req, res) => {
+    try {
+        const { userName, action } = req.params;
+        const searchName = req.body.searchName;
+        const page = req.body.page;
+        const pageSize = parseInt(req.query.pageSize) || 5;
+
+        let user;
+
+        if (userName) {
+            const [userResult] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+            if (userResult.length === 0) {
+                return res.status(404).json(apiResponseErr(null, 404, false, 'User not found'));
             }
-          }
-      
-          let totalPages = 1;
-          let currentPage = 1;
-      
-          if (action === 'store') {
+            user = userResult[0];
+        }
+        
+        let totalPages = 1;
+        let currentPage = 1;
+
+        if (action === 'store') {
+            console.log("innnnnnnnn");
             const newPath = user.userName;
+            console.log("newPath", newPath);
             const indexToRemove = globalUsernames.indexOf(newPath);
-      
+
             if (indexToRemove !== -1) {
-              globalUsernames.splice(indexToRemove + 1);
+                globalUsernames.splice(indexToRemove + 1);
             } else {
-              globalUsernames.push(newPath);
+                globalUsernames.push(newPath);
             }
-      
+
             const skip = (page - 1) * pageSize;
-            const query = {
-                createBy: user._id,
-                $or: [
-                    { userName: { $regex: new RegExp(searchName, "i") } },
-                ],
-                roles: { $elemMatch: { role: { $in: ["WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent"] } } }
-            };
-            
-          const createdUsers = await Admin.find(query)
-              .skip(skip)
-              .limit(pageSize);
-      
-            const totalUsers = await Admin.countDocuments(query);
+            // console.log("user", user);
+            const query = `
+                SELECT * FROM Admins 
+                WHERE createById = ? 
+                AND (userName LIKE ?) 
+                AND roles REGEXP '("role":"WhiteLabel"|"role":"HyperAgent"|"role":"SuperAgent"|"role":"MasterAgent")'
+                LIMIT ?, ?;
+            `;
+            const [createdUsers] = await database.execute(query, [user.createById, `%${searchName}%`, skip, pageSize]);
+            //    console.log("createdUsers", createdUsers);
+            const countQuery = `
+                SELECT COUNT(*) as count FROM Admins
+                WHERE createById = ? 
+                AND (userName LIKE ?) 
+                AND roles REGEXP '("role":"WhiteLabel"|"role":"HyperAgent"|"role":"SuperAgent"|"role":"MasterAgent")'
+            `;
+            const [countResult] = await database.execute(countQuery, [user.createById, `%${searchName}%`]);
+            // console.log("countResult", countResult);
+            const totalUsers = countResult[0].count;
             totalPages = Math.ceil(totalUsers / pageSize);
             currentPage = page;
 
-            const userDetails = {              
+            const userDetails = {
                 createdUsers: createdUsers.map(createdUser => ({
-                    id: createdUser._id,
+                    adminId: createdUser.adminId,
                     userName: createdUser.userName,
-                    roles: createdUser.roles,
+                    roles: JSON.parse(createdUser.roles),
                     balance: createdUser.balance,
                     loadBalance: createdUser.loadBalance,
-                    creditRef: createdUser.creditRef,
-                    refProfitLoss: createdUser.refProfitLoss,
-                    partnership: createdUser.partnership,
+                    CreditRefs: JSON.parse(createdUser.CreditRefs), 
+                    // refProfitLoss: createdUser.refProfitLoss,
+                    Partnerships: JSON.parse(createdUser.Partnerships),
                     status: createdUser.isActive ? "Active" : !createdUser.locked ? "Locked" : !createdUser.isActive ? "Suspended" : ""
                 })),
             };
+            console.log("userDetails", userDetails);
+            const totalItems = totalUsers;
 
-           const totalItems = totalUsers
-      
-            return { message: 'Path stored successfully', path: globalUsernames, userDetails,totalPages ,totalItems};
-          } else if (action === 'clear') {
+            return res.status(201).json(apiResponseSuccess({ path: globalUsernames, userDetails, totalPages, totalItems }, 201, true, 'Path stored successfully'));
+        } else if (action === 'clear') {
             const lastUsername = globalUsernames.pop();
             if (lastUsername) {
-              const indexToRemove = globalUsernames.indexOf(lastUsername);
-              if (indexToRemove !== -1) {
-                globalUsernames.splice(indexToRemove, 1);
-              }
+                const indexToRemove = globalUsernames.indexOf(lastUsername);
+                if (indexToRemove !== -1) {
+                    globalUsernames.splice(indexToRemove, 1);
+                }
             }
-          } else if (action === 'clearAll') {
+        } else if (action === 'clearAll') {
             globalUsernames.length = 0;
-          } else {
+        } else {
             throw { code: 400, message: 'Invalid action provided' };
-          }
-    
-          user.Path = globalUsernames;
-          await user.save();
-      
-          const successMessage =
-            action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
-          return { message: successMessage, path: globalUsernames };
-        } catch (err) {
-          console.error(err);
-          throw { code: err.code || 500, message: err.message || 'Internal Server Error' };
         }
-      },
-      
-      
-      
-     }
 
+        // Update the user.Path in the Admin table (assuming Path is a JSON field)
+        const [updateResult] = await database.execute('UPDATE Admins SET Path = ? WHERE adminId = ?', [JSON.stringify(globalUsernames), user.adminId]);
+
+        if (updateResult.affectedRows === 0) {
+            throw { code: 500, message: 'Failed to update user path' };
+        }
+
+        const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
+        return res.status(201).json(apiResponseSuccess({ path: globalUsernames }, 201, true, {message: successMessage}));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+// Need To Test
+export const viewSubAdmis = async (req, res) => {
+    try {
+        const id = req.params.adminId;
+        const ITEMS_PER_PAGE = 5;
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 5;
+        const searchName = req.query.searchName || "";
+
+        // Base query for counting total documents
+        let baseQuery = `
+            SELECT COUNT(*) as totalCount 
+            FROM Admins 
+            WHERE createdById = ? 
+              AND (
+                  JSON_CONTAINS(roles, JSON_QUOTE("SubAdmin")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubWhiteLabel")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubHyperAgent")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubSuperAgent")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubMasterAgent"))
+              )
+        `;
+
+        let queryParams = [id];
+
+        // Modify query and parameters if searchName is provided
+        if (searchName) {
+            baseQuery += ` AND userName LIKE ?`;
+            queryParams.push(`%${searchName}%`);
+        }
+
+        // Execute count query
+        const [countResults] = await database.execute(baseQuery, queryParams);
+        const totalCount = countResults[0].totalCount;
+        const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+        // Base query for selecting sub-admins
+        let subAdminsQuery = `
+            SELECT adminId, userName, roles, isActive, locked 
+            FROM Admins 
+            WHERE createdById = ? 
+              AND (
+                  JSON_CONTAINS(roles, JSON_QUOTE("SubAdmin")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubWhiteLabel")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubHyperAgent")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubSuperAgent")) 
+                  OR JSON_CONTAINS(roles, JSON_QUOTE("SubMasterAgent"))
+              )
+        `;
+
+        queryParams = [id]; // Reset query parameters
+
+        // Modify query and parameters if searchName is provided
+        if (searchName) {
+            subAdminsQuery += ` AND userName LIKE ?`;
+            queryParams.push(`%${searchName}%`);
+        }
+
+        // Add pagination parameters
+        subAdminsQuery += ` LIMIT ?, ?`;
+        queryParams.push((page - 1) * ITEMS_PER_PAGE, pageSize);
+
+        // Execute sub-admins query
+        const [subAdminResults] = await database.execute(subAdminsQuery, queryParams);
+
+        const users = subAdminResults.map(user => ({
+            adminId: user.adminId,
+            userName: user.userName,
+            roles: JSON.parse(user.roles),
+            Status: user.isActive ? "Active" : user.locked ? "Locked" : "Suspended"
+        }));
+
+        if (users.length === 0) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'No data found'));
+        }
+
+        return res.status(201).json(apiResponseSuccess({
+            data: users,
+            currentPage: page,
+            totalPages: totalPages,
+            totalCount: totalCount
+        }, 201, true, 'successfully'));
+    } catch (error) {
+        console.log("error", error);
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+
+export const singleSubAdmin = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+
+        const [subAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        if (!subAdmin) {
+            return res.status(500).json(apiResponseErr(null, 500, false, 'Sub Admin not found with the given Id'));
+        }
+        const data = {
+            userName: subAdmin[0].userName,
+            roles: subAdmin[0].roles
+        }
+        return res.status(201).json(apiResponseSuccess(data, 201, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const subAdminPermission = async (req, res) => {
+    try {
+        const subAdminId = req.params.adminId;
+        const { permission } = req.body;
+        if (!subAdminId) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Id not found'));
+        }
+        const [subAdminRows] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [subAdminId]);
+        const subAdmin = subAdminRows[0];
+
+        if (!subAdmin) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Sub Admin not found'));
+        }
+
+        const roles = subAdmin.roles;
+        
+        if (roles.length === 0) {
+            return res.status(400).send({ message: "Roles not found for Sub Admin" });
+        }
+        roles[0].permission = permission;
+
+        await database.execute('UPDATE Admins SET roles = ? WHERE adminId = ?', [JSON.stringify(roles), subAdminId]);
+
+        return res.status(201).json(apiResponseSuccess(true, 201, true, `${subAdmin.userName} permissions edited successfully`));
+    } catch (error) {
+        console.log("error", error);
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+
+export const accountStatement = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const ITEMS_PER_PAGE = 5;
+        const page = parseInt(req.query.page) || 1;
+
+        const [adminRows] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+        const admin = adminRows[0];
+        if (!admin) {
+            return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
+        }
+        
+        const [transferAmount] = await database.execute('SELECT * FROM Transactions WHERE adminId = ?', [admin.adminId]);
+        const [selfTransaction] = await database.execute('SELECT * FROM SelfTransactions WHERE adminId = ?', [admin.adminId]);
+
+        const mergedData = transferAmount.concat(selfTransaction);
+        const totalCount = mergedData.length;
+        const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+        const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+        return res.status(200).json(apiResponseSuccess({
+            data: paginatedData,
+            currentPage: page,
+            totalPages: totalPages,
+            totalCount: totalCount
+        }, 200, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
+
+export const userStatus = async (req, res) => {
+    try {
+        const userName = req.params.userName;
+        const [userRows] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+        const user = userRows[0];
+
+        if (!user) {
+            return res.status(400).json(apiResponseErr(null, 400, false, 'User not found'));
+        }
+
+        const userStatus = {
+            Status: user.isActive ? "Active" : !user.locked ? "Locked" : !user.isActive ? "Suspended" : ""
+        };
+
+        return res.status(201).json(apiResponseSuccess(userStatus, 201, true, 'successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+};
 
