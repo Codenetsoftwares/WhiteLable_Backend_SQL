@@ -24,8 +24,7 @@ export const AdminPasswordResetSchema = [
 
 export const depositeAmountSchema = [
     param('adminId').exists().withMessage('Admin ID is required.'),
-    body('amount').exists().withMessage('Amount is required'),
-    body('remarks').exists().withMessage('Remark is required')
+    body('amount').exists().withMessage('Amount is required')
 ];
 
 export const transferAmountSchema = [

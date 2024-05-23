@@ -215,7 +215,7 @@ export const AdminPasswordResetCode = async (req, res) => {
 
 export const depositTransaction = async (req, res) => {
     try {
-        const { amount, remarks } = req.body;
+        const { amount } = req.body;
         const adminId = req.params.adminId;
         const [admin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
 
@@ -229,7 +229,6 @@ export const depositTransaction = async (req, res) => {
             userName: admin[0].userName,
             date: new Date(),
             transactionType: 'Deposit',
-            remarks: remarks
         };
 
         console.log("depositTransaction", depositTransaction);
@@ -249,8 +248,8 @@ export const depositTransaction = async (req, res) => {
         // Now Create the transaction record in selfTransaction Table
         const selfTransactionId = uuidv4();
         await database.execute(
-            'INSERT INTO SelfTransactions (selfTransactionId, adminId, amount, userName, date, transactionType, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [selfTransactionId, adminId, depositTransaction.amount, depositTransaction.userName, depositTransaction.date, depositTransaction.transactionType, depositTransaction.remarks]
+            'INSERT INTO SelfTransactions (selfTransactionId, adminId, amount, userName, date, transactionType) VALUES (?, ?, ?, ?, ?, ?)',
+            [selfTransactionId, adminId, depositTransaction.amount, depositTransaction.userName, depositTransaction.date, depositTransaction.transactionType]
         );
 
         return res.status(201).json(apiResponseSuccess(depositTransaction, 201, true, 'Balance Deposit Successfully'));
@@ -429,19 +428,33 @@ export const transactionView = async (req, res) => {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
-// Need To Test
+
 export const viewAllCreates = async (req, res) => {
     try {
         const createdById = req.params.createdById;
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 5;
+        const offset = (page - 1) * pageSize;
+        const searchQuery = req.query.userName ? ` AND userName LIKE '%${req.query.userName}%'` : '';
 
-        const [admins] = await database.execute(`SELECT * FROM Admins WHERE createdById = ?`, [createdById]);
-         
+        const [totalRecordsResult] = await database.execute(`
+            SELECT COUNT(*) as totalRecords FROM Admins 
+            WHERE createdById = ? ${searchQuery}
+        `, [createdById]);
+        const totalRecords = totalRecordsResult[0].totalRecords;
+
+        const query = `
+            SELECT * FROM Admins 
+            WHERE createdById = ? ${searchQuery}
+            LIMIT ${pageSize} OFFSET ${offset}
+        `;
+        const [admins] = await database.execute(query, [createdById]);
+
         if (!admins || admins.length === 0) {
-            return res.status(404).send({ code: 404, message: `No records found` });
+            return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
         }
 
         const users = admins.map((admin) => {
-            
             return {
                 adminId: admin.adminId,
                 userName: admin.userName,
@@ -452,17 +465,23 @@ export const viewAllCreates = async (req, res) => {
                 createdById: admin.createdById,
                 createdByUser: admin.createdByUser,
                 Partnerships: admin.Partnerships,
-                Status: admin.isActive ? "Active" : admin.locked ? "Locked" : "Suspended"
+                Status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : ""
             };
         });
-        console.log("users", users);
-        res.status(200).send(users);
 
-    } catch (err) {
-        res.status(500).send({ code: err.code || 500, message: err.message });
+        const totalPages = Math.ceil(totalRecords / pageSize);
+
+        return res.status(200).json(apiResponseSuccess({
+            users,
+            totalRecords,
+            totalPages,
+            currentPage: page,
+            pageSize   
+        }, 200, true, 'Successfully'));
+    } catch (error) {
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
-
 
 
 // Need To Test
