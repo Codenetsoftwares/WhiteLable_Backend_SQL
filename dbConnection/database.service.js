@@ -14,15 +14,15 @@ const pool = mysql.createPool({
   idleTimeout: 60000,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  keepAliveInitialDelay: 0,
 });
 
 export const database = {
   execute: async (query, parameters = []) => {
-    if (!query) throw new Error("Invalid SQL query");
+    if (!query) throw new Error('Invalid SQL query');
     const conn = await pool.getConnection();
     let result = await conn.execute(query, parameters);
     pool.releaseConnection(conn);
     return result;
-  }
-}
+  },
+};
