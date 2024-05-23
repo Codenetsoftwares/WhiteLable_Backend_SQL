@@ -915,104 +915,110 @@ export const creditRefView = async (req, res) => {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
-// Need To Test
+
+
 export const buildRootPath = async (req, res) => {
     try {
-        const { userName, action } = req.params;
-        const searchName = req.body.searchName;
-        const page = req.body.page;
-        const pageSize = parseInt(req.query.pageSize) || 5;
-
-        let user;
-
-        if (userName) {
-            const [userResult] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-            if (userResult.length === 0) {
-                return res.status(404).json(apiResponseErr(null, 404, false, 'User not found'));
-            }
-            user = userResult[0];
+      const { userName, action } = req.params;
+      const searchName = req.body.searchName;
+      const page = parseInt(req.body.page) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 5;
+  
+      let user;
+  
+      if (!globalUsernames) {
+        globalUsernames = [];
+      }
+  
+      if (userName) {
+        const userQuery = "SELECT * FROM admins WHERE userName = ?";
+        const [userResult] = await database.execute(userQuery, [userName]);
+  
+        if (!userResult.length) {
+          throw { code: 404, message: 'User not found' };
         }
-        
-        let totalPages = 1;
-        let currentPage = 1;
-
-        if (action === 'store') {
-            console.log("innnnnnnnn");
-            const newPath = user.userName;
-            console.log("newPath", newPath);
-            const indexToRemove = globalUsernames.indexOf(newPath);
-
-            if (indexToRemove !== -1) {
-                globalUsernames.splice(indexToRemove + 1);
-            } else {
-                globalUsernames.push(newPath);
-            }
-
-            const skip = (page - 1) * pageSize;
-            // console.log("user", user);
-            const query = `
-                SELECT * FROM Admins 
-                WHERE createById = ? 
-                AND (userName LIKE ?) 
-                AND roles REGEXP '("role":"WhiteLabel"|"role":"HyperAgent"|"role":"SuperAgent"|"role":"MasterAgent")'
-                LIMIT ?, ?;
-            `;
-            const [createdUsers] = await database.execute(query, [user.createById, `%${searchName}%`, skip, pageSize]);
-            //    console.log("createdUsers", createdUsers);
-            const countQuery = `
-                SELECT COUNT(*) as count FROM Admins
-                WHERE createById = ? 
-                AND (userName LIKE ?) 
-                AND roles REGEXP '("role":"WhiteLabel"|"role":"HyperAgent"|"role":"SuperAgent"|"role":"MasterAgent")'
-            `;
-            const [countResult] = await database.execute(countQuery, [user.createById, `%${searchName}%`]);
-            // console.log("countResult", countResult);
-            const totalUsers = countResult[0].count;
-            totalPages = Math.ceil(totalUsers / pageSize);
-            currentPage = page;
-
-            const userDetails = {
-                createdUsers: createdUsers.map(createdUser => ({
-                    adminId: createdUser.adminId,
-                    userName: createdUser.userName,
-                    roles: JSON.parse(createdUser.roles),
-                    balance: createdUser.balance,
-                    loadBalance: createdUser.loadBalance,
-                    CreditRefs: JSON.parse(createdUser.CreditRefs), 
-                    // refProfitLoss: createdUser.refProfitLoss,
-                    Partnerships: JSON.parse(createdUser.Partnerships),
-                    status: createdUser.isActive ? "Active" : !createdUser.locked ? "Locked" : !createdUser.isActive ? "Suspended" : ""
-                })),
-            };
-            console.log("userDetails", userDetails);
-            const totalItems = totalUsers;
-
-            return res.status(201).json(apiResponseSuccess({ path: globalUsernames, userDetails, totalPages, totalItems }, 201, true, 'Path stored successfully'));
-        } else if (action === 'clear') {
-            const lastUsername = globalUsernames.pop();
-            if (lastUsername) {
-                const indexToRemove = globalUsernames.indexOf(lastUsername);
-                if (indexToRemove !== -1) {
-                    globalUsernames.splice(indexToRemove, 1);
-                }
-            }
-        } else if (action === 'clearAll') {
-            globalUsernames.length = 0;
+  
+        user = userResult[0];
+      } else {
+        throw { code: 400, message: 'userName parameter is required' };
+      }
+  
+      if (action === 'store') {
+        const newPath = user.userName;
+        const indexToRemove = globalUsernames.indexOf(newPath);
+  
+        if (indexToRemove !== -1) {
+          globalUsernames.splice(indexToRemove + 1);
         } else {
-            throw { code: 400, message: 'Invalid action provided' };
+          globalUsernames.push(newPath);
         }
-
-        // Update the user.Path in the Admin table (assuming Path is a JSON field)
-        const [updateResult] = await database.execute('UPDATE Admins SET Path = ? WHERE adminId = ?', [JSON.stringify(globalUsernames), user.adminId]);
-
-        if (updateResult.affectedRows === 0) {
-            throw { code: 500, message: 'Failed to update user path' };
+  
+        const likeCondition = searchName ? `AND userName LIKE ?` : '';
+        const limitClause = `LIMIT ${(page - 1) * pageSize}, ${pageSize}`;
+        const query = `
+          SELECT * FROM admins
+          WHERE createdByUser = ? ${likeCondition}
+          ${limitClause}
+        `;
+  
+        const queryParameters = searchName ? [user.userName, `%${searchName}%`] : [user.userName];
+  
+        const [createdUsers] = await database.execute(query, queryParameters);
+        console.log('Created Users:', createdUsers);
+  
+        const userDetails = {
+          createdUsers: createdUsers.map(createdUser => {
+            let creditRef = [];
+            let refProfitLoss = [];
+            let partnership = [];
+  
+            try {
+              creditRef = createdUser.CreditRefs ? JSON.parse(createdUser.CreditRefs) : [];
+              refProfitLoss = createdUser.Partnerships ? JSON.parse(createdUser.Partnerships) : [];
+              partnership = createdUser.Partnerships ? JSON.parse(createdUser.Partnerships) : [];
+            } catch (e) {
+              console.error('JSON parsing error:', e);
+            }
+  
+            return {
+              id: createdUser.adminId,
+              userName: createdUser.userName,
+              roles: createdUser.roles,
+              balance: createdUser.balance,
+              loadBalance: createdUser.loadBalance,
+              creditRef: creditRef,
+              refProfitLoss: refProfitLoss,
+              partnership: partnership,
+              status: createdUser.isActive ? "Active" : createdUser.locked ? "Locked" : "Suspended"
+            };
+          }),
+        };
+  
+        const message = 'Path stored successfully';
+        return res.status(201).json(apiResponseSuccess({ path: globalUsernames, userDetails }, 201, true, message));
+      } else if (action === 'clear') {
+        const lastUsername = globalUsernames.pop();
+  
+        if (lastUsername) {
+          const indexToRemove = globalUsernames.indexOf(lastUsername);
+  
+          if (indexToRemove !== -1) {
+            globalUsernames.splice(indexToRemove, 1);
+          }
         }
-
-        const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
-        return res.status(201).json(apiResponseSuccess({ path: globalUsernames }, 201, true, {message: successMessage}));
+      } else if (action === 'clearAll') {
+        globalUsernames = [];
+      } else {
+        throw { code: 400, message: 'Invalid action provided' };
+      }
+  
+      const updatePathQuery = "UPDATE admins SET path = ? WHERE adminId = ?";
+      await database.execute(updatePathQuery, [JSON.stringify(globalUsernames), user.adminId]);
+  
+      const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
+      return res.status(201).json(apiResponseSuccess({ message: successMessage, path: globalUsernames }, 201, true, { message: successMessage }));
     } catch (error) {
-        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
 // Need To Test

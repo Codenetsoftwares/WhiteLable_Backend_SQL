@@ -40,9 +40,12 @@ app.post("/api/transfer-amount/:adminId", Authorize(["superAdmin", "WhiteLabel",
 app.get("/api/transaction-view/:userName", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "AccountStatement"]), transactionViewSchema, customErrorHandler, transactionView);
 
 // View All Creates API ("Need To Test")
-app.get("/api/view-all-creates/:createdById", viewAllCreatesSchema, customErrorHandler, viewAllCreates);
+app.get("/api/view-all-creates/:createdById", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "TransferBalance",
+"Status", "CreditRef-Edit", "Partnership-Edit", "CreditRef-View", "Partnership-View", "User-Profile-View",
+"Profile-View", "View-Admin-Data", "Create-Admin", "Create-User", "AccountStatement", "ActivityLog",
+"Delete-Admin", "Restore-Admin", "Move-To-Trash", "Trash-View"]), viewAllCreatesSchema, customErrorHandler, viewAllCreates);
 
-// View All Sub Admins Creates ("Need To Test")
+// View All Sub Admins Creates ("DONE")
 app.get("/api/view-all-subAdmin-creates/:createdById", viewAllSubAdminCreatesSchema, customErrorHandler, viewAllSubAdminCreates);
 
 // View Balance API ("DONE")
@@ -78,7 +81,7 @@ app.get("/api/partnershipView/:adminId", Authorize(["superAdmin", "WhiteLabel", 
 // CreditRef View API ("DONE")
 app.get("/api/creditRefView/:adminId", Authorize(["superAdmin", "WhiteLabel", "HyperAgent", "SuperAgent", "MasterAgent", "CreditRef-View"]), creditRefViewSchema, customErrorHandler, creditRefView);
 
-// Root Path API ("Need To Test")
+// Root Path API ("DONE")
 app.post("/api/Root-Path/:userName/:action", rootPathSchema, customErrorHandler, buildRootPath);
 
 // View Sub Admins API ("Need To Test")
