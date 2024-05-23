@@ -19,8 +19,8 @@ export const createAdmin = async (req, res) => {
         const defaultPermission = "All-Access";
         const adminId = uuidv4();
         const rolesWithDefaultPermission = Array.isArray(roles) ? roles.map((role) => ({ role, permission: defaultPermission })) : [{ role: roles, permission: defaultPermission }];
-        const createdByUser = user[0].userName;
-        const createdById = user[0].adminId
+        const createdByUser = user.userName;
+        const createdById = user.adminId
         const [result] = await database.execute(
             'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
             [adminId, userName, encryptedPassword, JSON.stringify(rolesWithDefaultPermission), createdById, createdByUser],
@@ -1133,7 +1133,7 @@ export const subAdminPermission = async (req, res) => {
     }
 };
 
-
+ 
 export const accountStatement = async (req, res) => {
     try {
         const adminId = req.params.adminId;
