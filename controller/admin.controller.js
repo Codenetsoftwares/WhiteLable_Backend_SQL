@@ -1195,7 +1195,7 @@ export const buildRootPath = async (req, res) => {
         }
       }
     } else if (action === 'clearAll') {
-      globalUsernames = [];
+      globalUsernames.length = 0;
     } else {
       throw { code: 400, message: 'Invalid action provided' };
     }
