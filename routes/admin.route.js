@@ -185,6 +185,11 @@ export const AdminRoute = (app) => {
   app.get(
     '/api/view-all-subAdmin-creates/:createdById',
     Authorize([
+      'superAdmin',
+      'WhiteLabel',
+      'HyperAgent',
+      'SuperAgent',
+      'MasterAgent',
       'SubAdmin',
       'SubWhiteLabel',
       'SubHyperAgent',
