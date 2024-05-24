@@ -217,7 +217,7 @@ export const getIpDetail = async (req, res) => {
       lastLoginTime: loginTime,
     };
 
-    return res.status(201).json(apiResponseSuccess(responseObj, 201, true, 'Data Fetched'));
+    return res.status(200).json(apiResponseSuccess(responseObj, 200, true, 'Data Fetched'));
   } catch (error) {
     res
       .status(500)
@@ -518,8 +518,8 @@ export const transactionView = async (req, res) => {
     });
 
     return res
-      .status(201)
-      .json(apiResponseSuccess(allData, totalPages, totalItems, 201, true, 'Transactions fetched successfully'));
+      .status(200)
+      .json(apiResponseSuccess(allData, totalPages, totalItems, 200, true, 'Transactions fetched successfully'));
   } catch (error) {
     res
       .status(500)
@@ -694,12 +694,12 @@ export const viewBalance = async (req, res) => {
       const amount = {
         balance: subAdmin[0].balance,
       };
-      return res.status(201).json(apiResponseSuccess({ amount }, 201, true, 'successfully'));
+      return res.status(201).json(apiResponseSuccess({ amount }, 200, true, 'successfully'));
     }
     const amount = {
       balance: admin[0].balance,
     };
-    return res.status(201).json(apiResponseSuccess(amount, 201, true, 'Successfully'));
+    return res.status(200).json(apiResponseSuccess(amount, 200, true, 'Successfully'));
   } catch (error) {
     res
       .status(500)
@@ -895,7 +895,7 @@ export const activeStatus = async (req, res) => {
             ? 'Suspended'
             : '',
     };
-    return res.status(201).json(apiResponseSuccess(active, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(active, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -975,7 +975,7 @@ export const profileView = async (req, res) => {
       Roles: admin[0].roles,
       userName: admin[0].userName,
     };
-    return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -1059,7 +1059,7 @@ export const partnershipView = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -1087,7 +1087,7 @@ export const creditRefView = async (req, res) => {
       CreditRefs: last10CreditRefs,
       userName: admin.userName,
     };
-    return res.status(201).json(apiResponseSuccess(transferData, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -1283,7 +1283,7 @@ export const singleSubAdmin = async (req, res) => {
       userName: subAdmin[0].userName,
       roles: subAdmin[0].roles,
     };
-    return res.status(201).json(apiResponseSuccess(data, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(data, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -1382,7 +1382,7 @@ export const userStatus = async (req, res) => {
       Status: user.isActive ? 'Active' : !user.locked ? 'Locked' : !user.isActive ? 'Suspended' : '',
     };
 
-    return res.status(201).json(apiResponseSuccess(userStatus, 201, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(userStatus, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
