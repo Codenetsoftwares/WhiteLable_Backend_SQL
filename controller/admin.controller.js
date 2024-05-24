@@ -1205,7 +1205,7 @@ export const buildRootPath = async (req, res) => {
 
     const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
     return res
-      .status(201)
+      .status(200)
       .json(
         apiResponseSuccess({ message: successMessage, path: globalUsernames }, 201, true, { message: successMessage }),
       );

@@ -107,7 +107,7 @@ export const AdminRoute = (app) => {
 
   // Ip Detail API ("DONE")
   app.get(
-    '/api/get-ip-detail/:userName',
+    '/getip/:username',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'ActivityLog']),
     customErrorHandler,
     getIpDetail,
