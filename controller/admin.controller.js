@@ -982,7 +982,7 @@ export const profileView = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const editPartnership = async (req, res) => {
   try {
     const adminId = req.params.adminId;
@@ -1011,7 +1011,17 @@ export const editPartnership = async (req, res) => {
     };
 
     const [partnershipResult] = await database.execute('SELECT Partnerships FROM Admins WHERE adminId = ?', [adminId]);
-    let partnershipsList = JSON.parse(partnershipResult[0].Partnerships || '[]');
+
+    let partnershipsList;
+    try {
+      if (typeof partnershipResult[0].Partnerships === 'string') {
+        partnershipsList = JSON.parse(partnershipResult[0].Partnerships || '[]');
+      } else {
+        partnershipsList = partnershipResult[0].Partnerships || [];
+      }
+    } catch (error) {
+      return res.status(500).json(apiResponseErr(null, 500, false, 'Invalid Partnerships data'));
+    }
 
     partnershipsList.push(newPartnershipEntry);
 
@@ -1019,8 +1029,10 @@ export const editPartnership = async (req, res) => {
       partnershipsList = partnershipsList.slice(-10);
     }
 
+    const partnershipsJson = JSON.stringify(partnershipsList);
+
     const [updateResult] = await database.execute('UPDATE Admins SET Partnerships = ? WHERE adminId = ?', [
-      JSON.stringify(partnershipsList),
+      partnershipsJson,
       adminId,
     ]);
 
@@ -1028,9 +1040,7 @@ export const editPartnership = async (req, res) => {
       throw { code: 500, message: 'Cannot update Admin Partnerships' };
     }
 
-    return res
-      .status(201)
-      .json(apiResponseSuccess({ ...admin, partnershipsList }, 201, true, 'Partnership added successfully'));
+    return res.status(201).json(apiResponseSuccess({ ...admin, Partnerships: partnershipsList }, 201, true, 'Partnership added successfully'));
   } catch (error) {
     res.status(500).json(apiResponseErr(error.data ?? null, 500, false, error.errMessage ?? error.message));
   }
