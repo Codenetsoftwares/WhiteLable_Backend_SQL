@@ -356,11 +356,11 @@ export const transferAmount = async (req, res) => {
       await database.execute('UPDATE Admins SET balance = ?, loadBalance = ? WHERE adminId = ?', [
         deductionBalance,
         deductionLoadBalance,
-        receiverAdmin[0].adminId,
+        receiveUserId,
       ]);
-      await database.execute('UPDATE Admins SET balance = ?, WHERE adminId = ?', [
+      await database.execute('UPDATE Admins SET balance = ? WHERE adminId = ?', [
         creditAmount,
-        senderAdmin[0].adminId,
+        adminId,
       ]);
       // Now Creating the transaction record in Table
       const transactionId = uuidv4();
@@ -369,16 +369,16 @@ export const transferAmount = async (req, res) => {
         [
           transactionId,
           adminId,
-          withdrawalRecord.amount,
-          withdrawalRecord.userName,
-          withdrawalRecord.date,
-          withdrawalRecord.transactionType,
-          withdrawalRecord.remarks,
-          withdrawalRecord.transferFromUserAccount,
-          withdrawalRecord.transferToUserAccount,
+          withdrawalRecord.amount || null,
+          withdrawalRecord.userName || null,
+          withdrawalRecord.date || null,
+          withdrawalRecord.transactionType || null,
+          withdrawalRecord.remarks || null,
+          withdrawalRecord.transferFromUserAccount || null,
+          withdrawalRecord.transferToUserAccount || null,
         ],
       );
-      return res.status(201).json(apiResponseSuccess(crateTransaction, 201, true, 'Balance Deducted Successfully'));
+      return res.status(201).json(apiResponseSuccess(true, 201, true, 'Balance Deducted Successfully'));
     } else {
       if (senderAdmin[0].balance < trnsferAmount) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
@@ -426,13 +426,13 @@ export const transferAmount = async (req, res) => {
         [
           debitTransactionId,
           adminId,
-          transferRecordDebit.amount,
-          transferRecordDebit.transferFromUserAccount,
-          transferRecordDebit.date,
-          transferRecordDebit.transactionType,
-          transferRecordDebit.remarks,
-          transferRecordDebit.transferFromUserAccount,
-          transferRecordDebit.transferToUserAccount,
+          transferRecordDebit.amount || null,
+          transferRecordDebit.transferFromUserAccount || null,
+          transferRecordDebit.date || null,
+          transferRecordDebit.transactionType || null,
+          transferRecordDebit.remarks || null,
+          transferRecordDebit.transferFromUserAccount || null,
+          transferRecordDebit.transferToUserAccount || null,
         ],
       );
 
@@ -443,13 +443,13 @@ export const transferAmount = async (req, res) => {
         [
           creditTransactionId,
           adminId,
-          transferRecordCredit.amount,
-          transferRecordCredit.transferFromUserAccount,
-          transferRecordCredit.date,
-          transferRecordCredit.transactionType,
-          transferRecordCredit.remarks,
-          transferRecordCredit.transferFromUserAccount,
-          transferRecordCredit.transferToUserAccount,
+          transferRecordCredit.amount || null,
+          transferRecordCredit.transferFromUserAccount || null,
+          transferRecordCredit.date || null,
+          transferRecordCredit.transactionType || null,
+          transferRecordCredit.remarks || null,
+          transferRecordCredit.transferFromUserAccount || null,
+          transferRecordCredit.transferToUserAccount || null,
         ],
       );
       console.log('CreditTransaction', CreditTransaction);
