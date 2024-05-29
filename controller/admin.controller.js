@@ -805,26 +805,28 @@ export const moveAdminToTrash = async (req, res) => {
       loadBalance: admin.loadBalance,
       CreditRefs: admin.CreditRefs ? JSON.stringify(admin.CreditRefs) : null,
       Partnerships: admin.Partnerships ? JSON.stringify(admin.Partnerships) : null,
-      createById: admin.createById,
+      createdById: admin.createdById,
+      createdByUser: admin.createdByUser
     };
-
     const trashId = uuidv4();
 
     // Insert into Trash table
     const [backupResult] = await database.execute(
-      `INSERT INTO Trash (trashId, roles, userName, password, balance, loadBalance, CreditRefs, Partnerships, createById, adminId) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO Trash (trashId, roles, userName, password, balance, loadBalance, CreditRefs, Partnerships, createdById, adminId, createdByUser) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
       [
         trashId,
         updatedTransactionData.roles || null,
         updatedTransactionData.userName || null,
         updatedTransactionData.password || null,
-        updatedTransactionData.balance || null,
-        updatedTransactionData.loadBalance || null,
+        updatedTransactionData.balance !== null ? updatedTransactionData.balance : 0,
+        updatedTransactionData.loadBalance !== null ? updatedTransactionData.loadBalance : 0,
         updatedTransactionData.CreditRefs || null,
         updatedTransactionData.Partnerships || null,
-        updatedTransactionData.createById || null,
+        updatedTransactionData.createdById || null,
         updatedTransactionData.adminId || null,
+        updatedTransactionData.createdByUser || null,
+
       ],
     );
 
@@ -920,13 +922,14 @@ export const restoreAdminUser = async (req, res) => {
       loadBalance: existingAdminUser[0].loadBalance,
       CreditRefs: existingAdminUser[0].CreditRefs,
       Partnerships: existingAdminUser[0].Partnerships,
-      createdById: existingAdminUser[0].createById,
+      createdById: existingAdminUser[0].createdById,
       adminId: existingAdminUser[0].adminId,
+      createdByUser: existingAdminUser[0].createdByUser,
     };
 
     const [restoreResult] = await database.execute(
-      `INSERT INTO admins (adminId, userName, password, roles, balance, loadBalance, createdById, CreditRefs, Partnerships)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO admins (adminId, userName, password, roles, balance, loadBalance, createdById, CreditRefs, Partnerships,createdByUser)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
       [
         restoreRemoveData.adminId,
         restoreRemoveData.userName,
@@ -937,6 +940,7 @@ export const restoreAdminUser = async (req, res) => {
         restoreRemoveData.createdById,
         JSON.stringify(restoreRemoveData.CreditRefs),
         JSON.stringify(restoreRemoveData.Partnerships),
+        restoreRemoveData.createdByUser,
       ],
     );
 
