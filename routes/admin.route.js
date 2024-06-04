@@ -105,7 +105,7 @@ export const AdminRoute = (app) => {
       stringConstructor.superAdmin,
       stringConstructor.whiteLabel,
       stringConstructor.hyperAgent,
-      stringConstructor.subSuperAgent,
+      stringConstructor.superAgent,
       stringConstructor.masterAgent,
       stringConstructor.transferBalance,
       stringConstructor.status,

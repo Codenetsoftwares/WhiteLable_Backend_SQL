@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
 import { stringConstructor } from '../constructor/stringConstructor.js';
-import { Op } from 'sequelize';   /*** Op refers to the set of operators provided by Sequelize's query language */
+import { Op, fn, col, where } from 'sequelize';   /*** Op refers to the set of operators provided by Sequelize's query language */
 
 const globalUsernames = [];
 // done
@@ -134,6 +134,7 @@ export const getIpDetail = async (req, res) => {
   }
 };
 
+// done
 export const viewAllCreates = async (req, res) => {
   try {
     const createdById = req.params.createdById;
@@ -141,26 +142,38 @@ export const viewAllCreates = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize, 10) || 5;
 
     const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
-    console.log("createdById:", createdById);
-    console.log("searchQuery:", searchQuery);
-    const allowedRoles = [stringConstructor.whiteLabel, stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent];
-    const rolesQuery = allowedRoles.map(role => ({ roles: { [Op.contains]: [{ role }] } }));
+    const allowedRoles = [
+      stringConstructor.superAdmin,
+      stringConstructor.whiteLabel,
+      stringConstructor.hyperAgent,
+      stringConstructor.superAgent,
+      stringConstructor.masterAgent,
+    ];
 
-    const { count, rows: admin } = await admins.findAndCountAll({
+    const totalRecords = await admins.count({
       where: {
         createdById,
-        [Op.or]: rolesQuery.map(role => ({ roles: { [Op.like]: `%${JSON.stringify(role)}%` } })),
         ...searchQuery,
-      },
-      offset: (page - 1) * pageSize,
-      limit: pageSize,
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+      }
     });
 
-    if (!admin || admin.length === 0) {
+    if (totalRecords === 0) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
     }
 
-    const users = admin.map((admin) => ({
+    const offset = (page - 1) * pageSize;
+    const adminsData = await admins.findAll({
+      where: {
+        createdById,
+        ...searchQuery,
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+      },
+      offset,
+      limit: pageSize
+    });
+
+    const users = adminsData.map(admin => ({
       adminId: admin.adminId,
       userName: admin.userName,
       roles: admin.roles,
@@ -170,16 +183,16 @@ export const viewAllCreates = async (req, res) => {
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
       Partnerships: admin.Partnerships || [],
-      Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
+      Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
     }));
 
-    const totalPages = Math.ceil(count / pageSize);
+    const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(200).json(
       apiResponseSuccess(
         {
           users,
-          totalRecords: count,
+          totalRecords,
           totalPages,
           currentPage: page,
           pageSize,
@@ -191,7 +204,9 @@ export const viewAllCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -550,7 +565,7 @@ export const profileView = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-// done
+
 export const editPartnership = async (req, res) => {
   try {
     const adminId = req.params.adminId;
@@ -902,7 +917,6 @@ export const subAdminPermission = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 
 export const userStatus = async (req, res) => {
   try {
