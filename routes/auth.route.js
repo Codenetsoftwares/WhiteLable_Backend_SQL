@@ -1,3 +1,4 @@
+import { string } from "../constructor/string.js";
 import { adminPasswordResetCode, generateAdminAccessToken } from "../controller/auth.controller.js";
 import customErrorHandler from "../helper/customErrorHandler.js";
 import { Authorize } from "../middleware/auth.js";
@@ -11,9 +12,15 @@ export const authRoute = (app) => {
 
     //  Password Reset API ("DONE")
     app.post('/api/admin/reset-password',
-        Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent']),
         adminPasswordResetSchema,
         customErrorHandler,
+        Authorize([
+        string.superAdmin,
+        string.whiteLabel,
+        string.hyperAgent,
+        string.superAgent,
+        string.masterAgent
+    ]),
         adminPasswordResetCode,
     );
 

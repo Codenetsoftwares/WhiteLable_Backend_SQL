@@ -32,4 +32,4 @@ class stringConst {
     }
 }
 
-export const stringConstructor = new stringConst();
+export const string = new stringConst();

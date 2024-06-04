@@ -4,7 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import sequelize from './db.js';
 
-import { AdminRoute } from './routes/admin.route.js';
+import { adminRoute } from './routes/admin.route.js';
 import { authRoute } from './routes/auth.route.js';
 import { selfTransactionRoute } from './routes/selfTransaction.route.js';
 
@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
   res.send('Status : OK');
 });
 
-AdminRoute(app);
+adminRoute(app);
 authRoute(app);
 selfTransactionRoute(app);
 

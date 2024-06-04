@@ -4,8 +4,14 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
-import { stringConstructor } from '../constructor/stringConstructor.js';
-import { Op, fn, col, where } from 'sequelize';   /*** Op refers to the set of operators provided by Sequelize's query language */
+import { string } from '../constructor/string.js';
+import { Op, fn, col } from 'sequelize';
+/**
+ *Op refers to the set of operators provided by Sequelize's query language ,
+ *fn is function for call SQL functions directly within your Sequelize queries,
+ *col function is used to reference a column in your database within a Sequelize query
+
+ **/
 
 const globalUsernames = [];
 // done
@@ -60,16 +66,16 @@ export const createSubAdmin = async (req, res) => {
 
     let subRole = '';
     for (let i = 0; i < user.roles.length; i++) {
-      if (user.roles[i].role.includes(stringConstructor.superAdmin)) {
-        subRole = stringConstructor.subAdmin;
-      } else if (user.roles[i].role.includes(stringConstructor.whiteLabel)) {
-        subRole = stringConstructor.subWhiteLabel;
-      } else if (user.roles[i].role.includes(stringConstructor.hyperAgent)) {
-        subRole = stringConstructor.subHyperAgent;
-      } else if (user.roles[i].role.includes(stringConstructor.superAgent)) {
-        subRole = stringConstructor.subSuperAgent;
-      } else if (user.roles[i].role.includes(stringConstructor.masterAgent)) {
-        subRole = stringConstructor.subMasterAgent;
+      if (user.roles[i].role.includes(string.superAdmin)) {
+        subRole = string.subAdmin;
+      } else if (user.roles[i].role.includes(string.whiteLabel)) {
+        subRole = string.subWhiteLabel;
+      } else if (user.roles[i].role.includes(string.hyperAgent)) {
+        subRole = string.subHyperAgent;
+      } else if (user.roles[i].role.includes(string.superAgent)) {
+        subRole = string.subSuperAgent;
+      } else if (user.roles[i].role.includes(string.masterAgent)) {
+        subRole = string.subMasterAgent;
       } else {
         throw { code: 400, message: 'Invalid user role for creating sub-admin' };
       }
@@ -143,11 +149,11 @@ export const viewAllCreates = async (req, res) => {
 
     const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
     const allowedRoles = [
-      stringConstructor.superAdmin,
-      stringConstructor.whiteLabel,
-      stringConstructor.hyperAgent,
-      stringConstructor.superAgent,
-      stringConstructor.masterAgent,
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
     ];
 
     const totalRecords = await admins.count({
