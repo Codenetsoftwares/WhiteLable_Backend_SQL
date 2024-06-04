@@ -1,6 +1,6 @@
 import { body, param, query } from 'express-validator';
 
-export const crateAdminSchema = [
+export const createAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
   // body('roles').trim().notEmpty().withMessage('Roles is required'),
@@ -11,18 +11,18 @@ export const createSubAdminSchema = [
   body('password').trim().notEmpty().withMessage('Password is required'),
 ];
 
-export const AdminloginSchema = [
+export const adminLoginSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
-export const AdminPasswordResetSchema = [
+export const adminPasswordResetSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('oldPassword').notEmpty().withMessage('oldPassword is required'),
 ];
 
-export const depositeAmountSchema = [
+export const depositAmountSchema = [
   param('adminId').exists().withMessage('Admin ID is required.'),
   body('amount').exists().withMessage('Amount is required'),
 ];

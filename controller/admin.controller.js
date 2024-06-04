@@ -3,181 +3,92 @@ import { database } from '../dbConnection/database.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import admins from '../models/admin.model.js';
+import { stringConstructor } from '../constructor/stringConstructor.js';
+import { Op } from 'sequelize';   /*** Op refers to the set of operators provided by Sequelize's query language */
 
 const globalUsernames = [];
-
+// done
 export const createAdmin = async (req, res) => {
   try {
     const user = req.user;
     const { userName, password, roles } = req.body;
-    const [existingAdmin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    if (existingAdmin.length > 0) {
+
+    const existingAdmin = await admins.findOne({ where: { userName } });
+    if (existingAdmin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
     }
-    const passwordSalt = await bcrypt.genSalt();
-    const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+
     const defaultPermission = ['All-Access'];
-    const adminId = uuidv4();
     const rolesWithDefaultPermission = Array.isArray(roles)
       ? roles.map((role) => ({ role, permission: defaultPermission }))
       : [{ role: roles, permission: defaultPermission }];
-    const createdByUser = user.userName;
-    const createdById = user.adminId;
-    const [result] = await database.execute(
-      'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
-      [adminId, userName, encryptedPassword, JSON.stringify(rolesWithDefaultPermission), createdById, createdByUser],
-    );
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin created successfully'));
+
+    const newAdmin = await admins.create({
+      adminId: uuidv4(),
+      userName,
+      password,
+      roles: rolesWithDefaultPermission,
+      createdById: user.adminId,
+      createdByUser: user.userName,
+    });
+
+    return res.status(201).json(apiResponseSuccess(newAdmin, 201, true, 'Admin created successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const createSubAdmin = async (req, res) => {
   try {
     const { userName, password, roles } = req.body;
     const user = req.user;
+
     if (user.isActive === false) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Account is in Inactive Mode'));
     }
-    const [existingAdmin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    if (existingAdmin.length > 0) {
+
+    const existingAdmin = await admins.findOne({ where: { userName } });
+    if (existingAdmin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
     }
+
     const passwordSalt = await bcrypt.genSalt();
     const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+
     let subRole = '';
     for (let i = 0; i < user.roles.length; i++) {
-      if (user.roles[i].role.includes('superAdmin')) {
-        subRole = 'SubAdmin';
-      } else if (user.roles[i].role.includes('WhiteLabel')) {
-        subRole = 'SubWhiteLabel';
-      } else if (user.roles[i].role.includes('HyperAgent')) {
-        subRole = 'SubHyperAgent';
-      } else if (user.roles[i].role.includes('SuperAgent')) {
-        subRole = 'SubSuperAgent';
-      } else if (user.roles[i].role.includes('MasterAgent')) {
-        subRole = 'SubMasterAgent';
+      if (user.roles[i].role.includes(stringConstructor.superAdmin)) {
+        subRole = stringConstructor.subAdmin;
+      } else if (user.roles[i].role.includes(stringConstructor.whiteLabel)) {
+        subRole = stringConstructor.subWhiteLabel;
+      } else if (user.roles[i].role.includes(stringConstructor.hyperAgent)) {
+        subRole = stringConstructor.subHyperAgent;
+      } else if (user.roles[i].role.includes(stringConstructor.superAgent)) {
+        subRole = stringConstructor.subSuperAgent;
+      } else if (user.roles[i].role.includes(stringConstructor.masterAgent)) {
+        subRole = stringConstructor.subMasterAgent;
       } else {
         throw { code: 400, message: 'Invalid user role for creating sub-admin' };
       }
     }
+
     const adminId = uuidv4();
     const createdByUser = user.userName;
     const createdById = user.adminId;
-    const [result] = await database.execute(
-      'INSERT INTO Admins (adminId, userName, password, roles, createdById, createdByUser) VALUES (?, ?, ?, ?, ?, ?)',
-      [
-        adminId,
-        userName,
-        encryptedPassword,
-        JSON.stringify([{ role: subRole, permission: roles[0].permission }]),
-        createdById,
-        createdByUser,
-      ],
-    );
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Sub Admin created successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
 
-export const generateAdminAccessToken = async (req, res) => {
-  try {
-    const { userName, password, persist } = req.body;
-    const [existingAdmin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    if (!existingAdmin) {
-      const subAdminUser = await database.execute('SELECT * FROM SubAdmin userName = ?', [userName]);
-      if (!subAdminUser) {
-        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
-      }
-      if (subAdminUser.locked === false) {
-        return res.status(400).json(apiResponseErr(null, 400, false, `${subAdminUser[0].userName} Account is Locked`));
-      }
-      const passwordValid = await bcrypt.compare(password, subAdminUser.password);
-      if (!passwordValid) {
-        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
-      }
-      const accessTokenResponse = {
-        subAdminId: subAdminUser[0].subAdminId,
-        createdById: subAdminUser[0].createdById,
-        createdByUser: subAdminUser[0].createdByUser,
-        userName: subAdminUser[0].userName,
-        roles: subAdminUser[0].roles.map((role) => ({
-          role: role.role,
-          permission: role.permission,
-        })),
-        Status: subAdminUser[0].isActive
-          ? 'Active'
-          : !subAdminUser[0].locked
-            ? 'Locked'
-            : !subAdminUser[0].isActive
-              ? 'Suspended'
-              : '',
-      };
-      const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-        expiresIn: persist ? '1y' : '8h',
-      });
-      const loginTime = new Date();
-      await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
-      return res
-        .status(200)
-        .send(
-          apiResponseSuccess(
-            { Token: accessToken, SubAdminData: accessTokenResponse },
-            true,
-            200,
-            'Sub Admin login successfully',
-          ),
-        );
-    } else {
-      if (!existingAdmin) {
-        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
-      }
-      if (existingAdmin.locked === false) {
-        return res.status(400).json(apiResponseErr(null, 400, false, `${existingAdmin[0].userName} Account is Locked`));
-      }
-      const passwordValid = await bcrypt.compare(password, existingAdmin[0].password);
-      if (!passwordValid) {
-        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
-      }
-      const accessTokenResponse = {
-        adminId: existingAdmin[0].adminId,
-        createdById: existingAdmin[0].createdById,
-        createdByUser: existingAdmin[0].createdByUser,
-        userName: existingAdmin[0].userName,
-        roles: existingAdmin[0].roles.map((role) => ({
-          role: role.role,
-          permission: role.permission,
-        })),
-        Status: existingAdmin[0].isActive
-          ? 'Active'
-          : !existingAdmin[0].locked
-            ? 'Locked'
-            : !existingAdmin[0].isActive
-              ? 'Suspended'
-              : '',
-      };
-      const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-        expiresIn: persist ? '1y' : '8h',
-      });
-      const loginTime = new Date();
-      await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
-      return res
-        .status(200)
-        .send(
-          apiResponseSuccess(
-            { Token: accessToken, AdminData: accessTokenResponse },
-            true,
-            200,
-            'Admin login successfully',
-          ),
-        );
-    }
+    const newSubAdmin = await admins.create({
+      adminId,
+      userName,
+      password: encryptedPassword,
+      roles: [{ role: subRole, permission: roles[0].permission }],
+      createdById,
+      createdByUser,
+    });
+
+    return res.status(201).json(apiResponseSuccess(newSubAdmin, 201, true, 'Sub Admin created successfully'));
   } catch (error) {
     res
       .status(500)
@@ -189,11 +100,11 @@ export const getIpDetail = async (req, res) => {
   try {
     const userName = req.params.userName;
     console.log('userName', userName);
-    let [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
+    let admin = await admins.findOne({ where: { userName } });
     if (!admin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
     }
-    const loginTime = admin[0].lastLoginTime;
+    const loginTime = admin.lastLoginTime;
     console.log('loginTime', loginTime);
     let clientIP = req.ip;
     const forwardedFor = req.headers['x-forwarded-for'];
@@ -203,327 +114,23 @@ export const getIpDetail = async (req, res) => {
     }
     const data = await fetch(`http://ip-api.com/json/${clientIP}`);
     const collect = await data.json();
-    await database.execute('UPDATE Admins SET lastLoginTime = ? WHERE userName = ?', [loginTime, userName]);
+    await admins.update({ lastLoginTime: loginTime }, { where: { userName } });
     const responseObj = {
-      userName: admin[0].userName,
+      userName: admin.userName,
       ip: {
         IP: clientIP,
         country: collect.country,
         region: collect.regionName,
         timezone: collect.timezone,
       },
-      isActive: admin[0].isActive,
-      locked: admin[0].locked,
+      isActive: admin.isActive,
+      locked: admin.locked,
       lastLoginTime: loginTime,
     };
 
     return res.status(200).json(apiResponseSuccess(responseObj, 200, true, 'Data Fetched'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const AdminPasswordResetCode = async (req, res) => {
-  try {
-    const { userName, oldPassword, password } = req.body;
-    const [existingUser] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    if (existingUser.isActive === false || existingUser.locked === false) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Account is Not Active'));
-    }
-    if (!existingUser) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
-    }
-    const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, existingUser[0].password);
-    if (!oldPasswordIsCorrect) {
-      return res.status(400).json(apiResponseErr(null, 401, false, 'Invalid old password'));
-    }
-    const passwordIsDuplicate = await bcrypt.compare(password, existingUser[0].password);
-    if (passwordIsDuplicate) {
-      return res
-        .status(400)
-        .json(apiResponseErr(null, 409, false, 'New Password Cannot Be The Same As Existing Password'));
-    }
-    const passwordSalt = await bcrypt.genSalt();
-    const encryptedPassword = await bcrypt.hash(password, passwordSalt);
-    await database.execute('UPDATE Admins SET password = ? WHERE userName = ?', [encryptedPassword, userName]);
-    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Password Reset Successful!'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const depositTransaction = async (req, res) => {
-  try {
-    const { amount } = req.body;
-    const adminId = req.params.adminId;
-    const [admin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-
-    if (!admin.length) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found For Deposit'));
-    }
-
-    const depositAmount = Math.round(parseFloat(amount));
-    const depositTransaction = {
-      amount: depositAmount,
-      userName: admin[0].userName,
-      date: new Date(),
-      transactionType: 'Deposit',
-    };
-
-    console.log('depositTransaction', depositTransaction);
-
-    // Update balances correctly
-    const newDepositBalance = admin[0].depositBalance + depositAmount;
-    const newAdminBalance = admin[0].balance + depositAmount;
-
-    console.log('newDepositBalance', newDepositBalance);
-    console.log('newAdminBalance', newAdminBalance);
-
-    // First Update the balance in Admin Table
-    await database.execute('UPDATE Admins SET balance = ?, depositBalance = ? WHERE adminId = ?', [
-      newAdminBalance,
-      newDepositBalance,
-      adminId,
-    ]);
-
-    // Now Create the transaction record in selfTransaction Table
-    const selfTransactionId = uuidv4();
-    await database.execute(
-      'INSERT INTO SelfTransactions (selfTransactionId, adminId, amount, userName, date, transactionType) VALUES (?, ?, ?, ?, ?, ?)',
-      [
-        selfTransactionId,
-        adminId,
-        depositTransaction.amount,
-        depositTransaction.userName,
-        depositTransaction.date,
-        depositTransaction.transactionType,
-      ],
-    );
-
-    return res.status(201).json(apiResponseSuccess(depositTransaction, 201, true, 'Balance Deposit Successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const transferAmount = async (req, res) => {
-  try {
-    const { receiveUserId, trnsferAmount, withdrawlAmt, remarks, password } = req.body;
-    const adminId = req.params.adminId;
-    const [senderAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-
-    if (!senderAdmin) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Admin not found'));
-    }
-    const isPasswordValid = await bcrypt.compare(password, senderAdmin[0].password);
-    if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Invalid password for the transaction'));
-    }
-    const [receiverAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [receiveUserId]);
-    if (!receiverAdmin) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin not found'));
-    }
-    if (!senderAdmin[0].isActive) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Sender Admin is inactive'));
-    }
-
-    if (!receiverAdmin[0].isActive) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin is inactive'));
-    }
-    if (withdrawlAmt && withdrawlAmt > 0) {
-      if (receiverAdmin[0].balance < withdrawlAmt) {
-        return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Withdrawal'));
-      }
-      const withdrawalRecord = {
-        transactionType: 'Withdrawal',
-        amount: Math.round(parseFloat(withdrawlAmt)),
-        transferFromUserAccount: receiverAdmin[0].userName,
-        transferToUserAccount: senderAdmin[0].userName,
-        date: new Date(),
-        remarks: remarks,
-      };
-      // Calculation
-      const deductionBalance = (receiverAdmin[0].balance -= Math.round(parseFloat(withdrawlAmt)));
-      const deductionLoadBalance = (receiverAdmin[0].loadBalance -= Math.round(parseFloat(withdrawlAmt)));
-      const creditAmount = (senderAdmin[0].balance += Math.round(parseFloat(withdrawlAmt)));
-      // Updation in Table
-      await database.execute('UPDATE Admins SET balance = ?, loadBalance = ? WHERE adminId = ?', [
-        deductionBalance,
-        deductionLoadBalance,
-        receiveUserId,
-      ]);
-      await database.execute('UPDATE Admins SET balance = ? WHERE adminId = ?', [
-        creditAmount,
-        adminId,
-      ]);
-      // Now Creating the transaction record in Table
-      const transactionId = uuidv4();
-      const [crateTransaction] = await database.execute(
-        'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          transactionId,
-          adminId,
-          withdrawalRecord.amount || null,
-          withdrawalRecord.userName || null,
-          withdrawalRecord.date || null,
-          withdrawalRecord.transactionType || null,
-          withdrawalRecord.remarks || null,
-          withdrawalRecord.transferFromUserAccount || null,
-          withdrawalRecord.transferToUserAccount || null,
-        ],
-      );
-      return res.status(201).json(apiResponseSuccess(true, 201, true, 'Balance Deducted Successfully'));
-    } else {
-      if (senderAdmin[0].balance < trnsferAmount) {
-        return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
-      }
-      // console.log("senderAdmin", senderAdmin);
-
-      const transferRecordDebit = {
-        transactionType: 'Debit',
-        amount: Math.round(parseFloat(trnsferAmount)),
-        transferFromUserAccount: senderAdmin[0].userName,
-        transferToUserAccount: receiverAdmin[0].userName,
-        date: new Date(),
-        remarks: remarks,
-      };
-
-      const transferRecordCredit = {
-        transactionType: 'Credit',
-        amount: Math.round(parseFloat(trnsferAmount)),
-        transferFromUserAccount: senderAdmin[0].userName,
-        transferToUserAccount: receiverAdmin[0].userName,
-        date: new Date(),
-        remarks: remarks,
-      };
-
-      const senderBalance = (senderAdmin[0].balance -= Math.round(parseFloat(trnsferAmount)));
-      const receiverBalance = (receiverAdmin[0].balance += Math.round(parseFloat(trnsferAmount)));
-      const receiverLoadBalance = (receiverAdmin[0].loadBalance += Math.round(parseFloat(trnsferAmount)));
-
-      // Updation in Table
-      await database.execute('UPDATE Admins SET balance = ?, loadBalance = ? WHERE adminId = ?', [
-        receiverBalance,
-        receiverLoadBalance,
-        receiverAdmin[0].adminId,
-      ]);
-
-      await database.execute('UPDATE Admins SET balance = ?  WHERE adminId = ?', [
-        senderBalance,
-        senderAdmin[0].adminId,
-      ]);
-
-      // Now Creating the transaction record in Table
-      const debitTransactionId = uuidv4();
-      const [DebitTransaction] = await database.execute(
-        'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          debitTransactionId,
-          adminId,
-          transferRecordDebit.amount || null,
-          transferRecordDebit.transferFromUserAccount || null,
-          transferRecordDebit.date || null,
-          transferRecordDebit.transactionType || null,
-          transferRecordDebit.remarks || null,
-          transferRecordDebit.transferFromUserAccount || null,
-          transferRecordDebit.transferToUserAccount || null,
-        ],
-      );
-
-      // return res.status(201).json(apiResponseSuccess(DebitTransaction, 201, true, 'Balance Debited Successfully'));
-      const creditTransactionId = uuidv4();
-      const [CreditTransaction] = await database.execute(
-        'INSERT INTO Transactions (transactionId, adminId, amount, userName, date, transactionType, remarks, transferFromUserAccount, transferToUserAccount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          creditTransactionId,
-          adminId,
-          transferRecordCredit.amount || null,
-          transferRecordCredit.transferFromUserAccount || null,
-          transferRecordCredit.date || null,
-          transferRecordCredit.transactionType || null,
-          transferRecordCredit.remarks || null,
-          transferRecordCredit.transferFromUserAccount || null,
-          transferRecordCredit.transferToUserAccount || null,
-        ],
-      );
-      console.log('CreditTransaction', CreditTransaction);
-      return res.status(201).json(apiResponseSuccess(true, 201, true, 'Balance Debited Successfully'));
-    }
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const transactionView = async (req, res) => {
-  try {
-    const userName = req.params.userName;
-    const page = parseInt(req.query.page) || 1;
-    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
-    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
-    endDate.setDate(endDate.getDate() + 1);
-    const pageSize = parseInt(req.query.pageSize) || 5;
-
-    let balances = 0;
-    let debitBalances = 0;
-    let withdrawalBalances = 0;
-
-    const [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    if (!admin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
-    }
-
-    const adminId = admin[0].adminId;
-
-    let transactionQuery = `SELECT * FROM Transactions WHERE adminId = ?`;
-    const transactionValues = [adminId];
-
-    if (startDate) {
-      transactionQuery += ' AND date >= ?';
-      transactionValues.push(startDate);
-    }
-
-    transactionQuery += ' ORDER BY date DESC';
-
-    const [transactionData] = await database.execute(transactionQuery, transactionValues);
-
-    const totalItems = transactionData.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    const skip = (page - 1) * pageSize;
-    const endIndex = page * pageSize;
-
-    const paginatedData = transactionData.slice(skip, endIndex);
-
-    let allData = JSON.parse(JSON.stringify(paginatedData));
-    console.log('allData', allData);
-    allData.map((data) => {
-      if (data.transactionType === 'Credit') {
-        balances += data.amount;
-        data.balance = balances;
-      } else if (data.transactionType === 'Debit') {
-        debitBalances += data.amount;
-        data.debitBalance = debitBalances;
-      } else if (data.transactionType === 'Withdrawal') {
-        withdrawalBalances += data.withdraw;
-        data.withdrawalBalance = withdrawalBalances;
-      }
-    });
-
-    return res
-      .status(200)
-      .json(apiResponseSuccess(allData, totalPages, totalItems, 200, true, 'Transactions fetched successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -533,43 +140,27 @@ export const viewAllCreates = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const pageSize = parseInt(req.query.pageSize, 10) || 5;
 
-    const searchQuery = req.query.userName ? ` AND userName LIKE ?` : '';
-    const searchParams = req.query.userName ? [`%${req.query.userName}%`] : [];
+    const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
+    console.log("createdById:", createdById);
+    console.log("searchQuery:", searchQuery);
+    const allowedRoles = [stringConstructor.whiteLabel, stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent];
+    const rolesQuery = allowedRoles.map(role => ({ roles: { [Op.contains]: [{ role }] } }));
 
-    const allowedRoles = ['WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent'];
-    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
-    const rolesParams = allowedRoles;
+    const { count, rows: admin } = await admins.findAndCountAll({
+      where: {
+        createdById,
+        [Op.or]: rolesQuery.map(role => ({ roles: { [Op.like]: `%${JSON.stringify(role)}%` } })),
+        ...searchQuery,
+      },
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+    });
 
-    const totalRecordsParams = [createdById, ...rolesParams, ...searchParams];
-    const totalRecordsQuery = `
-      SELECT COUNT(*) as totalRecords
-      FROM Admins
-      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
-    `;
-    console.log('totalRecordsQuery:', totalRecordsQuery);
-    console.log('totalRecordsParams:', totalRecordsParams);
-    const [totalRecordsResult] = await database.execute(totalRecordsQuery, totalRecordsParams);
-    const totalRecords = totalRecordsResult[0].totalRecords;
-
-    // Data query without pagination
-    const dataParams = [createdById, ...rolesParams, ...searchParams];
-    const dataQuery = `
-      SELECT *
-      FROM Admins
-      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
-    `;
-    console.log('dataQuery:', dataQuery);
-    console.log('dataParams (without pagination):', dataParams);
-    const [admins] = await database.execute(dataQuery, dataParams);
-
-    if (!admins || admins.length === 0) {
+    if (!admin || admin.length === 0) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
     }
 
-    const offset = (page - 1) * pageSize;
-    const paginatedAdmins = admins.slice(offset, offset + pageSize);
-
-    const users = paginatedAdmins.map((admin) => ({
+    const users = admin.map((admin) => ({
       adminId: admin.adminId,
       userName: admin.userName,
       roles: admin.roles,
@@ -582,13 +173,13 @@ export const viewAllCreates = async (req, res) => {
       Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
     }));
 
-    const totalPages = Math.ceil(totalRecords / pageSize);
+    const totalPages = Math.ceil(count / pageSize);
 
     return res.status(200).json(
       apiResponseSuccess(
         {
           users,
-          totalRecords,
+          totalRecords: count,
           totalPages,
           currentPage: page,
           pageSize,
@@ -600,9 +191,7 @@ export const viewAllCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error:', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -676,31 +265,6 @@ export const viewAllSubAdminCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error:', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const viewBalance = async (req, res) => {
-  try {
-    const adminId = req.params.adminId;
-    const [admin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-    if (!admin) {
-      const [subAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-      if (!subAdmin) {
-        return res.status(400).json(apiResponseErr(null, 404, false, 'Admin Not Found'));
-      }
-      const amount = {
-        balance: subAdmin[0].balance,
-      };
-      return res.status(201).json(apiResponseSuccess({ amount }, 200, true, 'successfully'));
-    }
-    const amount = {
-      balance: admin[0].balance,
-    };
-    return res.status(200).json(apiResponseSuccess(amount, 200, true, 'Successfully'));
-  } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
@@ -1339,48 +903,6 @@ export const subAdminPermission = async (req, res) => {
   }
 };
 
-export const accountStatement = async (req, res) => {
-  try {
-    const adminId = req.params.adminId;
-    const ITEMS_PER_PAGE = 5;
-    const page = parseInt(req.query.page) || 1;
-
-    const [adminRows] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-    const admin = adminRows[0];
-    if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
-    }
-
-    const [transferAmount] = await database.execute('SELECT * FROM Transactions WHERE adminId = ?', [admin.adminId]);
-    const [selfTransaction] = await database.execute('SELECT * FROM SelfTransactions WHERE adminId = ?', [
-      admin.adminId,
-    ]);
-
-    const mergedData = transferAmount.concat(selfTransaction);
-    const totalCount = mergedData.length;
-    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
-    const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-
-    return res.status(200).json(
-      apiResponseSuccess(
-        {
-          data: paginatedData,
-          currentPage: page,
-          totalPages: totalPages,
-          totalCount: totalCount,
-        },
-        200,
-        true,
-        'successfully',
-      ),
-    );
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
 
 export const userStatus = async (req, res) => {
   try {

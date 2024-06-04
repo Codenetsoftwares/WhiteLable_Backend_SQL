@@ -2,9 +2,11 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import sequelize from './db.js';
 
-// Route Imports
 import { AdminRoute } from './routes/admin.route.js';
+import { authRoute } from './routes/auth.route.js';
+import { selfTransactionRoute } from './routes/selfTransaction.route.js';
 
 dotenv.config();
 const app = express();
@@ -20,6 +22,16 @@ app.get('/', (req, res) => {
 });
 
 AdminRoute(app);
+authRoute(app);
+selfTransactionRoute(app);
+
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('Database & tables created!');
+  })
+  .catch(err => {
+    console.error('Unable to create tables:', err);
+  });
 
 app.listen(process.env.PORT, () => {
   console.log(`App is running on  - http://localhost:${process.env.PORT || 8000}`);
