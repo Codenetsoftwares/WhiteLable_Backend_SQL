@@ -118,7 +118,7 @@ export const getIpDetail = async (req, res) => {
     const responseObj = {
       userName: admin.userName,
       ip: {
-        IP: clientIP,
+        iP: clientIP,
         country: collect.country,
         region: collect.regionName,
         timezone: collect.timezone,
@@ -127,8 +127,7 @@ export const getIpDetail = async (req, res) => {
       locked: admin.locked,
       lastLoginTime: loginTime,
     };
-
-    return res.status(200).json(apiResponseSuccess(responseObj, 200, true, 'Data Fetched'));
+    return res.status(200).json(apiResponseSuccess(responseObj, null, 200, true, 'Data Fetched'));
   } catch (error) {
     res
       .status(500)
@@ -541,24 +540,23 @@ export const restoreAdminUser = async (req, res) => {
 export const profileView = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-
+    const admin = await admins.findOne({ where: { userName } });
     if (!admin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found'));
     }
-
     const transferData = {
-      adminId: admin[0].adminId,
-      Roles: admin[0].roles,
-      userName: admin[0].userName,
+      adminId: admin.adminId,
+      Roles: admin.roles,
+      userName: admin.userName,
     };
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(transferData, null, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 // done
 export const editPartnership = async (req, res) => {
   try {

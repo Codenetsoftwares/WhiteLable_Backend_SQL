@@ -44,7 +44,7 @@ export const depositTransaction = async (req, res) => {
       transactionType: depositTransactionData.transactionType,
     });
 
-    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deposit Successfully'));
+    return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Deposit Successfully'));
   } catch (error) {
     res
       .status(500)
@@ -116,7 +116,7 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
         transferToUserAccount: withdrawalRecord.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deducted Successfully'));
+      return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Deducted Successfully'));
     } else {
       if (senderAdmin.balance < transferAmount) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
@@ -181,7 +181,7 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
         transferToUserAccount: transferRecordCredit.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Debited Successfully'));
+      return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Debited Successfully'));
     }
   } catch (error) {
     console.log(error);
@@ -290,7 +290,7 @@ export const viewBalance = async (req, res) => {
     const amount = {
       balance: admin.balance,
     };
-    return res.status(200).json(apiResponseSuccess(amount, 200, true, 'Successfully'));
+    return res.status(200).json(apiResponseSuccess(amount, null, 200, true, 'Successfully'));
   } catch (error) {
     res
       .status(500)

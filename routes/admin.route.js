@@ -92,8 +92,9 @@ export const AdminRoute = (app) => {
 
   // Ip Detail API ("DONE")
   app.get(
-    '/getip/:username',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'ActivityLog']),
+    '/api/get-ip/:userName',
+    Authorize([stringConstructor.superAdmin, stringConstructor.whiteLabel, 
+    stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent, stringConstructor.activityLog]),
     customErrorHandler,
     getIpDetail,
   );
@@ -223,9 +224,10 @@ export const AdminRoute = (app) => {
   // Profile View API ("DONE")
   app.get(
     '/api/User-Profile-view/:userName',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'User-Profile-View']),
     profileViewSchema,
     customErrorHandler,
+    Authorize([stringConstructor.superAdmin, stringConstructor.whiteLabel, 
+    stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent, stringConstructor.userProfileView]),
     profileView,
   );
 
