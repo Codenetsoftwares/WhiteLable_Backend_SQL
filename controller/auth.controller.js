@@ -22,13 +22,13 @@ export const adminLogin = async (req, res) => {
 
         let adminIdToSend;
         const roles = existingAdmin.roles.map((role) => role.role);
-        
+
         if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
             adminIdToSend = existingAdmin.adminId;
         } else if ([string.subWhiteLabel, string.subAdmin, string.subHyperAgent, string.subSuperAgent, string.subMasterAgent].includes(roles[0])) {
             adminIdToSend = existingAdmin.createdById;
         } else {
-            adminIdToSend = existingAdmin.adminId; 
+            adminIdToSend = existingAdmin.adminId;
         }
 
         const accessTokenResponse = {
@@ -47,18 +47,33 @@ export const adminLogin = async (req, res) => {
                     : !existingAdmin.isActive
                         ? 'suspended'
                         : '',
+            accessToken: jwt.sign({
+                adminId: adminIdToSend,
+                createdById: existingAdmin.createdById,
+                createdByUser: existingAdmin.createdByUser,
+                userName: existingAdmin.userName,
+                roles: existingAdmin.roles.map((role) => ({
+                    role: role.role,
+                    permission: role.permission,
+                })),
+                status: existingAdmin.isActive
+                    ? 'active'
+                    : !existingAdmin.locked
+                        ? 'locked'
+                        : !existingAdmin.isActive
+                            ? 'suspended'
+                            : '',
+            }, process.env.JWT_SECRET_KEY, {
+                expiresIn: persist ? '1y' : '8h',
+            })
         };
-
-        const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-            expiresIn: persist ? '1y' : '8h',
-        });
 
         const loginTime = new Date();
         await existingAdmin.update({ lastLoginTime: loginTime });
 
         return res.status(200).send(
             apiResponseSuccess(
-                { token: accessToken, adminData: accessTokenResponse },
+                accessTokenResponse,
                 true,
                 200,
                 'Admin login successfully',
@@ -68,6 +83,7 @@ export const adminLogin = async (req, res) => {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
+
 // done
 export const adminPasswordResetCode = async (req, res) => {
     try {

@@ -693,7 +693,7 @@ export const profileView = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const buildRootPath = async (req, res) => {
   try {
     const { userName, action } = req.params;
@@ -708,14 +708,11 @@ export const buildRootPath = async (req, res) => {
     }
 
     if (userName) {
-      const userQuery = 'SELECT * FROM admins WHERE userName = ?';
-      const [userResult] = await database.execute(userQuery, [userName]);
+      user = await admins.findOne({ where: { userName } });
 
-      if (!userResult.length) {
+      if (!user) {
         throw { code: 404, message: 'User not found' };
       }
-
-      user = userResult[0];
     } else {
       throw { code: 400, message: 'userName parameter is required' };
     }
@@ -730,18 +727,15 @@ export const buildRootPath = async (req, res) => {
         globalUsernames.push(newPath);
       }
 
-      const likeCondition = searchName ? `AND userName LIKE ?` : '';
-      const limitClause = `LIMIT ${(page - 1) * pageSize}, ${pageSize}`;
-      const query = `
-          SELECT * FROM admins
-          WHERE createdByUser = ? ${likeCondition}
-          ${limitClause}
-        `;
-
-      const queryParameters = searchName ? [user.userName, `%${searchName}%`] : [user.userName];
-
-      const [createdUsers] = await database.execute(query, queryParameters);
-      console.log('Created Users:', createdUsers);
+      const likeCondition = searchName ? { userName: { [Op.like]: `%${searchName}%` } } : {};
+      const createdUsers = await admins.findAll({
+        where: {
+          createdByUser: user.userName,
+          ...likeCondition,
+        },
+        offset: (page - 1) * pageSize,
+        limit: pageSize,
+      });
 
       const userDetails = {
         createdUsers: createdUsers.map((createdUser) => {
@@ -750,9 +744,9 @@ export const buildRootPath = async (req, res) => {
           let partnership = [];
 
           try {
-            creditRef = createdUser.CreditRefs ? JSON.parse(createdUser.CreditRefs) : [];
-            refProfitLoss = createdUser.Partnerships ? JSON.parse(createdUser.Partnerships) : [];
-            partnership = createdUser.Partnerships ? JSON.parse(createdUser.Partnerships) : [];
+            creditRef = createdUser.creditRefs ? JSON.parse(createdUser.creditRefs) : [];
+            refProfitLoss = createdUser.refProfitLoss ? JSON.parse(createdUser.refProfitLoss) : [];
+            partnership = createdUser.partnerships ? JSON.parse(createdUser.partnerships) : [];
           } catch (e) {
             console.error('JSON parsing error:', e);
           }
@@ -789,14 +783,13 @@ export const buildRootPath = async (req, res) => {
       throw { code: 400, message: 'Invalid action provided' };
     }
 
-    const updatePathQuery = 'UPDATE admins SET path = ? WHERE adminId = ?';
-    await database.execute(updatePathQuery, [JSON.stringify(globalUsernames), user.adminId]);
+    await user.update({ path: JSON.stringify(globalUsernames) });
 
     const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
     return res
       .status(200)
       .json(
-        apiResponseSuccess({ message: successMessage, path: globalUsernames }, 201, true, { message: successMessage }),
+        apiResponseSuccess({ message: successMessage, path: globalUsernames }, true, 200, { message: successMessage }),
       );
   } catch (error) {
     return res
