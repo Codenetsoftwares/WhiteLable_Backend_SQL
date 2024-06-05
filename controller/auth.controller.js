@@ -59,7 +59,6 @@ export const adminLogin = async (req, res) => {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
-
 // done
 export const adminPasswordResetCode = async (req, res) => {
     try {
@@ -82,7 +81,7 @@ export const adminPasswordResetCode = async (req, res) => {
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
         await admins.update({ password: encryptedPassword }, { where: { userName } });
-        return res.status(201).json(apiResponseSuccess(null, 201, true, 'Password Reset Successful!'));
+        return res.status(200).json(apiResponseSuccess(null, true, 200, 'Password Reset Successful!'));
     } catch (error) {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }

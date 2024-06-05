@@ -55,14 +55,13 @@ export const createAdmin = async (req, res) => {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(201).json(apiResponseSuccess(newAdmin, 201, true, 'Admin created successfully'));
+    return res.status(201).json(apiResponseSuccess(newAdmin, true, 201, 'Admin created successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const createSubAdmin = async (req, res) => {
   try {
@@ -108,7 +107,7 @@ export const createSubAdmin = async (req, res) => {
       createdByUser,
     });
 
-    return res.status(201).json(apiResponseSuccess(newSubAdmin, 201, true, 'Sub Admin created successfully'));
+    return res.status(201).json(apiResponseSuccess(newSubAdmin, true, 201, 'Sub Admin created successfully'));
   } catch (error) {
     res
       .status(500)
@@ -153,7 +152,6 @@ export const getIpDetail = async (req, res) => {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const viewAllCreates = async (req, res) => {
   try {
@@ -217,8 +215,8 @@ export const viewAllCreates = async (req, res) => {
           currentPage: page,
           pageSize,
         },
-        200,
         true,
+        200,
         'Successfully',
       ),
     );
@@ -229,7 +227,6 @@ export const viewAllCreates = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const viewAllSubAdminCreates = async (req, res) => {
   try {
@@ -294,8 +291,8 @@ export const viewAllSubAdminCreates = async (req, res) => {
           currentPage: page,
           pageSize,
         },
-        200,
         true,
+        200,
         'Successfully',
       ),
     );
@@ -306,7 +303,6 @@ export const viewAllSubAdminCreates = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const editCreditRef = async (req, res) => {
   try {
@@ -357,14 +353,13 @@ export const editCreditRef = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, 201, true, 'CreditRef Edited successfully'));
+    return res.status(201).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, 201, 'CreditRef Edited successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const editPartnership = async (req, res) => {
   try {
@@ -411,14 +406,13 @@ export const editPartnership = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, 201, true, 'Partnership Edit successfully'));
+    return res.status(201).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, 201, 'Partnership Edit successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const partnershipView = async (req, res) => {
   try {
@@ -447,12 +441,11 @@ export const partnershipView = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'success'));
+    return res.status(200).json(apiResponseSuccess(transferData, true, 200, 'success'));
   } catch (error) {
     return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const creditRefView = async (req, res) => {
   try {
