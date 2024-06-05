@@ -1,15 +1,15 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db.js';
 
-const SelfTransaction = sequelize.define(
-  'selfTransactions',
+const transaction = sequelize.define(
+  'transaction',
   {
     id: {
       type: DataTypes.BIGINT,
       autoIncrement: true,
       primaryKey: true,
     },
-    selfTransactionId: {
+    transactionId: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -33,10 +33,18 @@ const SelfTransaction = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    transferFromUserAccount: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    transferToUserAccount: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
   {
     timestamps: false,
   },
 );
 
-export default SelfTransaction;
+export default transaction;

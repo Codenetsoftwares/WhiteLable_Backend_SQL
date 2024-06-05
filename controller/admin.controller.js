@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
 import { stringConstructor } from '../constructor/stringConstructor.js';
-import { Op } from 'sequelize';   /*** Op refers to the set of operators provided by Sequelize's query language */
+import { Op } from 'sequelize'; /*** Op refers to the set of operators provided by Sequelize's query language */
 
 const globalUsernames = [];
 // done
@@ -130,7 +130,9 @@ export const getIpDetail = async (req, res) => {
 
     return res.status(200).json(apiResponseSuccess(responseObj, 200, true, 'Data Fetched'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -141,15 +143,20 @@ export const viewAllCreates = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize, 10) || 5;
 
     const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
-    console.log("createdById:", createdById);
-    console.log("searchQuery:", searchQuery);
-    const allowedRoles = [stringConstructor.whiteLabel, stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent];
-    const rolesQuery = allowedRoles.map(role => ({ roles: { [Op.contains]: [{ role }] } }));
+    console.log('createdById:', createdById);
+    console.log('searchQuery:', searchQuery);
+    const allowedRoles = [
+      stringConstructor.whiteLabel,
+      stringConstructor.hyperAgent,
+      stringConstructor.superAgent,
+      stringConstructor.masterAgent,
+    ];
+    const rolesQuery = allowedRoles.map((role) => ({ roles: { [Op.contains]: [{ role }] } }));
 
     const { count, rows: admin } = await admins.findAndCountAll({
       where: {
         createdById,
-        [Op.or]: rolesQuery.map(role => ({ roles: { [Op.like]: `%${JSON.stringify(role)}%` } })),
+        [Op.or]: rolesQuery.map((role) => ({ roles: { [Op.like]: `%${JSON.stringify(role)}%` } })),
         ...searchQuery,
       },
       offset: (page - 1) * pageSize,
@@ -173,7 +180,8 @@ export const viewAllCreates = async (req, res) => {
       Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
     }));
 
-    const totalPages = Math.ceil(count / pageSize);
+    const totalPages = Math.ce;
+    il(count / pageSize);
 
     return res.status(200).json(
       apiResponseSuccess(
@@ -191,7 +199,9 @@ export const viewAllCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -370,7 +380,7 @@ export const moveAdminToTrash = async (req, res) => {
       CreditRefs: admin.CreditRefs ? JSON.stringify(admin.CreditRefs) : null,
       Partnerships: admin.Partnerships ? JSON.stringify(admin.Partnerships) : null,
       createdById: admin.createdById,
-      createdByUser: admin.createdByUser
+      createdByUser: admin.createdByUser,
     };
     const trashId = uuidv4();
 
@@ -390,7 +400,6 @@ export const moveAdminToTrash = async (req, res) => {
         updatedTransactionData.createdById || null,
         updatedTransactionData.adminId || null,
         updatedTransactionData.createdByUser || null,
-
       ],
     );
 
@@ -608,7 +617,11 @@ export const editPartnership = async (req, res) => {
       throw { code: 500, message: 'Cannot update Admin Partnerships' };
     }
 
-    return res.status(201).json(apiResponseSuccess({ ...admin, Partnerships: partnershipsList }, 201, true, 'Partnership added successfully'));
+    return res
+      .status(201)
+      .json(
+        apiResponseSuccess({ ...admin, Partnerships: partnershipsList }, 201, true, 'Partnership added successfully'),
+      );
   } catch (error) {
     res.status(500).json(apiResponseErr(error.data ?? null, 500, false, error.errMessage ?? error.message));
   }
@@ -902,7 +915,6 @@ export const subAdminPermission = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 
 export const userStatus = async (req, res) => {
   try {

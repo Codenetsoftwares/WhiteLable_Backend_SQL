@@ -48,9 +48,9 @@ import {
 import { stringConstructor } from '../constructor/stringConstructor.js';
 
 export const AdminRoute = (app) => {
-
   // Create Admin API ("DONE")
-  app.post('/api/admin-create',
+  app.post(
+    '/api/admin-create',
     createAdminSchema,
     customErrorHandler,
     Authorize([
@@ -70,7 +70,8 @@ export const AdminRoute = (app) => {
   );
 
   // Create SubAdmin API ("DONE")
-  app.post('/api/admin/create-subAdmin',
+  app.post(
+    '/api/admin/create-subAdmin',
     createSubAdminSchema,
     customErrorHandler,
     Authorize([
@@ -84,21 +85,22 @@ export const AdminRoute = (app) => {
       stringConstructor.subHyperAgent,
       stringConstructor.subSuperAgent,
       stringConstructor.subMasterAgent,
-      stringConstructor.createSubAdmin
+      stringConstructor.createSubAdmin,
     ]),
     createSubAdmin,
   );
 
   // Ip Detail API ("DONE")
-  app.get('/getip/:username',
+  app.get(
+    '/getip/:username',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'ActivityLog']),
     customErrorHandler,
     getIpDetail,
   );
 
-  
   // View All Creates API ("DONE")
-  app.get('/api/view-all-creates/:createdById',
+  app.get(
+    '/api/view-all-creates/:createdById',
     viewAllCreatesSchema,
     customErrorHandler,
     Authorize([
@@ -129,7 +131,8 @@ export const AdminRoute = (app) => {
   );
 
   // View All Sub Admins Creates ("DONE")
-  app.get('/api/view-all-subAdmin-creates/:createdById',
+  app.get(
+    '/api/view-all-subAdmin-creates/:createdById',
     Authorize([
       'superAdmin',
       'WhiteLabel',
@@ -282,8 +285,6 @@ export const AdminRoute = (app) => {
     customErrorHandler,
     subAdminPermission,
   );
-
-  
 
   // User State API ("DONE")
   app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, userStatus);

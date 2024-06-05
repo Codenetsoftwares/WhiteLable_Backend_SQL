@@ -6,7 +6,7 @@ import sequelize from './db.js';
 
 import { AdminRoute } from './routes/admin.route.js';
 import { authRoute } from './routes/auth.route.js';
-import { selfTransactionRoute } from './routes/selfTransaction.route.js';
+import { transactionRoute } from './routes/transaction.route.js';
 
 dotenv.config();
 const app = express();
@@ -23,13 +23,14 @@ app.get('/', (req, res) => {
 
 AdminRoute(app);
 authRoute(app);
-selfTransactionRoute(app);
+transactionRoute(app);
 
-sequelize.sync({ alter: true })
+sequelize
+  .sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('Unable to create tables:', err);
   });
 
