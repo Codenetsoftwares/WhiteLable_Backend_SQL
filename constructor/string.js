@@ -10,7 +10,7 @@ class stringConst {
         this.subHyperAgent = 'subHyperAgent';
         this.subSuperAgent = 'subSuperAgent';
         this.subMasterAgent = 'subMasterAgent';
-        this.createAdmin = 'createAdmin';
+        this.createAdmin = 'create-Admin';
         this.createSubAdmin = 'create-subAdmin';
         this.transferBalance = 'transferBalance';
         this.status = 'status';
@@ -21,7 +21,6 @@ class stringConst {
         this.userProfileView = 'user-profile-view';
         this.profileView = 'profile-view';
         this.viewAdminData = 'view-admin-data';
-        this.createAdmin = 'create-Admin';
         this.createUser = 'create-user';
         this.accountStatement = 'accountStatement';
         this.activityLog = 'activityLog';

@@ -20,15 +20,19 @@ export const createAdmin = async (req, res) => {
     const user = req.user;
     const { userName, password, roles } = req.body;
 
-    const existingAdmin = await admins.findOne({ where: { userName } });
+    const existingAdmin = await admins.findOne({ where: { userName: userName } });
     if (existingAdmin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
+      throw { code: 409, message: "Admin Already Exists" };
     }
-
+    if (user.isActive === false || user.locked === false) {
+      throw { code: 400, message: "Account is Not Active" };
+    }
     const defaultPermission = ['all-access'];
-    const rolesWithDefaultPermission = Array.isArray(roles)
-      ? roles.map((role) => ({ role, permission: defaultPermission }))
-      : [{ role: roles, permission: defaultPermission }];
+
+    const rolesWithDefaultPermission = roles.map(role => ({
+      role,
+      permission: defaultPermission
+    }));
 
     const newAdmin = await admins.create({
       adminId: uuidv4(),
@@ -39,6 +43,18 @@ export const createAdmin = async (req, res) => {
       createdByUser: user.userName,
     });
 
+    const isSubRole = [
+      string.subWhiteLabel,
+      string.subAdmin,
+      string.subHyperAgent,
+      string.subSuperAgent,
+      string.subMasterAgent
+    ].includes(user.roles[0].role);
+
+    if (isSubRole) {
+      await newAdmin.update({ createdById: user.createdById || user.adminId });
+    }
+
     return res.status(201).json(apiResponseSuccess(newAdmin, 201, true, 'Admin created successfully'));
   } catch (error) {
     res
@@ -46,6 +62,7 @@ export const createAdmin = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 // done
 export const createSubAdmin = async (req, res) => {
   try {
@@ -60,7 +77,7 @@ export const createSubAdmin = async (req, res) => {
     if (existingAdmin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
     }
-    
+
     let subRole = '';
     for (let i = 0; i < user.roles.length; i++) {
       if (user.roles[i].role.includes(string.superAdmin)) {
@@ -182,10 +199,10 @@ export const viewAllCreates = async (req, res) => {
       roles: admin.roles,
       balance: admin.balance,
       loadBalance: admin.loadBalance,
-      CreditRefs: admin.CreditRefs || [],
+      creditRefs: admin.creditRefs || [],
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
-      Partnerships: admin.Partnerships || [],
+      partnerships: admin.partnerships || [],
       Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
     }));
 
@@ -259,10 +276,10 @@ export const viewAllSubAdminCreates = async (req, res) => {
       roles: admin.roles,
       balance: admin.balance,
       loadBalance: admin.loadBalance,
-      CreditRefs: admin.CreditRefs || [],
+      creditRefs: admin.creditRefs || [],
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
-      Partnerships: admin.Partnerships || [],
+      partnerships: admin.partnerships || [],
       Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
     }));
 
@@ -340,11 +357,11 @@ export const editCreditRef = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({adminDetails, creditRef: creditRefList}, 201, true, 'CreditRef Edited successfully'));
+    return res.status(201).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, 201, true, 'CreditRef Edited successfully'));
   } catch (error) {
     res
-    .status(500)
-    .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -394,7 +411,7 @@ export const editPartnership = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({ adminDetails,partnerships: partnershipsList }, 201, true, 'Partnership Edit successfully'));
+    return res.status(201).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, 201, true, 'Partnership Edit successfully'));
   } catch (error) {
     res
       .status(500)

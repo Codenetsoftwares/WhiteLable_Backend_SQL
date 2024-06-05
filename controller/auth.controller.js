@@ -31,7 +31,7 @@ export const adminLogin = async (req, res) => {
                 role: role.role,
                 permission: role.permission,
             })),
-            Status: existingAdmin.isActive
+            status: existingAdmin.isActive
                 ? 'active'
                 : !existingAdmin.locked
                     ? 'locked'
