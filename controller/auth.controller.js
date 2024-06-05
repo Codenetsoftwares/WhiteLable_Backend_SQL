@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import admins from '../models/admin.model.js';
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
+import { string } from '../constructor/string.js';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -14,16 +15,24 @@ export const adminLogin = async (req, res) => {
             return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
         }
 
-        console.log('Stored Hashed Password:', existingAdmin.password);
-        console.log('Generated Hashed Password:', await bcrypt.hash(password, 10));
-
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
             return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
         }
 
+        let adminIdToSend;
+        const roles = existingAdmin.roles.map((role) => role.role);
+        
+        if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
+            adminIdToSend = existingAdmin.adminId;
+        } else if ([string.subWhiteLabel, string.subAdmin, string.subHyperAgent, string.subSuperAgent, string.subMasterAgent].includes(roles[0])) {
+            adminIdToSend = existingAdmin.createdById;
+        } else {
+            adminIdToSend = existingAdmin.adminId; 
+        }
+
         const accessTokenResponse = {
-            adminId: existingAdmin.adminId,
+            adminId: adminIdToSend,
             createdById: existingAdmin.createdById,
             createdByUser: existingAdmin.createdByUser,
             userName: existingAdmin.userName,
