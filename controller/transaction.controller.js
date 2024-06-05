@@ -1,4 +1,4 @@
-import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
+import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../helper/errorHandler.js';
 import { database } from '../dbConnection/database.service.js';
 import selfTransactions from '../models/selfTransaction.model.js';
 import transaction from '../models/transactions.model.js';
@@ -21,7 +21,7 @@ export const depositTransaction = async (req, res) => {
       amount: depositAmount,
       userName: admin.userName,
       date: new Date(),
-      transactionType: 'Deposit',
+      transactionType: 'deposit',
     };
 
     // Update balances correctly
@@ -54,7 +54,7 @@ export const depositTransaction = async (req, res) => {
 
 export const transferAmount = async (req, res) => {
   try {
-    const { receiveUserId, trnsferAmount, withdrawlAmt, remarks, password } = req.body;
+    const { receiveUserId,  transferAmount, withdrawalAmt, remarks, password } = req.body;
     const adminId = req.params.adminId;
     const senderAdmin = await admins.findOne({ where: { adminId } });
 
@@ -76,13 +76,13 @@ export const transferAmount = async (req, res) => {
     if (!receiverAdmin.isActive) {
       return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin is inactive'));
     }
-    if (withdrawlAmt && withdrawlAmt > 0) {
-      if (receiverAdmin.balance < withdrawlAmt) {
+    if (withdrawalAmt && withdrawalAmt > 0) {
+      if (receiverAdmin.balance < withdrawalAmt) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Withdrawal'));
       }
       const withdrawalRecord = {
-        transactionType: 'Withdrawal',
-        amount: Math.round(parseFloat(withdrawlAmt)),
+        transactionType: 'withdrawal',
+        amount: Math.round(parseFloat(withdrawalAmt)),
         transferFromUserAccount: receiverAdmin.userName,
         transferToUserAccount: senderAdmin.userName,
         userName: senderAdmin.userName,
@@ -90,11 +90,11 @@ export const transferAmount = async (req, res) => {
         remarks: remarks,
       };
       // Calculation
-      const deductionBalance = (receiverAdmin.balance -= Math.round(parseFloat(withdrawlAmt)));
-      const deductionLoadBalance = (receiverAdmin.loadBalance -= Math.round(parseFloat(withdrawlAmt)));
-      const creditAmount = (senderAdmin.balance += Math.round(parseFloat(withdrawlAmt)));
+      const deductionBalance = (receiverAdmin.balance -= Math.round(parseFloat(withdrawalAmt)));
+      const deductionLoadBalance = (receiverAdmin.loadBalance -= Math.round(parseFloat(withdrawalAmt)));
+      const creditAmount = (senderAdmin.balance += Math.round(parseFloat(withdrawalAmt)));
 
-      // Updation in Table
+      // Updating in Table
       await receiverAdmin.update({
         balance: deductionBalance,
         loadBalance: deductionLoadBalance,
@@ -118,14 +118,14 @@ export const transferAmount = async (req, res) => {
       });
       return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deducted Successfully'));
     } else {
-      if (senderAdmin.balance < trnsferAmount) {
+      if (senderAdmin.balance < transferAmount) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
       }
       // console.log("senderAdmin", senderAdmin);
 
       const transferRecordDebit = {
-        transactionType: 'Debit',
-        amount: Math.round(parseFloat(trnsferAmount)),
+        transactionType: 'debit',
+        amount: Math.round(parseFloat(transferAmount)),
         transferFromUserAccount: senderAdmin.userName,
         transferToUserAccount: receiverAdmin.userName,
         userName: senderAdmin.userName,
@@ -134,8 +134,8 @@ export const transferAmount = async (req, res) => {
       };
 
       const transferRecordCredit = {
-        transactionType: 'Credit',
-        amount: Math.round(parseFloat(trnsferAmount)),
+        transactionType: 'credit',
+        amount: Math.round(parseFloat(transferAmount)),
         transferFromUserAccount: senderAdmin.userName,
         transferToUserAccount: receiverAdmin.userName,
         userName: senderAdmin.userName,
@@ -143,11 +143,11 @@ export const transferAmount = async (req, res) => {
         remarks: remarks,
       };
 
-      const senderBalance = (senderAdmin.balance -= Math.round(parseFloat(trnsferAmount)));
-      const receiverBalance = (receiverAdmin.balance += Math.round(parseFloat(trnsferAmount)));
-      const receiverLoadBalance = (receiverAdmin.loadBalance += Math.round(parseFloat(trnsferAmount)));
+      const senderBalance = (senderAdmin.balance -= Math.round(parseFloat(transferAmount)));
+      const receiverBalance = (receiverAdmin.balance += Math.round(parseFloat(transferAmount)));
+      const receiverLoadBalance = (receiverAdmin.loadBalance += Math.round(parseFloat(transferAmount)));
 
-      // Updation in Table
+      // Updating in Table
       await receiverAdmin.update({
         balance: receiverBalance,
         loadBalance: receiverLoadBalance,
@@ -243,10 +243,8 @@ export const transactionView = async (req, res) => {
         data.withdrawalBalance = withdrawalBalances || 0;
       }
     });
-
-    return res
-      .status(200)
-      .json(apiResponseSuccess({ allData, totalPages, totalItems }, 200, true, 'Transactions fetched successfully'));
+    const paginationData = apiResponsePagination(page, totalPages, totalItems);
+    return res.status(200).send(apiResponseSuccess(allData, paginationData, true, 200, 'Success'));
   } catch (error) {
     res
       .status(500)
@@ -275,19 +273,9 @@ export const accountStatement = async (req, res) => {
 
     const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-    return res.status(200).json(
-      apiResponseSuccess(
-        {
-          data: paginatedData,
-          currentPage: page,
-          totalPages: totalPages,
-          totalCount: totalCount,
-        },
-        200,
-        true,
-        'successfully',
-      ),
-    );
+    const paginationData = apiResponsePagination(page, totalPages, totalCount);
+    return res.status(200).send(apiResponseSuccess(paginatedData, paginationData, true, 200, 'Success'));
+
   } catch (error) {
     res
       .status(500)

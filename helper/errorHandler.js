@@ -6,13 +6,13 @@ export const apiResponseErr = (data, success, responseCode, errMessage) => {
     errMessage: errMessage ?? 'Something went wrong',
   };
 };
-export const apiResponseSuccess = (data, success, successCode, message, pagination) => {
+export const apiResponseSuccess = (data, pagination, success, successCode, message) => {
   return {
     data: data,
+    pagination: pagination,
     success: success,
     successCode: successCode,
     message: message,
-    pagination: pagination,
   };
 };
 
