@@ -117,11 +117,11 @@ const admins = sequelize.define('admins', {
     type: DataTypes.JSON,
     allowNull: true,
   },
-  CreditRefs: {
+  creditRefs: {
     type: DataTypes.JSON,
     allowNull: true,
   },
-  Partnerships: {
+  partnerships: {
     type: DataTypes.JSON,
     allowNull: true,
   },

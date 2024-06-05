@@ -25,7 +25,7 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
     }
 
-    const defaultPermission = ['All-Access'];
+    const defaultPermission = ['all-access'];
     const rolesWithDefaultPermission = Array.isArray(roles)
       ? roles.map((role) => ({ role, permission: defaultPermission }))
       : [{ role: roles, permission: defaultPermission }];
@@ -60,10 +60,7 @@ export const createSubAdmin = async (req, res) => {
     if (existingAdmin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
     }
-
-    const passwordSalt = await bcrypt.genSalt();
-    const encryptedPassword = await bcrypt.hash(password, passwordSalt);
-
+    
     let subRole = '';
     for (let i = 0; i < user.roles.length; i++) {
       if (user.roles[i].role.includes(string.superAdmin)) {
@@ -88,7 +85,7 @@ export const createSubAdmin = async (req, res) => {
     const newSubAdmin = await admins.create({
       adminId,
       userName,
-      password: encryptedPassword,
+      password,
       roles: [{ role: subRole, permission: roles[0].permission }],
       createdById,
       createdByUser,
@@ -216,46 +213,47 @@ export const viewAllCreates = async (req, res) => {
   }
 };
 
+// done
 export const viewAllSubAdminCreates = async (req, res) => {
   try {
     const createdById = req.params.createdById;
     const page = parseInt(req.query.page, 10) || 1;
     const pageSize = parseInt(req.query.pageSize, 10) || 5;
 
-    const searchQuery = req.query.userName ? ' AND userName LIKE ?' : '';
-    const searchParams = req.query.userName ? [`%${req.query.userName}%`] : [];
+    const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
 
-    const allowedRoles = ['SubAdmin', 'SubWhiteLabel', 'SubHyperAgent', 'SubSuperAgent', 'SubMasterAgent'];
-    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
-    const rolesParams = allowedRoles;
+    const allowedRoles = [
+      string.subAdmin,
+      string.subHyperAgent,
+      string.subMasterAgent,
+      string.subWhiteLabel,
+      string.subSuperAgent
+    ];
 
-    const totalRecordsParams = [createdById, ...rolesParams, ...searchParams];
-    const totalRecordsQuery = `
-      SELECT COUNT(*) as totalRecords
-      FROM Admins
-      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
-    `;
+    const totalRecords = await admins.count({
+      where: {
+        createdById,
+        ...searchQuery,
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+      }
+    });
 
-    const [totalRecordsResult] = await database.execute(totalRecordsQuery, totalRecordsParams);
-    const totalRecords = totalRecordsResult[0].totalRecords;
-
-    const dataParams = [createdById, ...rolesParams, ...searchParams];
-    const dataQuery = `
-      SELECT *
-      FROM Admins
-      WHERE createdById = ? AND (${rolesQuery})${searchQuery}
-    `;
-
-    const [admins] = await database.execute(dataQuery, dataParams);
-
-    if (!admins || admins.length === 0) {
+    if (totalRecords === 0) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
     }
 
     const offset = (page - 1) * pageSize;
-    const paginatedAdmins = admins.slice(offset, offset + pageSize);
+    const adminsData = await admins.findAll({
+      where: {
+        createdById,
+        ...searchQuery,
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+      },
+      offset,
+      limit: pageSize
+    });
 
-    const users = paginatedAdmins.map((admin) => ({
+    const users = adminsData.map((admin) => ({
       adminId: admin.adminId,
       userName: admin.userName,
       roles: admin.roles,
@@ -265,7 +263,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
       Partnerships: admin.Partnerships || [],
-      Status: admin.isActive ? 'Active' : !admin.locked ? 'Locked' : !admin.isActive ? 'Suspended' : '',
+      Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
     }));
 
     const totalPages = Math.ceil(totalRecords / pageSize);
@@ -292,69 +290,183 @@ export const viewAllSubAdminCreates = async (req, res) => {
   }
 };
 
+// done
 export const editCreditRef = async (req, res) => {
   try {
     const adminId = req.params.adminId;
     const { creditRef, password } = req.body;
 
-    // Retrieve the admin
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-    const admin = adminResult[0];
+    const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'Admin Not Found'));
     }
 
-    // Validate the password
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
       return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
     }
 
-    // Check if the admin is active and not locked
-    if (!admin.isActive || !admin.locked) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin is Suspended or Locked'));
+    if (!admin.isActive || admin.locked) {
+      return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is Suspended or Locked'));
     }
 
-    // Create a new credit reference entry
     const newCreditRefEntry = {
       value: creditRef,
       date: new Date(),
     };
 
-    // Retrieve existing credit references
-    const [creditRefResult] = await database.execute('SELECT CreditRefs FROM Admins WHERE adminId = ?', [adminId]);
-    let creditRefList;
-
-    try {
-      creditRefList = JSON.parse(creditRefResult[0].CreditRefs) || [];
-    } catch (e) {
-      creditRefList = [];
+    let creditRefList = [];
+    if (typeof admin.creditRefs === 'string') {
+      try {
+        creditRefList = JSON.parse(admin.creditRefs);
+      } catch (error) {
+        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid creditRefs JSON'));
+      }
+    } else if (Array.isArray(admin.creditRefs)) {
+      creditRefList = admin.creditRefs;
     }
 
-    // Update the credit reference list
     creditRefList.push(newCreditRefEntry);
 
     if (creditRefList.length > 10) {
       creditRefList.shift();
     }
 
-    // Update the credit reference field in the database
-    const [updateResult] = await database.execute('UPDATE Admins SET CreditRefs = ? WHERE adminId = ?', [
-      JSON.stringify(creditRefList),
-      adminId,
-    ]);
+    admin.creditRefs = JSON.stringify(creditRefList);
+    await admin.save();
 
-    if (updateResult.affectedRows === 0) {
-      throw { code: 500, message: 'Cannot Update Admin CreditRef' };
+    const adminDetails = {
+      adminId: admin.adminId,
+      userName: admin.userName,
+    };
+
+    return res.status(201).json(apiResponseSuccess({adminDetails, creditRef: creditRefList}, 201, true, 'CreditRef Edited successfully'));
+  } catch (error) {
+    res
+    .status(500)
+    .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+
+// done
+export const editPartnership = async (req, res) => {
+  try {
+    const adminId = req.params.adminId;
+    const { partnership, password } = req.body;
+
+    const admin = await admins.findOne({ where: { adminId } });
+    if (!admin) {
+      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
     }
 
-    return res
-      .status(201)
-      .json(apiResponseSuccess({ ...admin, creditRef: creditRefList }, 201, true, 'CreditRef Edited successfully'));
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    if (!isPasswordValid) {
+      return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
+    }
+
+    if (!admin.isActive || admin.locked) {
+      return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is suspended or locked'));
+    }
+
+    const newPartnershipEntry = {
+      value: partnership,
+      date: new Date(),
+    };
+
+    let partnershipsList;
+    try {
+      partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
+    } catch (error) {
+      return res.status(500).json(apiResponseErr(null, 500, false, 'Invalid Partnerships data'));
+    }
+
+    partnershipsList.push(newPartnershipEntry);
+
+    if (partnershipsList.length > 10) {
+      partnershipsList = partnershipsList.slice(-10);
+    }
+
+    admin.partnerships = JSON.stringify(partnershipsList);
+    await admin.save();
+
+    const adminDetails = {
+      adminId: admin.adminId,
+      userName: admin.userName,
+    };
+
+    return res.status(201).json(apiResponseSuccess({ adminDetails,partnerships: partnershipsList }, 201, true, 'Partnership Edit successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+
+// done
+export const partnershipView = async (req, res) => {
+  try {
+    const adminId = req.params.adminId;
+
+    const admin = await admins.findOne({ where: { adminId } });
+    if (!admin) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+    }
+
+    let partnershipsList;
+    try {
+      partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
+    } catch (error) {
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid Partnerships data'));
+    }
+
+    if (!Array.isArray(partnershipsList)) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Partnerships not found or not an array'));
+    }
+
+    const last10Partnerships = partnershipsList.slice(-10);
+
+    const transferData = {
+      Partnerships: last10Partnerships,
+      userName: admin.userName,
+    };
+
+    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'success'));
+  } catch (error) {
+    return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+
+// done
+export const creditRefView = async (req, res) => {
+  try {
+    const adminId = req.params.adminId;
+
+    const admin = await admins.findOne({ where: { adminId } });
+    if (!admin) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+    }
+
+    let creditRefList;
+    try {
+      creditRefList = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
+    } catch (error) {
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid CreditRefs data'));
+    }
+
+    if (!Array.isArray(creditRefList)) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'CreditRefs not found or not an array'));
+    }
+
+    const last10CreditRefs = creditRefList.slice(-10);
+
+    const transferData = {
+      CreditRefs: last10CreditRefs,
+      userName: admin.userName,
+    };
+
+    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'Success'));
+  } catch (error) {
+    return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
@@ -572,128 +684,6 @@ export const profileView = async (req, res) => {
   }
 };
 
-export const editPartnership = async (req, res) => {
-  try {
-    const adminId = req.params.adminId;
-    const { partnership, password } = req.body;
-
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
-    const admin = adminResult[0];
-
-    if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
-    }
-
-    if (!admin.locked || !admin.isActive) {
-      return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is suspended or locked'));
-    }
-
-    const newPartnershipEntry = {
-      value: partnership,
-      date: new Date(),
-    };
-
-    const [partnershipResult] = await database.execute('SELECT Partnerships FROM Admins WHERE adminId = ?', [adminId]);
-
-    let partnershipsList;
-    try {
-      if (typeof partnershipResult[0].Partnerships === 'string') {
-        partnershipsList = JSON.parse(partnershipResult[0].Partnerships || '[]');
-      } else {
-        partnershipsList = partnershipResult[0].Partnerships || [];
-      }
-    } catch (error) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Invalid Partnerships data'));
-    }
-
-    partnershipsList.push(newPartnershipEntry);
-
-    if (partnershipsList.length > 10) {
-      partnershipsList = partnershipsList.slice(-10);
-    }
-
-    const partnershipsJson = JSON.stringify(partnershipsList);
-
-    const [updateResult] = await database.execute('UPDATE Admins SET Partnerships = ? WHERE adminId = ?', [
-      partnershipsJson,
-      adminId,
-    ]);
-
-    if (updateResult.affectedRows === 0) {
-      throw { code: 500, message: 'Cannot update Admin Partnerships' };
-    }
-
-    return res.status(201).json(apiResponseSuccess({ ...admin, Partnerships: partnershipsList }, 201, true, 'Partnership added successfully'));
-  } catch (error) {
-    res.status(500).json(apiResponseErr(error.data ?? null, 500, false, error.errMessage ?? error.message));
-  }
-};
-
-export const partnershipView = async (req, res) => {
-  try {
-    const id = req.params.adminId;
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [id]);
-
-    if (adminResult.length === 0) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
-    }
-
-    const admin = adminResult[0];
-    console.log('admin', admin);
-
-    if (!admin.Partnerships || !Array.isArray(admin.Partnerships)) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Partnerships not found or not an array'));
-    }
-
-    const last10Partnerships = admin.Partnerships.slice(-10);
-    console.log('last10Partnerships', last10Partnerships);
-    const transferData = {
-      Partnerships: last10Partnerships,
-      userName: admin.userName,
-    };
-
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const creditRefView = async (req, res) => {
-  try {
-    const id = req.params.adminId;
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [id]);
-
-    if (adminResult.length === 0) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
-    }
-
-    const admin = adminResult[0];
-
-    if (!admin.Partnerships || !Array.isArray(admin.CreditRefs)) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'CreditRefs not found or not an array'));
-    }
-
-    const last10CreditRefs = admin.CreditRefs.slice(-10);
-    const transferData = {
-      CreditRefs: last10CreditRefs,
-      userName: admin.userName,
-    };
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
 export const buildRootPath = async (req, res) => {
   try {
     const { userName, action } = req.params;
@@ -805,7 +795,7 @@ export const buildRootPath = async (req, res) => {
   }
 };
 
-export const viewSubAdmis = async (req, res) => {
+export const viewSubAdmins = async (req, res) => {
   try {
     const id = req.params.adminId;
     const page = parseInt(req.query.page, 10) || 1;
