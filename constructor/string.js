@@ -28,6 +28,7 @@ class stringConst {
         this.restoreAdmin = 'restore-admin';
         this.moveToTrash = 'move-to-trash';
         this.trashView = 'trash-view';
+        this.viewSubAdmin = 'view-subAdmin'
     }
 }
 

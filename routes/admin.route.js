@@ -89,7 +89,6 @@ export const adminRoute = (app) => {
     createSubAdmin,
   );
 
-  // Ip Detail API ("DONE")
   app.get('/getip/:username',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'ActivityLog']),
     customErrorHandler,
@@ -195,13 +194,18 @@ export const adminRoute = (app) => {
     editPartnership,
   );
 
-
   // PartnerShip View API ("DONE")
-  app.get(
-    '/api/partnershipView/:adminId',
+  app.get('/api/partnershipView/:adminId',
     partnershipViewSchema,
     customErrorHandler,
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Partnership-View']),
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.partnershipView
+    ]),
     partnershipView,
   );
 
@@ -210,11 +214,17 @@ export const adminRoute = (app) => {
     '/api/creditRefView/:adminId',
     creditRefViewSchema,
     customErrorHandler,
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'CreditRef-View']),
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.creditRefView
+    ]),
     creditRefView,
   );
 
-  // Move Admin User To Trash ("DONE")
   app.post(
     '/api/admin/move-to-trash-user',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Move-To-Trash']),
@@ -223,7 +233,6 @@ export const adminRoute = (app) => {
     moveAdminToTrash,
   );
 
-  // View Trash API ("DONE")
   app.get(
     '/api/admin/view-trash',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Trash-View']),
@@ -231,7 +240,6 @@ export const adminRoute = (app) => {
     viewTrash,
   );
 
-  // Delete Trash Data API ("DONE")
   app.delete(
     '/api/delete/admin-user/:trashId',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Delete-Admin']),
@@ -240,7 +248,6 @@ export const adminRoute = (app) => {
     deleteTrashData,
   );
 
-  // View Active Status API ("DONE")
   app.get(
     '/api/admin/active-status/:adminId',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Status']),
@@ -249,7 +256,6 @@ export const adminRoute = (app) => {
     activeStatus,
   );
 
-  // Restore Deleted Admin API ("DONE")
   app.post(
     '/api/admin/restore-to-wallet-use',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Restore-Admin']),
@@ -258,7 +264,6 @@ export const adminRoute = (app) => {
     restoreAdminUser,
   );
 
-  // Profile View API ("DONE")
   app.get('/api/User-Profile-view/:userName',
     Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'User-Profile-View']),
     profileViewSchema,
@@ -269,30 +274,46 @@ export const adminRoute = (app) => {
   // Root Path API ("DONE")
   app.post('/api/Root-Path/:userName/:action', rootPathSchema, customErrorHandler, buildRootPath);
 
-  // View Sub Admins API ("DONE")
+  // view-sub-admins ("DONE")
   app.get('/api/admin/view-sub-admins/:adminId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent']),
     viewSubAdminSchema,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.viewSubAdmin
+    ]),
     viewSubAdmins,
   );
-
-  // Single Sub Admin API ("DONE")
+  // single-sub-admin ("DONE")
   app.post('/api/admin/single-sub-admin/:adminId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent']),
     singleSubAdminSchema,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
     singleSubAdmin,
   );
-
-  // Permission Edit API ("DONE")
-  app.put('/admin/edit-subadmin-permissions/:adminId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent']),
+  // edit-subAdmin-permissions ("DONE")
+  app.put('/admin/edit-subAdmin-permissions/:adminId',
     subAdminPermissionSchema,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
     subAdminPermission,
   );
-
-  // User State API ("DONE")
+  // user-status ("DONE")
   app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, userStatus);
 };

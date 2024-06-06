@@ -6,6 +6,8 @@ import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
 import { string } from '../constructor/string.js';
 import { Op, fn, col } from 'sequelize';
+import sequelize from '../db.js';
+
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
  *fn is function for call SQL functions directly within your Sequelize queries,
@@ -22,10 +24,10 @@ export const createAdmin = async (req, res) => {
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
     if (existingAdmin) {
-      throw { code: 409, message: "Admin Already Exists" };
+      throw apiResponseErr(null, false, 400, "Admin Already Exists")
     }
     if (user.isActive === false || user.locked === false) {
-      throw { code: 400, message: "Account is Not Active" };
+      throw apiResponseErr(null, false, 400, "Account is Not Active")
     }
     const defaultPermission = ['all-access'];
 
@@ -69,12 +71,12 @@ export const createSubAdmin = async (req, res) => {
     const user = req.user;
 
     if (user.isActive === false) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Account is in Inactive Mode'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Account is in Inactive Mode'));
     }
 
     const existingAdmin = await admins.findOne({ where: { userName } });
     if (existingAdmin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin already exists'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Admin already exists'));
     }
 
     let subRole = '';
@@ -90,7 +92,7 @@ export const createSubAdmin = async (req, res) => {
       } else if (user.roles[i].role.includes(string.masterAgent)) {
         subRole = string.subMasterAgent;
       } else {
-        throw { code: 400, message: 'Invalid user role for creating sub-admin' };
+        return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid user role for creating sub-admin'));
       }
     }
 
@@ -201,7 +203,7 @@ export const viewAllCreates = async (req, res) => {
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
       partnerships: admin.partnerships || [],
-      Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
+      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
     }));
 
     const totalPages = Math.ceil(totalRecords / pageSize);
@@ -277,7 +279,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
       partnerships: admin.partnerships || [],
-      Status: admin.isActive ? 'Active' : admin.locked ? 'Locked' : 'Suspended',
+      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
     }));
 
     const totalPages = Math.ceil(totalRecords / pageSize);
@@ -309,18 +311,21 @@ export const editCreditRef = async (req, res) => {
     const adminId = req.params.adminId;
     const { creditRef, password } = req.body;
 
+    if (typeof creditRef !== 'number') {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'CreditRef must be a number'));
+    }
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin Not Found'));
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin Not Found'));
     }
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
+      return res.status(401).json(apiResponseErr(null, false, 401, 'Invalid password'));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is Suspended or Locked'));
+      return res.status(403).json(apiResponseErr(null, false, 403, 'Admin is Suspended or Locked'));
     }
 
     const newCreditRefEntry = {
@@ -333,7 +338,7 @@ export const editCreditRef = async (req, res) => {
       try {
         creditRefList = JSON.parse(admin.creditRefs);
       } catch (error) {
-        return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid creditRefs JSON'));
+        return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid creditRefs JSON'));
       }
     } else if (Array.isArray(admin.creditRefs)) {
       creditRefList = admin.creditRefs;
@@ -366,18 +371,21 @@ export const editPartnership = async (req, res) => {
     const adminId = req.params.adminId;
     const { partnership, password } = req.body;
 
+    if (typeof partnership !== 'number') {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'partnership must be a number'));
+    }
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
     }
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, 401, false, 'Invalid password'));
+      return res.status(401).json(apiResponseErr(null, false, 401, 'Invalid password'));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(403).json(apiResponseErr(null, 403, false, 'Admin is suspended or locked'));
+      return res.status(403).json(apiResponseErr(null, false, 403, 'Admin is suspended or locked'));
     }
 
     const newPartnershipEntry = {
@@ -389,7 +397,7 @@ export const editPartnership = async (req, res) => {
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Invalid Partnerships data'));
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid Partnerships data'));
     }
 
     partnershipsList.push(newPartnershipEntry);
@@ -789,7 +797,7 @@ export const buildRootPath = async (req, res) => {
     return res
       .status(200)
       .json(
-        apiResponseSuccess({ message: successMessage, path: globalUsernames }, true, 200, { message: successMessage }),
+        apiResponseSuccess({ message: successMessage, path: globalUsernames }, true, 200, successMessage),
       );
   } catch (error) {
     return res
@@ -797,7 +805,7 @@ export const buildRootPath = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const viewSubAdmins = async (req, res) => {
   try {
     const id = req.params.adminId;
@@ -805,136 +813,144 @@ export const viewSubAdmins = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize, 10) || 5;
     const searchName = req.query.searchName || '';
 
-    const allowedRoles = ['SubAdmin', 'SubWhiteLabel', 'SubHyperAgent', 'SubSuperAgent', 'SubMasterAgent'];
-    const rolesQuery = allowedRoles.map(() => `JSON_CONTAINS(roles, JSON_OBJECT('role', ?), '$')`).join(' OR ');
-    const rolesParams = allowedRoles;
+    const allowedRoles = [
+      string.subAdmin,
+      string.subHyperAgent,
+      string.subMasterAgent,
+      string.subWhiteLabel,
+      string.subSuperAgent
+    ];
 
-    let subAdminsQuery = `
-      SELECT adminId, userName, roles, isActive, locked 
-      FROM Admins 
-      WHERE createdById = ? 
-        AND (${rolesQuery})
-    `;
+    const subAdmins = await admins.findAll({
+      attributes: ['adminId', 'userName', 'roles', 'isActive', 'locked'],
+      where: {
+        createdById: id,
+        [Op.or]: allowedRoles.map(role => {
+          return sequelize.where(
+            sequelize.fn('JSON_CONTAINS', sequelize.col('roles'), JSON.stringify({ role })),
+            true
+          );
+        }),
+        userName: {
+          [Op.like]: `%${searchName}%`
+        }
+      },
+    });
 
-    let queryParams = [id, ...rolesParams];
-
-    if (searchName) {
-      subAdminsQuery += ` AND userName LIKE ?`;
-      queryParams.push(`%${searchName}%`);
+    if (!subAdmins || subAdmins.length === 0) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'No data found'));
     }
 
-    console.log('subAdminsQuery:', subAdminsQuery);
-    console.log('queryParams:', queryParams);
-    const [subAdminResults] = await database.execute(subAdminsQuery, queryParams);
-
-    if (!subAdminResults || subAdminResults.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'No data found'));
-    }
-
-    const users = subAdminResults.map((user) => ({
+    const users = subAdmins.map(user => ({
       adminId: user.adminId,
       userName: user.userName,
       roles: user.roles,
-      Status: user.isActive ? 'Active' : !user.locked ? 'Locked' : !user.isActive ? 'Suspended' : '',
+      status: user.isActive ? 'active' : !user.locked ? 'locked' : 'suspended',
     }));
 
     const totalCount = users.length;
     const totalPages = Math.ceil(totalCount / pageSize);
     const paginatedUsers = users.slice((page - 1) * pageSize, page * pageSize);
 
-    return res.status(200).json(
-      apiResponseSuccess(
-        {
-          data: paginatedUsers,
-          currentPage: page,
-          totalPages: totalPages,
-          totalCount: totalCount,
-        },
-        200,
-        true,
-        'successfully',
-      ),
-    );
+    return res.status(200).json(apiResponseSuccess(paginatedUsers, true, 200, 'Success', {
+      currentPage: page,
+      totalPages: totalPages,
+      totalCount: totalCount,
+    }));
   } catch (error) {
-    console.log('error', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    return res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const singleSubAdmin = async (req, res) => {
   try {
     const adminId = req.params.adminId;
 
-    const [subAdmin] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+    const subAdmin = await admins.findOne({
+      attributes: ['userName', 'roles'],
+      where: {
+        adminId: adminId
+      }
+    });
+
     if (!subAdmin) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Sub Admin not found with the given Id'));
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Sub Admin not found with the given Id'));
     }
+
     const data = {
-      userName: subAdmin[0].userName,
-      roles: subAdmin[0].roles,
+      userName: subAdmin.userName,
+      roles: subAdmin.roles,
     };
-    return res.status(200).json(apiResponseSuccess(data, 200, true, 'successfully'));
+
+    return res.status(200).json(apiResponseSuccess(data, true, 200, 'Success'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const subAdminPermission = async (req, res) => {
   try {
     const subAdminId = req.params.adminId;
     const { permission } = req.body;
+
     if (!subAdminId) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Id not found'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Id not found'));
     }
-    const [subAdminRows] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [subAdminId]);
-    const subAdmin = subAdminRows[0];
+
+    const subAdmin = await admins.findOne({
+      where: {
+        adminId: subAdminId
+      }
+    });
 
     if (!subAdmin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Sub Admin not found'));
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Sub Admin not found'));
     }
 
-    const roles = subAdmin.roles;
+    let roles = subAdmin.roles;
 
-    if (roles.length === 0) {
-      return res.status(400).send({ message: 'Roles not found for Sub Admin' });
+    if (!roles || roles.length === 0) {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Roles not found for Sub Admin'));
     }
-    roles[0].permission = permission;
 
-    await database.execute('UPDATE Admins SET roles = ? WHERE adminId = ?', [JSON.stringify(roles), subAdminId]);
+    roles[0].permission = [...roles[0].permission, permission];
 
-    return res
-      .status(201)
-      .json(apiResponseSuccess(true, 201, true, `${subAdmin.userName} permissions edited successfully`));
+    await admins.update(
+      { roles: roles },
+      {
+        where: {
+          adminId: subAdminId
+        }
+      }
+    );
+
+    return res.status(200).json(apiResponseSuccess(null, true, 200, `${subAdmin.userName} permissions edited successfully`));
   } catch (error) {
-    console.log('error', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const userStatus = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const [userRows] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-    const user = userRows[0];
+
+    const user = await admins.findOne({
+      where: {
+        userName: userName
+      }
+    });
 
     if (!user) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'User not found'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
     }
 
     const userStatus = {
-      Status: user.isActive ? 'Active' : !user.locked ? 'Locked' : !user.isActive ? 'Suspended' : '',
+      status: user.isActive ? 'active' : user.locked ? 'locked' : 'suspended',
     };
 
-    return res.status(200).json(apiResponseSuccess(userStatus, 200, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(userStatus, true, 200, 'success'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    console.error('Error:', error);
+    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };

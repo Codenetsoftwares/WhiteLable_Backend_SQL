@@ -97,11 +97,11 @@ export const adminPasswordResetCode = async (req, res) => {
         //   }
         const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, existingUser.password);
         if (!oldPasswordIsCorrect) {
-            return res.status(400).json(apiResponseErr(null, 401, false, 'Invalid old password'));
+            return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid old password'));
         }
         const passwordIsDuplicate = await bcrypt.compare(password, existingUser.password);
         if (passwordIsDuplicate) {
-            return res.status(400).json(apiResponseErr(null, 409, false, 'New Password Cannot Be The Same As Existing Password'));
+            return res.status(400).json(apiResponseErr(null, 400 , false, 'New Password Cannot Be The Same As Existing Password'));
         }
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);

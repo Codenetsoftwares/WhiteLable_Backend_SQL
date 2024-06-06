@@ -1,5 +1,6 @@
 import { body, param, query } from 'express-validator';
 
+
 export const createAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
@@ -58,8 +59,8 @@ export const viewBalanceSchema = [param('adminId').exists().withMessage('Admin I
 
 export const creditRefSchema = [
   param('adminId').exists().withMessage('Admin Id is required.'),
-  body('password').trim().notEmpty().withMessage('Password is required'),
-  body('creditRef').exists().withMessage('Credit Ref is required'),
+  body('creditRef').isNumeric().withMessage('CreditRef must be a number'),
+  body('password').notEmpty().withMessage('Password is required')
 ];
 
 export const moveToTrashSchema = [body('requestId').exists().withMessage('Request Id is required')];
@@ -74,8 +75,8 @@ export const profileViewSchema = [param('userName').exists().withMessage('User N
 
 export const partnershipEditSchema = [
   param('adminId').exists().withMessage('Admin Id is required.'),
-  body('password').trim().notEmpty().withMessage('Password is required'),
-  body('partnership').exists().withMessage('Partnership is required'),
+  body('partnership').isNumeric().withMessage('Partnership must be a number'),
+  body('password').notEmpty().withMessage('Password is required')
 ];
 
 export const partnershipViewSchema = [param('adminId').exists().withMessage('Admin Id is required.')];
