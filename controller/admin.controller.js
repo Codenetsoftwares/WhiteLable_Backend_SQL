@@ -199,10 +199,10 @@ export const viewAllCreates = async (req, res) => {
       roles: admin.roles,
       balance: admin.balance,
       loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs || [],
+      creditRefs: admin.creditRefs ? JSON.parse(admin.creditRefs) : [],
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships || [],
+      partnerships: admin.partnerships ? JSON.parse(admin.partnerships) : [],
       status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
     }));
 
@@ -219,7 +219,7 @@ export const viewAllCreates = async (req, res) => {
         },
         true,
         200,
-        'Successfully',
+        'Success',
       ),
     );
   } catch (error) {
@@ -230,7 +230,7 @@ export const viewAllCreates = async (req, res) => {
   }
 };
 // done
-export const viewAllSubAdminCreates = async (req, res) => {
+export const viewAllSubAdminCreates = async (req, res) => { 
   try {
     const createdById = req.params.createdById;
     const page = parseInt(req.query.page, 10) || 1;
@@ -275,10 +275,10 @@ export const viewAllSubAdminCreates = async (req, res) => {
       roles: admin.roles,
       balance: admin.balance,
       loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs || [],
+      creditRefs: admin.creditRefs ? JSON.parse(admin.creditRefs) : [],
       createdById: admin.createdById,
       createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships || [],
+      partnerships: admin.partnerships ? JSON.parse(admin.partnerships) : [],
       status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
     }));
 
@@ -295,11 +295,10 @@ export const viewAllSubAdminCreates = async (req, res) => {
         },
         true,
         200,
-        'Successfully',
+        'Success',
       ),
     );
   } catch (error) {
-    console.error('Error:', error);
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
@@ -445,7 +444,7 @@ export const partnershipView = async (req, res) => {
     const last10Partnerships = partnershipsList.slice(-10);
 
     const transferData = {
-      Partnerships: last10Partnerships,
+      partnerships: last10Partnerships,
       userName: admin.userName,
     };
 
@@ -478,7 +477,7 @@ export const creditRefView = async (req, res) => {
     const last10CreditRefs = creditRefList.slice(-10);
 
     const transferData = {
-      CreditRefs: last10CreditRefs,
+      creditRefs: last10CreditRefs,
       userName: admin.userName,
     };
 
