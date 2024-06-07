@@ -407,7 +407,7 @@ export const profileView = async (req, res) => {
     }
     const transferData = {
       adminId: admin.adminId,
-      Roles: admin.roles,
+      roles: admin.roles,
       userName: admin.userName,
     };
     return res.status(200).json(apiResponseSuccess(transferData, null, 200, true, 'successfully'));
