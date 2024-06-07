@@ -174,8 +174,8 @@ export const viewAllCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
-        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
-      }
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
+      },
     });
 
     if (totalRecords === 0) {
@@ -187,50 +187,67 @@ export const viewAllCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
-        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
       },
       offset,
-      limit: pageSize
+      limit: pageSize,
     });
 
-    const users = adminsData.map(admin => ({
-      adminId: admin.adminId,
-      userName: admin.userName,
-      roles: admin.roles,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs ? JSON.parse(admin.creditRefs) : [],
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships ? JSON.parse(admin.partnerships) : [],
-      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
-    }));
+    const users = adminsData.map(admin => {
+      let creditRefs = [];
+      let partnerships = [];
+
+      try {
+        creditRefs = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
+      } catch (error) {
+        console.error('Error parsing creditRefs JSON:', error);
+      }
+
+      try {
+        partnerships = admin.partnerships ? JSON.parse(admin.partnerships) : [];
+      } catch (error) {
+        console.error('Error parsing partnerships JSON:', error);
+      }
+
+      return {
+        adminId: admin.adminId,
+        userName: admin.userName,
+        roles: admin.roles,
+        balance: admin.balance,
+        loadBalance: admin.loadBalance,
+        creditRefs,
+        createdById: admin.createdById,
+        createdByUser: admin.createdByUser,
+        partnerships,
+        status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
+      };
+    });
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(200).json(
       apiResponseSuccess(
+        users,
+        true,
+        200,
+        'Success',
         {
-          users,
           totalRecords,
           totalPages,
           currentPage: page,
           pageSize,
-        },
-        true,
-        200,
-        'Success',
+        }
       ),
     );
   } catch (error) {
-    console.error('Error:', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    console.error('Error fetching sub admins:', error);
+    return res.status(500).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message),
+    );
   }
 };
 // done
-export const viewAllSubAdminCreates = async (req, res) => { 
+export const viewAllSubAdminCreates = async (req, res) => {
   try {
     const createdById = req.params.createdById;
     const page = parseInt(req.query.page, 10) || 1;
@@ -250,8 +267,8 @@ export const viewAllSubAdminCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
-        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
-      }
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
+      },
     });
 
     if (totalRecords === 0) {
@@ -263,45 +280,63 @@ export const viewAllSubAdminCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
-        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role })))
+        [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
       },
       offset,
-      limit: pageSize
+      limit: pageSize,
     });
 
-    const users = adminsData.map((admin) => ({
-      adminId: admin.adminId,
-      userName: admin.userName,
-      roles: admin.roles,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs ? JSON.parse(admin.creditRefs) : [],
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships ? JSON.parse(admin.partnerships) : [],
-      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
-    }));
+    const users = adminsData.map(admin => {
+      let creditRefs = [];
+      let partnerships = [];
+
+      try {
+        creditRefs = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
+      } catch (error) {
+        console.error('Error parsing creditRefs JSON:', error);
+      }
+
+      try {
+        partnerships = admin.partnerships ? JSON.parse(admin.partnerships) : [];
+      } catch (error) {
+        console.error('Error parsing partnerships JSON:', error);
+      }
+
+      return {
+        adminId: admin.adminId,
+        userName: admin.userName,
+        roles: admin.roles,
+        balance: admin.balance,
+        loadBalance: admin.loadBalance,
+        creditRefs,
+        createdById: admin.createdById,
+        createdByUser: admin.createdByUser,
+        partnerships,
+        status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
+      };
+    });
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(200).json(
       apiResponseSuccess(
+        users,
+        true,
+        200,
+        'Success',
         {
-          users,
           totalRecords,
           totalPages,
           currentPage: page,
           pageSize,
-        },
-        true,
-        200,
-        'Success',
+        }
       ),
     );
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    console.error('Error fetching sub admins:', error);
+    return res.status(500).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message),
+    );
   }
 };
 // done
@@ -320,7 +355,7 @@ export const editCreditRef = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, false, 401, 'Invalid password'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid password'));
     }
 
     if (!admin.isActive || admin.locked) {
@@ -357,7 +392,7 @@ export const editCreditRef = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, 201, 'CreditRef Edited successfully'));
+    return res.status(200).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, 200, 'CreditRef Edited successfully'));
   } catch (error) {
     res
       .status(500)
@@ -380,7 +415,7 @@ export const editPartnership = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, false, 401, 'Invalid password'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid password'));
     }
 
     if (!admin.isActive || admin.locked) {
@@ -413,7 +448,7 @@ export const editPartnership = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(201).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, 201, 'Partnership Edit successfully'));
+    return res.status(200).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, 200, 'Partnership Edit successfully'));
   } catch (error) {
     res
       .status(500)
@@ -438,7 +473,7 @@ export const partnershipView = async (req, res) => {
     }
 
     if (!Array.isArray(partnershipsList)) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Partnerships not found or not an array'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Partnerships not found or not an array'));
     }
 
     const last10Partnerships = partnershipsList.slice(-10);
@@ -718,10 +753,10 @@ export const buildRootPath = async (req, res) => {
       user = await admins.findOne({ where: { userName } });
 
       if (!user) {
-        throw { code: 404, message: 'User not found' };
+        return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
       }
     } else {
-      throw { code: 400, message: 'userName parameter is required' };
+      return res.status(400).json(apiResponseErr(null, false, 400, 'userName parameter is required'));
     }
 
     if (action === 'store') {
@@ -767,7 +802,7 @@ export const buildRootPath = async (req, res) => {
             creditRef: creditRef,
             refProfitLoss: refProfitLoss,
             partnership: partnership,
-            status: createdUser.isActive ? 'Active' : createdUser.locked ? 'Locked' : 'Suspended',
+            status: createdUser.isActive ? 'active' : createdUser.locked ? 'locked' : 'suspended',
           };
         }),
       };
@@ -796,7 +831,7 @@ export const buildRootPath = async (req, res) => {
     return res
       .status(200)
       .json(
-        apiResponseSuccess({ message: successMessage, path: globalUsernames }, true, 200, successMessage),
+        apiResponseSuccess({ path: globalUsernames }, true, 200, successMessage),
       );
   } catch (error) {
     return res
