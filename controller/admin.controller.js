@@ -2,7 +2,6 @@ import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
 import { database } from '../dbConnection/database.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
 import { stringConstructor } from '../constructor/stringConstructor.js';
 import { Op } from 'sequelize'; /*** Op refers to the set of operators provided by Sequelize's query language */
@@ -346,84 +345,6 @@ export const editCreditRef = async (req, res) => {
   }
 };
 
-export const moveAdminToTrash = async (req, res) => {
-  try {
-    const { requestId } = req.body;
-
-    // Fetch the admin to be moved to trash
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [requestId]);
-
-    if (!adminResult || adminResult.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, `Admin User not found with id: ${requestId}`));
-    }
-
-    const admin = adminResult[0];
-
-    if (admin.balance !== 0) {
-      return res
-        .status(400)
-        .json(apiResponseErr(null, 400, false, `Balance should be 0 to move the Admin User to Trash`));
-    }
-
-    if (!admin.isActive) {
-      return res.status(400).json(apiResponseErr(null, 400, false, `Admin is inactive or locked`));
-    }
-
-    const updatedTransactionData = {
-      adminId: admin.adminId,
-      roles: admin.roles ? JSON.stringify(admin.roles) : null,
-      userName: admin.userName,
-      password: admin.password,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      CreditRefs: admin.CreditRefs ? JSON.stringify(admin.CreditRefs) : null,
-      Partnerships: admin.Partnerships ? JSON.stringify(admin.Partnerships) : null,
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser,
-    };
-    const trashId = uuidv4();
-
-    // Insert into Trash table
-    const [backupResult] = await database.execute(
-      `INSERT INTO Trash (trashId, roles, userName, password, balance, loadBalance, CreditRefs, Partnerships, createdById, adminId, createdByUser) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [
-        trashId,
-        updatedTransactionData.roles || null,
-        updatedTransactionData.userName || null,
-        updatedTransactionData.password || null,
-        updatedTransactionData.balance !== null ? updatedTransactionData.balance : 0,
-        updatedTransactionData.loadBalance !== null ? updatedTransactionData.loadBalance : 0,
-        updatedTransactionData.CreditRefs || null,
-        updatedTransactionData.Partnerships || null,
-        updatedTransactionData.createdById || null,
-        updatedTransactionData.adminId || null,
-        updatedTransactionData.createdByUser || null,
-      ],
-    );
-
-    if (backupResult.affectedRows === 0) {
-      return res.status(500).json(apiResponseErr(null, 500, false, `Failed to backup Admin User`));
-    }
-
-    // Delete the admin user from the Admins table
-    const [deleteResult] = await database.execute('DELETE FROM Admins WHERE adminId = ?', [requestId]);
-
-    if (deleteResult.affectedRows === 0) {
-      return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User with id: ${requestId}`));
-    }
-
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin User moved to Trash'));
-  } catch (error) {
-    console.error('Error in moveAdminToTrash:', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
 export const viewTrash = async (req, res) => {
   try {
     const [viewTrash] = await database.execute('SELECT * FROM Trash');
@@ -456,80 +377,20 @@ export const deleteTrashData = async (req, res) => {
 export const activeStatus = async (req, res) => {
   try {
     const adminId = req.params.adminId;
-    const [activateStatus] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+    const activateStatus = await admins.findOne({ where: { adminId } });
     const active = {
-      adminId: activateStatus[0].adminId,
-      isActive: activateStatus[0].isActive,
-      locked: activateStatus[0].locked,
-      Status: activateStatus[0].isActive
+      adminId: activateStatus.adminId,
+      isActive: activateStatus.isActive,
+      locked: activateStatus.locked,
+      Status: activateStatus.isActive
         ? 'Active'
-        : !activateStatus[0].locked
+        : !activateStatus.locked
           ? 'Locked'
-          : !activateStatus[0].isActive
+          : !activateStatus.isActive
             ? 'Suspended'
             : '',
     };
-    return res.status(200).json(apiResponseSuccess(active, 200, true, 'successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const restoreAdminUser = async (req, res) => {
-  try {
-    const { adminId } = req.body;
-    const [existingAdminUser] = await database.execute('SELECT * FROM trash WHERE adminId = ?', [adminId]);
-
-    if (existingAdminUser.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found in trash'));
-    }
-
-    const restoreRemoveData = {
-      roles: existingAdminUser[0].roles,
-      userName: existingAdminUser[0].userName,
-      password: existingAdminUser[0].password,
-      balance: existingAdminUser[0].balance,
-      loadBalance: existingAdminUser[0].loadBalance,
-      CreditRefs: existingAdminUser[0].CreditRefs,
-      Partnerships: existingAdminUser[0].Partnerships,
-      createdById: existingAdminUser[0].createdById,
-      adminId: existingAdminUser[0].adminId,
-      createdByUser: existingAdminUser[0].createdByUser,
-    };
-
-    const [restoreResult] = await database.execute(
-      `INSERT INTO admins (adminId, userName, password, roles, balance, loadBalance, createdById, CreditRefs, Partnerships,createdByUser)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [
-        restoreRemoveData.adminId,
-        restoreRemoveData.userName,
-        restoreRemoveData.password,
-        JSON.stringify(restoreRemoveData.roles),
-        restoreRemoveData.balance,
-        restoreRemoveData.loadBalance,
-        restoreRemoveData.createdById,
-        JSON.stringify(restoreRemoveData.CreditRefs),
-        JSON.stringify(restoreRemoveData.Partnerships),
-        restoreRemoveData.createdByUser,
-      ],
-    );
-
-    if (restoreResult.affectedRows === 0) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Failed to restore Admin User'));
-    }
-
-    // Delete the user from the trash table
-    const [deleteResult] = await database.execute('DELETE FROM trash WHERE adminId = ?', [adminId]);
-
-    if (deleteResult.affectedRows === 0) {
-      return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
-    }
-
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin restored from trash successfully!'));
+    return res.status(200).json(apiResponseSuccess(active, null, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)

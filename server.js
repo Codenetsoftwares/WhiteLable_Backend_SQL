@@ -7,6 +7,7 @@ import sequelize from './db.js';
 import { AdminRoute } from './routes/admin.route.js';
 import { authRoute } from './routes/auth.route.js';
 import { transactionRoute } from './routes/transaction.route.js';
+import { trashRoute } from './routes/trash.route.js';
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.get('/', (req, res) => {
 AdminRoute(app);
 authRoute(app);
 transactionRoute(app);
+trashRoute(app);
 
 sequelize
   .sync({ alter: true })

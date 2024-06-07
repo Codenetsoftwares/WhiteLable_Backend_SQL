@@ -1,16 +1,13 @@
 import { Authorize } from '../middleware/auth.js';
-
 import customErrorHandler from '../helper/customErrorHandler.js';
+
 import {
   createAdminSchema,
   createSubAdminSchema,
   viewAllCreatesSchema,
   viewAllSubAdminCreatesSchema,
   creditRefSchema,
-  moveToTrashSchema,
-  deleteFromTrashSchema,
   activeStatusSchema,
-  restoreAdminUserSchema,
   profileViewSchema,
   partnershipEditSchema,
   partnershipViewSchema,
@@ -28,10 +25,7 @@ import {
   getIpDetail,
   viewAllSubAdminCreates,
   editCreditRef,
-  moveAdminToTrash,
-  viewTrash,
   activeStatus,
-  restoreAdminUser,
   profileView,
   viewAllCreates,
   editPartnership,
@@ -42,7 +36,6 @@ import {
   singleSubAdmin,
   subAdminPermission,
   userStatus,
-  deleteTrashData,
 } from '../controller/admin.controller.js';
 
 import { stringConstructor } from '../constructor/stringConstructor.js';
@@ -93,8 +86,14 @@ export const AdminRoute = (app) => {
   // Ip Detail API ("DONE")
   app.get(
     '/api/get-ip/:userName',
-    Authorize([stringConstructor.superAdmin, stringConstructor.whiteLabel, 
-    stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent, stringConstructor.activityLog]),
+    Authorize([
+      stringConstructor.superAdmin,
+      stringConstructor.whiteLabel,
+      stringConstructor.hyperAgent,
+      stringConstructor.superAgent,
+      stringConstructor.masterAgent,
+      stringConstructor.activityLog,
+    ]),
     customErrorHandler,
     getIpDetail,
   );
@@ -177,48 +176,20 @@ export const AdminRoute = (app) => {
     editCreditRef,
   );
 
-  // Move Admin User To Trash ("DONE")
-  app.post(
-    '/api/admin/move-to-trash-user',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Move-To-Trash']),
-    moveToTrashSchema,
-    customErrorHandler,
-    moveAdminToTrash,
-  );
-
-  // View Trash API ("DONE")
-  app.get(
-    '/api/admin/view-trash',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Trash-View']),
-    customErrorHandler,
-    viewTrash,
-  );
-
-  // Delete Trash Data API ("DONE")
-  app.delete(
-    '/api/delete/admin-user/:trashId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Delete-Admin']),
-    deleteFromTrashSchema,
-    customErrorHandler,
-    deleteTrashData,
-  );
-
   // View Active Status API ("DONE")
   app.get(
     '/api/admin/active-status/:adminId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Status']),
     activeStatusSchema,
     customErrorHandler,
+    Authorize([
+      stringConstructor.superAdmin,
+      stringConstructor.whiteLabel,
+      stringConstructor.hyperAgent,
+      stringConstructor.superAgent,
+      stringConstructor.masterAgent,
+      stringConstructor.status,
+    ]),
     activeStatus,
-  );
-
-  // Restore Deleted Admin API ("DONE")
-  app.post(
-    '/api/admin/restore-to-wallet-use',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Restore-Admin']),
-    restoreAdminUserSchema,
-    customErrorHandler,
-    restoreAdminUser,
   );
 
   // Profile View API ("DONE")
@@ -226,8 +197,14 @@ export const AdminRoute = (app) => {
     '/api/User-Profile-view/:userName',
     profileViewSchema,
     customErrorHandler,
-    Authorize([stringConstructor.superAdmin, stringConstructor.whiteLabel, 
-    stringConstructor.hyperAgent, stringConstructor.superAgent, stringConstructor.masterAgent, stringConstructor.userProfileView]),
+    Authorize([
+      stringConstructor.superAdmin,
+      stringConstructor.whiteLabel,
+      stringConstructor.hyperAgent,
+      stringConstructor.superAgent,
+      stringConstructor.masterAgent,
+      stringConstructor.userProfileView,
+    ]),
     profileView,
   );
 

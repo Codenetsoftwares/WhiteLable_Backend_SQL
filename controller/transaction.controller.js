@@ -1,5 +1,4 @@
 import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../helper/errorHandler.js';
-import { database } from '../dbConnection/database.service.js';
 import selfTransactions from '../models/selfTransaction.model.js';
 import transaction from '../models/transactions.model.js';
 import admins from '../models/admin.model.js';
@@ -54,7 +53,7 @@ export const depositTransaction = async (req, res) => {
 
 export const transferAmount = async (req, res) => {
   try {
-    const { receiveUserId,  transferAmount, withdrawalAmt, remarks, password } = req.body;
+    const { receiveUserId, transferAmount, withdrawalAmt, remarks, password } = req.body;
     const adminId = req.params.adminId;
     const senderAdmin = await admins.findOne({ where: { adminId } });
 
@@ -275,7 +274,6 @@ export const accountStatement = async (req, res) => {
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount);
     return res.status(200).send(apiResponseSuccess(paginatedData, paginationData, true, 200, 'Success'));
-
   } catch (error) {
     res
       .status(500)
