@@ -33,11 +33,11 @@ const trash = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    CreditRefs: {
+    creditRefs: {
       type: DataTypes.JSON,
       allowNull: false,
     },
-    Partnerships: {
+    partnerShips: {
       type: DataTypes.JSON,
       allowNull: false,
     },
