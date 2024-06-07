@@ -743,20 +743,18 @@ export const buildRootPath = async (req, res) => {
     const page = parseInt(req.body.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 5;
 
-    let user;
-
     if (!globalUsernames) {
       globalUsernames = [];
     }
 
-    if (userName) {
-      user = await admins.findOne({ where: { userName } });
-
-      if (!user) {
-        return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
-      }
-    } else {
+    if (!userName) {
       return res.status(400).json(apiResponseErr(null, false, 400, 'userName parameter is required'));
+    }
+
+    const user = await admins.findOne({ where: { userName } });
+
+    if (!user) {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
     }
 
     if (action === 'store') {
@@ -770,6 +768,15 @@ export const buildRootPath = async (req, res) => {
       }
 
       const likeCondition = searchName ? { userName: { [Op.like]: `%${searchName}%` } } : {};
+      const totalRecords = await admins.count({
+        where: {
+          createdByUser: user.userName,
+          ...likeCondition,
+        },
+      });
+
+      const totalPages = Math.ceil(totalRecords / pageSize);
+
       const createdUsers = await admins.findAll({
         where: {
           createdByUser: user.userName,
@@ -808,7 +815,20 @@ export const buildRootPath = async (req, res) => {
       };
 
       const message = 'Path stored successfully';
-      return res.status(201).json(apiResponseSuccess({ path: globalUsernames, userDetails }, 201, true, message));
+      return res.status(201).json(
+        apiResponseSuccess(
+          {
+            path: globalUsernames,
+            userDetails,
+            page,
+            pageSize,
+            totalPages,
+          },
+          true,
+          201,
+          message
+        )
+      );
     } else if (action === 'clear') {
       const lastUsername = globalUsernames.pop();
 
@@ -828,11 +848,9 @@ export const buildRootPath = async (req, res) => {
     await user.update({ path: JSON.stringify(globalUsernames) });
 
     const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
-    return res
-      .status(200)
-      .json(
-        apiResponseSuccess({ path: globalUsernames }, true, 200, successMessage),
-      );
+    return res.status(200).json(
+      apiResponseSuccess({ path: globalUsernames, page, pageSize, totalPages: 1 }, true, 200, successMessage)
+    );
   } catch (error) {
     return res
       .status(500)
