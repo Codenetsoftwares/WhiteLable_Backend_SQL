@@ -45,6 +45,10 @@ import {
   deleteTrashData,
 } from '../controller/admin.controller.js';
 import { string } from '../constructor/string.js';
+import { role } from '../constructor/roles.js';
+import { permission } from '../constructor/permissions.js';
+import { permissionAuth } from '../middleware/permissionAuth.js';
+import { roleAuth } from '../middleware/roleAuth.js';
 
 
 export const adminRoute = (app) => {
@@ -53,21 +57,23 @@ export const adminRoute = (app) => {
   app.post('/api/admin-create',
     createAdminSchema,
     customErrorHandler,
-    Authorize([
-      string.superAdmin,
-      string.whiteLabel,
-      string.hyperAgent,
-      string.superAgent,
-      string.masterAgent,
-      string.subWhiteLabel,
-      string.subAdmin,
-      string.subHyperAgent,
-      string.subSuperAgent,
-      string.subMasterAgent,
-      string.createAdmin,
+    roleAuth([
+        role.superAdmin,
+        role.whiteLabel,
+        role.hyperAgent,
+        role.superAgent,
+        role.masterAgent,
+        role.subWhiteLabel,
+        role.subAdmin,
+        role.subHyperAgent,
+        role.subSuperAgent,
+        role.subMasterAgent,
+    ]),
+    permissionAuth([
+        permission.createAdmin,
     ]),
     createAdmin,
-  );
+);
 
   // Create SubAdmin API ("DONE")
   app.post('/api/admin/create-subAdmin',

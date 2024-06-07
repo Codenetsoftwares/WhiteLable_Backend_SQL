@@ -4,30 +4,30 @@ import { body, param, query } from 'express-validator';
 export const createAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
-  body('roles')
-    .isArray({ min: 1 })
-    .withMessage('At least one role is required')
-    .custom((value) => {
-      if (value.some(role => !role.role || role.role.trim() === '')) {
-        throw new Error('Role cannot be blank or empty');
-      }
-      return true;
-    })
+  // body('roles')
+  //   .isArray({ min: 1 })
+  //   .withMessage('At least one role is required')
+  //   .custom((value) => {
+  //     if (value.some(role => !role.role || role.role.trim() === '')) {
+  //       throw new Error('Role cannot be blank or empty');
+  //     }
+  //     return true;
+  //   })
 ];
 
 
 export const createSubAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
-  body('roles')
-    .isArray({ min: 1 })
-    .withMessage('At least one permission is required')
-    .custom((value) => {
-      if (value.some(role => !role.permission || role.permission.trim() === '')) {
-        throw new Error('Permission cannot be empty');
-      }
-      return true;
-    })
+  // body('roles')
+  //   .isArray({ min: 1 })
+  //   .withMessage('At least one permission is required')
+  //   .custom((value) => {
+  //     if (value.some(role => !role.permission || role.permission.trim() === '')) {
+  //       throw new Error('Permission cannot be empty');
+  //     }
+  //     return true;
+  //   })
 ];
 
 
