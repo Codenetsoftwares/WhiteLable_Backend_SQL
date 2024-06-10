@@ -63,7 +63,7 @@ export const moveAdminToTrash = async (req, res) => {
         .json(apiResponseErr(null, 500, false, `Failed to delete Admin User with id: ${requestId}`));
     }
 
-    return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Admin User moved to Trash'));
+    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Admin User moved to Trash'));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
     res
@@ -78,7 +78,7 @@ export const viewTrash = async (req, res) => {
     if (!viewTrash || viewTrash.length === 0) {
       return res.status(404).json(apiResponseErr(null, 404, false, 'No entries found in Trash'));
     }
-    return res.status(200).json(apiResponseSuccess(viewTrash, null, 200, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(viewTrash, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
@@ -94,7 +94,7 @@ export const deleteTrashData = async (req, res) => {
       return res.status(404).json(apiResponseErr('Data not found', false, 404, 'Data not found'));
     }
     await record.destroy();
-    return res.status(200).json(apiResponseSuccess(null, null, 200, true, 'Data deleted successfully'));
+    return res.status(200).json(apiResponseSuccess(null, 200, true, 'Data deleted successfully'));
   } catch (error) {
     console.error('Error in deleteTrashData:', error);
     res
@@ -140,7 +140,7 @@ export const restoreAdminUser = async (req, res) => {
         .json(apiResponseErr(null, 500, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
     }
 
-    return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Admin restored from trash successfully!'));
+    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Admin restored from trash successfully!'));
   } catch (error) {
     res
       .status(500)
