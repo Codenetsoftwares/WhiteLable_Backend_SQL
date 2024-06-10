@@ -584,7 +584,7 @@ export const buildRootPath = async (req, res) => {
     const user = await admins.findOne({ where: { userName } });
 
     if (!user) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.userNotFound));
     }
 
     if (action === 'store') {
@@ -823,7 +823,7 @@ export const userStatus = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.userNotFound));
     }
 
     const userStatus = {
