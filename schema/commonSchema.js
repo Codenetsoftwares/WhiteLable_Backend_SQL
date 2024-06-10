@@ -15,7 +15,6 @@ export const createAdminSchema = [
   //   })
 ];
 
-
 export const createSubAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
@@ -29,7 +28,6 @@ export const createSubAdminSchema = [
   //     return true;
   //   })
 ];
-
 
 export const adminLoginSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
@@ -50,8 +48,8 @@ export const depositAmountSchema = [
 export const transferAmountSchema = [
   param('adminId').exists().withMessage('Admin ID is required.'),
   body('receiveUserId').exists().withMessage('Receiver ID is required.'),
-  body('trnsferAmount').exists().withMessage('Transfer Amount is required'),
-  body('withdrawlAmt').exists().withMessage('Withdraw Amount is required'),
+  body('transferAmount').exists().withMessage('Transfer Amount is required'),
+  body('withdrawalAmt').exists().withMessage('Withdraw Amount is required'),
   body('remarks').exists().withMessage('Remark is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
 ];
@@ -61,7 +59,6 @@ export const transactionViewSchema = [
   query('page').optional().toInt().isInt({ min: 1 }).withMessage('Page number must be a positive integer.'),
   query('limit').optional().toInt().isInt({ min: 1 }).withMessage('Limit must be a positive integer.'),
 ];
-
 export const viewAllCreatesSchema = [
   param('createdById').exists().withMessage('Id is required.'),
   query('page').optional().toInt().isInt({ min: 1 }).withMessage('Page number must be a positive integer.'),

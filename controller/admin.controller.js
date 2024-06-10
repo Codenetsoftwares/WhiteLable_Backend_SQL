@@ -116,7 +116,7 @@ export const createSubAdmin = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const getIpDetail = async (req, res) => {
   try {
     const userName = req.params.userName;
@@ -139,7 +139,7 @@ export const getIpDetail = async (req, res) => {
     const responseObj = {
       userName: admin.userName,
       ip: {
-        IP: clientIP,
+        iP: clientIP,
         country: collect.country,
         region: collect.regionName,
         timezone: collect.timezone,
@@ -148,10 +148,11 @@ export const getIpDetail = async (req, res) => {
       locked: admin.locked,
       lastLoginTime: loginTime,
     };
-
-    return res.status(200).json(apiResponseSuccess(responseObj, 200, true, 'Data Fetched'));
+    return res.status(200).json(apiResponseSuccess(responseObj, null, 200, true, 'Data Fetched'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -431,7 +432,7 @@ export const editPartnership = async (req, res) => {
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid Partnerships data'));
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid partnerships data'));
     }
 
     partnershipsList.push(newPartnershipEntry);
@@ -469,17 +470,17 @@ export const partnershipView = async (req, res) => {
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid Partnerships data'));
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid partnerships data'));
     }
 
     if (!Array.isArray(partnershipsList)) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Partnerships not found or not an array'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'partnerships not found or not an array'));
     }
 
-    const last10Partnerships = partnershipsList.slice(-10);
+    const last10partnerships = partnershipsList.slice(-10);
 
     const transferData = {
-      partnerships: last10Partnerships,
+      partnerships: last10partnerships,
       userName: admin.userName,
     };
 
@@ -502,17 +503,17 @@ export const creditRefView = async (req, res) => {
     try {
       creditRefList = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid CreditRefs data'));
+      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid creditRefs data'));
     }
 
     if (!Array.isArray(creditRefList)) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'CreditRefs not found or not an array'));
+      return res.status(404).json(apiResponseErr(null, false, 404, 'creditRefs not found or not an array'));
     }
 
-    const last10CreditRefs = creditRefList.slice(-10);
+    const last10creditRefs = creditRefList.slice(-10);
 
     const transferData = {
-      creditRefs: last10CreditRefs,
+      creditRefs: last10creditRefs,
       userName: admin.userName,
     };
 
@@ -521,214 +522,44 @@ export const creditRefView = async (req, res) => {
     return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-export const moveAdminToTrash = async (req, res) => {
-  try {
-    const { requestId } = req.body;
-
-    // Fetch the admin to be moved to trash
-    const [adminResult] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [requestId]);
-
-    if (!adminResult || adminResult.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, `Admin User not found with id: ${requestId}`));
-    }
-
-    const admin = adminResult[0];
-
-    if (admin.balance !== 0) {
-      return res
-        .status(400)
-        .json(apiResponseErr(null, 400, false, `Balance should be 0 to move the Admin User to Trash`));
-    }
-
-    if (!admin.isActive) {
-      return res.status(400).json(apiResponseErr(null, 400, false, `Admin is inactive or locked`));
-    }
-
-    const updatedTransactionData = {
-      adminId: admin.adminId,
-      roles: admin.roles ? JSON.stringify(admin.roles) : null,
-      userName: admin.userName,
-      password: admin.password,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      CreditRefs: admin.CreditRefs ? JSON.stringify(admin.CreditRefs) : null,
-      Partnerships: admin.Partnerships ? JSON.stringify(admin.Partnerships) : null,
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser
-    };
-    const trashId = uuidv4();
-
-    // Insert into Trash table
-    const [backupResult] = await database.execute(
-      `INSERT INTO Trash (trashId, roles, userName, password, balance, loadBalance, CreditRefs, Partnerships, createdById, adminId, createdByUser) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [
-        trashId,
-        updatedTransactionData.roles || null,
-        updatedTransactionData.userName || null,
-        updatedTransactionData.password || null,
-        updatedTransactionData.balance !== null ? updatedTransactionData.balance : 0,
-        updatedTransactionData.loadBalance !== null ? updatedTransactionData.loadBalance : 0,
-        updatedTransactionData.CreditRefs || null,
-        updatedTransactionData.Partnerships || null,
-        updatedTransactionData.createdById || null,
-        updatedTransactionData.adminId || null,
-        updatedTransactionData.createdByUser || null,
-
-      ],
-    );
-
-    if (backupResult.affectedRows === 0) {
-      return res.status(500).json(apiResponseErr(null, 500, false, `Failed to backup Admin User`));
-    }
-
-    // Delete the admin user from the Admins table
-    const [deleteResult] = await database.execute('DELETE FROM Admins WHERE adminId = ?', [requestId]);
-
-    if (deleteResult.affectedRows === 0) {
-      return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User with id: ${requestId}`));
-    }
-
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin User moved to Trash'));
-  } catch (error) {
-    console.error('Error in moveAdminToTrash:', error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const viewTrash = async (req, res) => {
-  try {
-    const [viewTrash] = await database.execute('SELECT * FROM Trash');
-    return res.status(200).json(apiResponseSuccess(viewTrash, 200, true, 'successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
-export const deleteTrashData = async (req, res) => {
-  try {
-    const trashId = req.params.trashId;
-    const [result] = await database.execute('DELETE FROM Trash WHERE trashId = ?', [trashId]);
-    if (result.affectedRows === 1) {
-      return res
-        .status(201)
-        .json(apiResponseSuccess('Data Deleted Successfully', 201, true, 'Data Deleted Successfully'));
-    } else {
-      return res.status(404).json(apiResponseErr('Data not found', false, 404, 'Data not found'));
-    }
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
+// done
 export const activeStatus = async (req, res) => {
   try {
     const adminId = req.params.adminId;
-    const [activateStatus] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [adminId]);
+    const activateStatus = await admins.findOne({ where: { adminId } });
     const active = {
-      adminId: activateStatus[0].adminId,
-      isActive: activateStatus[0].isActive,
-      locked: activateStatus[0].locked,
-      Status: activateStatus[0].isActive
-        ? 'Active'
-        : !activateStatus[0].locked
-          ? 'Locked'
-          : !activateStatus[0].isActive
-            ? 'Suspended'
+      adminId: activateStatus.adminId,
+      isActive: activateStatus.isActive,
+      locked: activateStatus.locked,
+      status: activateStatus.isActive
+        ? 'active'
+        : !activateStatus.locked
+          ? 'locked'
+          : !activateStatus.isActive
+            ? 'suspended'
             : '',
     };
-    return res.status(200).json(apiResponseSuccess(active, 200, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(active, null, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-export const restoreAdminUser = async (req, res) => {
-  try {
-    const { adminId } = req.body;
-    const [existingAdminUser] = await database.execute('SELECT * FROM trash WHERE adminId = ?', [adminId]);
-
-    if (existingAdminUser.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found in trash'));
-    }
-
-    const restoreRemoveData = {
-      roles: existingAdminUser[0].roles,
-      userName: existingAdminUser[0].userName,
-      password: existingAdminUser[0].password,
-      balance: existingAdminUser[0].balance,
-      loadBalance: existingAdminUser[0].loadBalance,
-      CreditRefs: existingAdminUser[0].CreditRefs,
-      Partnerships: existingAdminUser[0].Partnerships,
-      createdById: existingAdminUser[0].createdById,
-      adminId: existingAdminUser[0].adminId,
-      createdByUser: existingAdminUser[0].createdByUser,
-    };
-
-    const [restoreResult] = await database.execute(
-      `INSERT INTO admins (adminId, userName, password, roles, balance, loadBalance, createdById, CreditRefs, Partnerships,createdByUser)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [
-        restoreRemoveData.adminId,
-        restoreRemoveData.userName,
-        restoreRemoveData.password,
-        JSON.stringify(restoreRemoveData.roles),
-        restoreRemoveData.balance,
-        restoreRemoveData.loadBalance,
-        restoreRemoveData.createdById,
-        JSON.stringify(restoreRemoveData.CreditRefs),
-        JSON.stringify(restoreRemoveData.Partnerships),
-        restoreRemoveData.createdByUser,
-      ],
-    );
-
-    if (restoreResult.affectedRows === 0) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Failed to restore Admin User'));
-    }
-
-    // Delete the user from the trash table
-    const [deleteResult] = await database.execute('DELETE FROM trash WHERE adminId = ?', [adminId]);
-
-    if (deleteResult.affectedRows === 0) {
-      return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
-    }
-
-    return res.status(201).json(apiResponseSuccess(true, 201, true, 'Admin restored from trash successfully!'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-
+// done
 export const profileView = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const [admin] = await database.execute('SELECT * FROM Admins WHERE userName = ?', [userName]);
-
+    const admin = await admins.findOne({ where: { userName } });
     if (!admin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found'));
     }
-
     const transferData = {
-      adminId: admin[0].adminId,
-      Roles: admin[0].roles,
-      userName: admin[0].userName,
+      adminId: admin.adminId,
+      roles: admin.roles,
+      userName: admin.userName,
     };
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'successfully'));
+    return res.status(200).json(apiResponseSuccess(transferData, null, 200, true, 'successfully'));
   } catch (error) {
     res
       .status(500)

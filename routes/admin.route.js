@@ -7,10 +7,7 @@ import {
   viewAllCreatesSchema,
   viewAllSubAdminCreatesSchema,
   creditRefSchema,
-  moveToTrashSchema,
-  deleteFromTrashSchema,
   activeStatusSchema,
-  restoreAdminUserSchema,
   profileViewSchema,
   partnershipEditSchema,
   partnershipViewSchema,
@@ -28,10 +25,7 @@ import {
   getIpDetail,
   viewAllSubAdminCreates,
   editCreditRef,
-  moveAdminToTrash,
-  viewTrash,
   activeStatus,
-  restoreAdminUser,
   profileView,
   viewAllCreates,
   editPartnership,
@@ -42,7 +36,6 @@ import {
   singleSubAdmin,
   subAdminPermission,
   userStatus,
-  deleteTrashData,
 } from '../controller/admin.controller.js';
 import { string } from '../constructor/string.js';
 
@@ -88,13 +81,20 @@ export const adminRoute = (app) => {
     ]),
     createSubAdmin,
   );
-
-  app.get('/getip/:username',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'ActivityLog']),
+  
+  // Ip Detail API ("DONE")
+  app.get('/api/get-ip/:userName',
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.activityLog,
+    ]),
     customErrorHandler,
     getIpDetail,
   );
-
 
   // View All Creates API ("DONE")
   app.get('/api/view-all-creates/:createdById',
@@ -164,8 +164,7 @@ export const adminRoute = (app) => {
   );
 
   // Credit Ref Edit API ("DONE")
-  app.put(
-    '/api/admin/update-credit-ref/:adminId',
+  app.put('/api/admin/update-credit-ref/:adminId',
     creditRefSchema,
     customErrorHandler,
     Authorize([
@@ -210,8 +209,7 @@ export const adminRoute = (app) => {
   );
 
   // CreditRef View API ("DONE")
-  app.get(
-    '/api/creditRefView/:adminId',
+  app.get('/api/creditRefView/:adminId',
     creditRefViewSchema,
     customErrorHandler,
     Authorize([
@@ -225,49 +223,33 @@ export const adminRoute = (app) => {
     creditRefView,
   );
 
-  app.post(
-    '/api/admin/move-to-trash-user',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Move-To-Trash']),
-    moveToTrashSchema,
-    customErrorHandler,
-    moveAdminToTrash,
-  );
-
-  app.get(
-    '/api/admin/view-trash',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Trash-View']),
-    customErrorHandler,
-    viewTrash,
-  );
-
-  app.delete(
-    '/api/delete/admin-user/:trashId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Delete-Admin']),
-    deleteFromTrashSchema,
-    customErrorHandler,
-    deleteTrashData,
-  );
-
-  app.get(
-    '/api/admin/active-status/:adminId',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Status']),
+  // View Active Status API ("DONE")
+  app.get('/api/admin/active-status/:adminId',
     activeStatusSchema,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.status,
+    ]),
     activeStatus,
   );
 
-  app.post(
-    '/api/admin/restore-to-wallet-use',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'Restore-Admin']),
-    restoreAdminUserSchema,
-    customErrorHandler,
-    restoreAdminUser,
-  );
-
+  // Profile View API ("DONE")
   app.get('/api/User-Profile-view/:userName',
-    Authorize(['superAdmin', 'WhiteLabel', 'HyperAgent', 'SuperAgent', 'MasterAgent', 'User-Profile-View']),
     profileViewSchema,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.userProfileView,
+    ]),
     profileView,
   );
 
@@ -288,6 +270,7 @@ export const adminRoute = (app) => {
     ]),
     viewSubAdmins,
   );
+
   // single-sub-admin ("DONE")
   app.post('/api/admin/single-sub-admin/:adminId',
     singleSubAdminSchema,
@@ -301,6 +284,7 @@ export const adminRoute = (app) => {
     ]),
     singleSubAdmin,
   );
+
   // edit-subAdmin-permissions ("DONE")
   app.put('/admin/edit-subAdmin-permissions/:adminId',
     subAdminPermissionSchema,
@@ -314,6 +298,7 @@ export const adminRoute = (app) => {
     ]),
     subAdminPermission,
   );
+
   // user-status ("DONE")
   app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, userStatus);
 };
