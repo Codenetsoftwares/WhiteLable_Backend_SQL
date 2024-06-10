@@ -15,11 +15,11 @@ const customErrorHandler = function (req, res, next) {
 
     const allErrors = formattedErrors.map((formattedError) => formattedError.msg);
 
-    return res.status(400).json({
+    return res.status(statusCode.badRequest).json({
       data: null,
       success: false,
       errMessage: formattedErrors[0].msg,
-      responseCode: 400,
+      responseCode: statusCode.badRequest,
       additionalErr: allErrors.join(', '),
     });
   }

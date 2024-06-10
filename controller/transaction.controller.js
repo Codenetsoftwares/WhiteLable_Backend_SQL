@@ -4,6 +4,7 @@ import transaction from '../models/transactions.model.js';
 import admins from '../models/admin.model.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
+import { statusCode } from '../helper/statusCodes.js';
 
 export const depositTransaction = async (req, res) => {
   try {
@@ -12,11 +13,11 @@ export const depositTransaction = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid amount'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid amount'));
     }
 
     if (!admin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const depositAmount = Math.round(parseFloat(amount));
@@ -27,17 +28,14 @@ export const depositTransaction = async (req, res) => {
       transactionType: 'deposit',
     };
 
-    // Update balances correctly
     const newDepositBalance = admin.depositBalance + depositAmount;
     const newAdminBalance = admin.balance + depositAmount;
 
-    // First Update the balance in Admin Table
     await admin.update({
       balance: newAdminBalance,
       depositBalance: newDepositBalance,
     });
 
-    // Now Create the transaction record in selfTransaction Table
     await selfTransactions.create({
       selfTransactionId: uuidv4(),
       adminId: adminId,
@@ -47,11 +45,11 @@ export const depositTransaction = async (req, res) => {
       transactionType: depositTransactionData.transactionType,
     });
 
-    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deposit Successfully'));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deposit Successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -59,51 +57,60 @@ export const transferAmount = async (req, res) => {
   try {
     const { receiveUserId, transferAmount, withdrawalAmt, remarks, password } = req.body;
     const adminId = req.params.adminId;
-    const senderAdmin = await admins.findOne({ where: { adminId } })
-    
-    if (isNaN(transferAmount) || isNaN(withdrawalAmt)) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid Amount'));
-    }
+
+    const senderAdmin = await admins.findOne({ where: { adminId } });
 
     if (!senderAdmin) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Admin not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, senderAdmin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Invalid password for the transaction'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password for the transaction'));
     }
+
     const receiverAdmin = await admins.findOne({ where: { adminId: receiveUserId } });
     if (!receiverAdmin) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin not found'));
     }
+
     if (!senderAdmin.isActive) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Sender Admin is inactive'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Sender Admin is inactive'));
     }
 
     if (!receiverAdmin.isActive) {
-      return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin is inactive'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin is inactive'));
     }
-    if (withdrawalAmt && withdrawalAmt > 0) {
-      
-      if (receiverAdmin.balance < withdrawalAmt) {
-        return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Withdrawal'));
+
+    if (transferAmount !== undefined && typeof transferAmount !== 'number') {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Transfer amount must be a number'));
+    }
+
+    if (withdrawalAmt !== undefined && typeof withdrawalAmt !== 'number') {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Withdrawal amount must be a number'));
+    }
+    const parsedTransferAmount = parseFloat(transferAmount);
+    const parsedWithdrawalAmt = parseFloat(withdrawalAmt);
+
+    if (parsedWithdrawalAmt) {
+      if (receiverAdmin.balance < parsedWithdrawalAmt) {
+        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Withdrawal'));
       }
+
       const withdrawalRecord = {
         transactionType: 'withdrawal',
-        amount: Math.round(parseFloat(withdrawalAmt)),
+        amount: Math.round(parsedWithdrawalAmt),
         transferFromUserAccount: receiverAdmin.userName,
         transferToUserAccount: senderAdmin.userName,
         userName: senderAdmin.userName,
         date: new Date(),
-        remarks: remarks,
+        remarks,
       };
-      // Calculation
-      const deductionBalance = (receiverAdmin.balance -= Math.round(parseFloat(withdrawalAmt)));
-      const deductionLoadBalance = (receiverAdmin.loadBalance -= Math.round(parseFloat(withdrawalAmt)));
-      const creditAmount = (senderAdmin.balance += Math.round(parseFloat(withdrawalAmt)));
 
-      // Updating in Table
+      const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
+      const deductionLoadBalance = receiverAdmin.loadBalance - parsedWithdrawalAmt;
+      const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
+
       await receiverAdmin.update({
         balance: deductionBalance,
         loadBalance: deductionLoadBalance,
@@ -113,7 +120,6 @@ export const transferAmount = async (req, res) => {
         balance: creditAmount,
       });
 
-      // Now Creating the transaction record in Table
       await transaction.create({
         transactionId: uuidv4(),
         adminId: adminId,
@@ -125,38 +131,37 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
         transferToUserAccount: withdrawalRecord.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deducted Successfully'));
+
+      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully'));
     } else {
-      if (senderAdmin.balance < transferAmount) {
-        return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
+      if (senderAdmin.balance < parsedTransferAmount) {
+        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
       }
-      // console.log("senderAdmin", senderAdmin);
 
       const transferRecordDebit = {
         transactionType: 'debit',
-        amount: Math.round(parseFloat(transferAmount)),
+        amount: Math.round(parsedTransferAmount),
         transferFromUserAccount: senderAdmin.userName,
         transferToUserAccount: receiverAdmin.userName,
         userName: senderAdmin.userName,
         date: new Date(),
-        remarks: remarks,
+        remarks,
       };
 
       const transferRecordCredit = {
         transactionType: 'credit',
-        amount: Math.round(parseFloat(transferAmount)),
+        amount: Math.round(parsedTransferAmount),
         transferFromUserAccount: senderAdmin.userName,
         transferToUserAccount: receiverAdmin.userName,
-        userName: senderAdmin.userName,
+        userName: receiverAdmin.userName,
         date: new Date(),
-        remarks: remarks,
+        remarks,
       };
 
-      const senderBalance = (senderAdmin.balance -= Math.round(parseFloat(transferAmount)));
-      const receiverBalance = (receiverAdmin.balance += Math.round(parseFloat(transferAmount)));
-      const receiverLoadBalance = (receiverAdmin.loadBalance += Math.round(parseFloat(transferAmount)));
+      const senderBalance = senderAdmin.balance - parsedTransferAmount;
+      const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
+      const receiverLoadBalance = receiverAdmin.loadBalance + parsedTransferAmount;
 
-      // Updating in Table
       await receiverAdmin.update({
         balance: receiverBalance,
         loadBalance: receiverLoadBalance,
@@ -166,7 +171,6 @@ export const transferAmount = async (req, res) => {
         balance: senderBalance,
       });
 
-      // Now Creating the transaction record in Table
       await transaction.create({
         transactionId: uuidv4(),
         adminId: adminId,
@@ -190,15 +194,15 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
         transferToUserAccount: transferRecordCredit.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Debited Successfully'));
+
+      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully'));
     }
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const transactionView = async (req, res) => {
   try {
@@ -215,7 +219,7 @@ export const transactionView = async (req, res) => {
 
     const admin = await admins.findOne({ where: { userName } });
     if (!admin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const adminId = admin.adminId;
@@ -253,11 +257,11 @@ export const transactionView = async (req, res) => {
       }
     });
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
-    return res.status(200).send(apiResponseSuccess(allData, true, 200, 'Success', paginationData));
+    return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -270,7 +274,7 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
     }
 
     const transferAmount = await transaction.findAll({ where: { adminId } });
@@ -283,11 +287,11 @@ export const accountStatement = async (req, res) => {
     const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount);
-    return res.status(200).send(apiResponseSuccess(paginatedData, true, 200, 'Success', paginationData));
+    return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -298,10 +302,10 @@ export const viewBalance = async (req, res) => {
     const amount = {
       balance: admin.balance,
     };
-    return res.status(200).json(apiResponseSuccess(amount, 200, true, 'Successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(amount, statusCode.success, true, 'Successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };

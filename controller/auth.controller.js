@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import admins from '../models/admin.model.js';
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
 import { string } from '../constructor/string.js';
+import { statusCode } from '../helper/statusCodes.js';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -12,12 +13,12 @@ export const adminLogin = async (req, res) => {
         const existingAdmin = await admins.findOne({ where: { userName } });
 
         if (!existingAdmin) {
-            return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid User Name or password'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, 'Invalid User Name or password'));
         }
 
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
-            return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid password'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.invalidPassword));
         }
 
         let adminIdToSend;
@@ -71,16 +72,16 @@ export const adminLogin = async (req, res) => {
         const loginTime = new Date();
         await existingAdmin.update({ lastLoginTime: loginTime });
 
-        return res.status(200).send(
+        return res.status(statusCode.success).send(
             apiResponseSuccess(
                 accessTokenResponse,
                 true,
-                200,
+                statusCode.success,
                 'Admin login successfully',
             ),
         );
     } catch (error) {
-        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+        res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
     }
 };
 
@@ -90,25 +91,25 @@ export const adminPasswordResetCode = async (req, res) => {
         const { userName, oldPassword, password } = req.body;
         const existingUser = await admins.findOne({ where: { userName } });
         if (!existingUser) {
-            return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
         }
         //   if (!existingUser.isActive || !existingUser.locked) {
-        //     return res.status(400).json(apiResponseErr(null, 400, false, 'Account is Not Active'));
+        //     return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, 'Account is Not Active'));
         //   }
         const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, existingUser.password);
         if (!oldPasswordIsCorrect) {
-            return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid old password'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, 'Invalid old password'));
         }
         const passwordIsDuplicate = await bcrypt.compare(password, existingUser.password);
         if (passwordIsDuplicate) {
-            return res.status(400).json(apiResponseErr(null, 400 , false, 'New Password Cannot Be The Same As Existing Password'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest , false, 'New Password Cannot Be The Same As Existing Password'));
         }
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
         await admins.update({ password: encryptedPassword }, { where: { userName } });
-        return res.status(200).json(apiResponseSuccess(null, true, 200, 'Password Reset Successful!'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successful!'));
     } catch (error) {
-        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+        res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
     }
 };
 

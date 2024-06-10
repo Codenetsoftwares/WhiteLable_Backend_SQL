@@ -33,3 +33,26 @@ class stringConst {
 }
 
 export const string = new stringConst();
+
+class ResponseMessages {
+    constructor() {
+        this.adminCreated = 'Admin created successfully';
+        this.subAdminCreated = 'Sub Admin created successfully';
+        this.adminExists = 'Admin already exists';
+        this.accountInactive = 'Account is in Inactive Mode';
+        this.invalidRole = 'Invalid user role for creating sub-admin';
+        this.adminNotFound = 'Admin not found';
+        this.noRecordsFound = 'No records found';
+        this.success = 'Success';
+        this.dataFetched = 'Data Fetched';
+        this.somethingWentWrong = 'Something went wrong';
+        this.invalidPassword = 'Invalid password';
+        this.inActiveAdmin = 'Admin is Suspended or Locked';
+        this.invalidCreditRes = 'Invalid creditRefs data';
+        this.invalidPartnership = 'Invalid partnerships data';
+        this.userNotFound = 'User not found';
+
+    }
+}
+
+export const messages = new ResponseMessages();

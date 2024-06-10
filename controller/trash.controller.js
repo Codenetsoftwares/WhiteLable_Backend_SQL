@@ -2,6 +2,7 @@ import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../he
 import admins from '../models/admin.model.js';
 import { v4 as uuidv4 } from 'uuid';
 import trash from '../models/trash.model.js';
+import { statusCode } from '../helper/statusCodes.js';
 
 export const moveAdminToTrash = async (req, res) => {
   try {
@@ -10,17 +11,17 @@ export const moveAdminToTrash = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId: requestId } });
 
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, 404, false, `Admin User not found with id: ${requestId}`));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, `Admin User not found with id: ${requestId}`));
     }
 
     if (admin.balance !== 0) {
       return res
-        .status(400)
-        .json(apiResponseErr(null, 400, false, `Balance should be 0 to move the Admin User to Trash`));
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, statusCode.badRequest, false, `Balance should be 0 to move the Admin User to Trash`));
     }
 
     if (!admin.isActive) {
-      return res.status(400).json(apiResponseErr(null, 400, false, `Admin is inactive or locked`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Admin is inactive or locked`));
     }
 
     const updatedTransactionData = {
@@ -51,7 +52,7 @@ export const moveAdminToTrash = async (req, res) => {
     });
 
     if (!trashEntry) {
-      return res.status(500).json(apiResponseErr(null, 500, false, `Failed to backup Admin User`));
+      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to backup Admin User`));
     }
 
     // Delete the admin user from the Admins table
@@ -59,16 +60,16 @@ export const moveAdminToTrash = async (req, res) => {
 
     if (!deleteResult) {
       return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User with id: ${requestId}`));
+        .status(statusCode.enteralServerError)
+        .json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to delete Admin User with id: ${requestId}`));
     }
 
-    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Admin User moved to Trash'));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin User moved to Trash'));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -76,13 +77,13 @@ export const viewTrash = async (req, res) => {
   try {
     const viewTrash = await trash.findAll();
     if (!viewTrash || viewTrash.length === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'No entries found in Trash'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, 'No entries found in Trash'));
     }
-    return res.status(200).json(apiResponseSuccess(viewTrash, 200, true, 'successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(viewTrash, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -91,15 +92,15 @@ export const deleteTrashData = async (req, res) => {
     const trashId = req.params.trashId;
     const record = await trash.findOne({ where: { trashId } });
     if (!record) {
-      return res.status(404).json(apiResponseErr('Data not found', false, 404, 'Data not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr('Data not found', false, statusCode.notFound, 'Data not found'));
     }
     await record.destroy();
-    return res.status(200).json(apiResponseSuccess(null, 200, true, 'Data deleted successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Data deleted successfully'));
   } catch (error) {
     console.error('Error in deleteTrashData:', error);
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -109,7 +110,7 @@ export const restoreAdminUser = async (req, res) => {
     const existingAdminUser = await trash.findOne({ where: { adminId } });
 
     if (!existingAdminUser) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'Admin not found in trash'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, 'Admin not found in trash'));
     }
 
     const restoreRemoveData = {
@@ -128,7 +129,7 @@ export const restoreAdminUser = async (req, res) => {
     const restoreResult = await admins.create(restoreRemoveData);
 
     if (!restoreResult) {
-      return res.status(500).json(apiResponseErr(null, 500, false, 'Failed to restore Admin User'));
+      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, statusCode.enteralServerError, false, 'Failed to restore Admin User'));
     }
 
     // Delete the user from the trash table
@@ -136,14 +137,14 @@ export const restoreAdminUser = async (req, res) => {
 
     if (!deleteResult) {
       return res
-        .status(500)
-        .json(apiResponseErr(null, 500, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+        .status(statusCode.enteralServerError)
+        .json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
     }
 
-    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Admin restored from trash successfully!'));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash successfully!'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
