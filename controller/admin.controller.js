@@ -382,12 +382,12 @@ export const activeStatus = async (req, res) => {
       adminId: activateStatus.adminId,
       isActive: activateStatus.isActive,
       locked: activateStatus.locked,
-      Status: activateStatus.isActive
-        ? 'Active'
+      status: activateStatus.isActive
+        ? 'active'
         : !activateStatus.locked
-          ? 'Locked'
+          ? 'locked'
           : !activateStatus.isActive
-            ? 'Suspended'
+            ? 'suspended'
             : '',
     };
     return res.status(200).json(apiResponseSuccess(active, null, 200, true, 'successfully'));
