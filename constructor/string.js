@@ -50,6 +50,7 @@ class ResponseMessages {
         this.inActiveAdmin = 'Admin is Suspended or Locked';
         this.invalidCreditRes = 'Invalid creditRefs data';
         this.invalidPartnership = 'Invalid partnerships data';
+        this.numberPartnership = 'Partnership must be a number'
         this.userNotFound = 'User not found';
 
     }

@@ -48,8 +48,8 @@ export const depositTransaction = async (req, res) => {
     return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deposit Successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -199,7 +199,7 @@ export const transferAmount = async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -260,8 +260,8 @@ export const transactionView = async (req, res) => {
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -290,8 +290,8 @@ export const accountStatement = async (req, res) => {
     return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -305,7 +305,7 @@ export const viewBalance = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(amount, statusCode.success, true, 'Successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };

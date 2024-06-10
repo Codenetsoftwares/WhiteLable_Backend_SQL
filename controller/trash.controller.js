@@ -52,7 +52,7 @@ export const moveAdminToTrash = async (req, res) => {
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to backup Admin User`));
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup Admin User`));
     }
 
     // Delete the admin user from the Admins table
@@ -60,16 +60,16 @@ export const moveAdminToTrash = async (req, res) => {
 
     if (!deleteResult) {
       return res
-        .status(statusCode.enteralServerError)
-        .json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to delete Admin User with id: ${requestId}`));
+        .status(statusCode.internalServerError)
+        .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
     }
 
     return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin User moved to Trash'));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -82,8 +82,8 @@ export const viewTrash = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(viewTrash, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -99,8 +99,8 @@ export const deleteTrashData = async (req, res) => {
   } catch (error) {
     console.error('Error in deleteTrashData:', error);
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
@@ -129,7 +129,7 @@ export const restoreAdminUser = async (req, res) => {
     const restoreResult = await admins.create(restoreRemoveData);
 
     if (!restoreResult) {
-      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, statusCode.enteralServerError, false, 'Failed to restore Admin User'));
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, 'Failed to restore Admin User'));
     }
 
     // Delete the user from the trash table
@@ -137,14 +137,14 @@ export const restoreAdminUser = async (req, res) => {
 
     if (!deleteResult) {
       return res
-        .status(statusCode.enteralServerError)
-        .json(apiResponseErr(null, statusCode.enteralServerError, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+        .status(statusCode.internalServerError)
+        .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
     }
 
     return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash successfully!'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };

@@ -3,7 +3,7 @@ export const statusCode = {
     create: 201,
     badRequest: 400,
     notFound: 404,
-    enteralServerError: 500,
+    internalServerError: 500,
     inActive : 403
   };
   
