@@ -81,7 +81,7 @@ export const adminLogin = async (req, res) => {
             ),
         );
     } catch (error) {
-        res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 
@@ -109,7 +109,7 @@ export const adminPasswordResetCode = async (req, res) => {
         await admins.update({ password: encryptedPassword }, { where: { userName } });
         return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successful!'));
     } catch (error) {
-        res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 

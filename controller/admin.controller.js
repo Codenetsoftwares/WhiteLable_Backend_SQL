@@ -11,7 +11,6 @@ import { statusCode } from '../helper/statusCodes.js';
  *Op refers to the set of operators provided by Sequelize's query language ,
  *fn is function for call SQL functions directly within your Sequelize queries,
  *col function is used to reference a column in your database within a Sequelize query
-
  **/
 
 const globalUsernames = [];
@@ -59,8 +58,8 @@ export const createAdmin = async (req, res) => {
     return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, message.adminCreated));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -111,8 +110,8 @@ export const createSubAdmin = async (req, res) => {
     return res.status(statusCode.create).json(apiResponseSuccess(newSubAdmin, true, statusCode.create, messages.subAdminCreated));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -150,8 +149,8 @@ export const getIpDetail = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(responseObj, null, statusCode.success, true, 'Data Fetched'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -197,16 +196,20 @@ export const viewAllCreates = async (req, res) => {
       let creditRefs = [];
       let partnerships = [];
 
-      try {
-        creditRefs = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
-      } catch (error) {
-        console.error('Error parsing creditRefs JSON:', error);
+      if (admin.creditRefs) {
+        try {
+          creditRefs = JSON.parse(admin.creditRefs);
+        } catch {
+          creditRefs = [];
+        }
       }
 
-      try {
-        partnerships = admin.partnerships ? JSON.parse(admin.partnerships) : [];
-      } catch (error) {
-        console.error('Error parsing partnerships JSON:', error);
+      if (admin.partnerships) {
+        try {
+          partnerships = JSON.parse(admin.partnerships);
+        } catch {
+          partnerships = [];
+        }
       }
 
       return {
@@ -240,12 +243,12 @@ export const viewAllCreates = async (req, res) => {
       ),
     );
   } catch (error) {
-    console.error('Error fetching sub admins:', error);
-    return res.status(statusCode.enteralServerError).json(
-      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message),
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message),
     );
   }
 };
+
 // done
 export const viewAllSubAdminCreates = async (req, res) => {
   try {
@@ -290,16 +293,20 @@ export const viewAllSubAdminCreates = async (req, res) => {
       let creditRefs = [];
       let partnerships = [];
 
-      try {
-        creditRefs = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
-      } catch (error) {
-        console.error('Error parsing creditRefs JSON:', error);
+      if (admin.creditRefs) {
+        try {
+          creditRefs = JSON.parse(admin.creditRefs);
+        } catch {
+          creditRefs = [];
+        }
       }
 
-      try {
-        partnerships = admin.partnerships ? JSON.parse(admin.partnerships) : [];
-      } catch (error) {
-        console.error('Error parsing partnerships JSON:', error);
+      if (admin.partnerships) {
+        try {
+          partnerships = JSON.parse(admin.partnerships);
+        } catch {
+          partnerships = [];
+        }
       }
 
       return {
@@ -333,9 +340,8 @@ export const viewAllSubAdminCreates = async (req, res) => {
       ),
     );
   } catch (error) {
-    console.error('Error fetching sub admins:', error);
-    return res.status(statusCode.enteralServerError).json(
-      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message),
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message),
     );
   }
 };
@@ -395,8 +401,8 @@ export const editCreditRef = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, statusCode.success, 'CreditRef Edited successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -406,8 +412,9 @@ export const editPartnership = async (req, res) => {
     const { partnership, password } = req.body;
 
     if (typeof partnership !== 'number') {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPartnership));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.numberPartnership));
     }
+
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
       return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
@@ -429,13 +436,16 @@ export const editPartnership = async (req, res) => {
 
     let partnershipsList;
     try {
-      partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
+      if (typeof admin.partnerships === 'string' && admin.partnerships.trim() !== '') {
+        partnershipsList = JSON.parse(admin.partnerships);
+      } else {
+        partnershipsList = [];
+      }
     } catch (error) {
-      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidPartnership));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPartnership));
     }
 
     partnershipsList.push(newPartnershipEntry);
-
     if (partnershipsList.length > 10) {
       partnershipsList = partnershipsList.slice(-10);
     }
@@ -448,11 +458,11 @@ export const editPartnership = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(statusCode.success).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, statusCode.success, 'Partnership Edit successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, statusCode.success, 'Partnership edited successfully'));
   } catch (error) {
-    res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message)
+    );
   }
 };
 // done
@@ -469,7 +479,7 @@ export const partnershipView = async (req, res) => {
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidPartnership));
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidPartnership));
     }
 
     if (!Array.isArray(partnershipsList)) {
@@ -485,7 +495,7 @@ export const partnershipView = async (req, res) => {
 
     return res.status(statusCode.success).json(apiResponseSuccess(transferData, true, statusCode.success, messages.success));
   } catch (error) {
-    return res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -502,7 +512,7 @@ export const creditRefView = async (req, res) => {
     try {
       creditRefList = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
     } catch (error) {
-      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidCreditRes));
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidCreditRes));
     }
 
     if (!Array.isArray(creditRefList)) {
@@ -518,7 +528,7 @@ export const creditRefView = async (req, res) => {
 
     return res.status(statusCode.success).json(apiResponseSuccess(transferData, statusCode.success, true, messages.success));
   } catch (error) {
-    return res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -541,8 +551,8 @@ export const activeStatus = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(active, null, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -561,8 +571,8 @@ export const profileView = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(transferData, null, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -683,8 +693,8 @@ export const buildRootPath = async (req, res) => {
     );
   } catch (error) {
     return res
-      .status(statusCode.enteralServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -740,7 +750,7 @@ export const viewSubAdmins = async (req, res) => {
       totalCount: totalCount,
     }));
   } catch (error) {
-    return res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    return res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -766,7 +776,7 @@ export const singleSubAdmin = async (req, res) => {
 
     return res.status(statusCode.success).json(apiResponseSuccess(data, true, statusCode.success, messages.success));
   } catch (error) {
-    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -808,7 +818,7 @@ export const subAdminPermission = async (req, res) => {
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, `${subAdmin.userName} permissions edited successfully`));
   } catch (error) {
-    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -833,6 +843,6 @@ export const userStatus = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(userStatus, true, statusCode.success, messages.success));
   } catch (error) {
     console.error('Error:', error);
-    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
