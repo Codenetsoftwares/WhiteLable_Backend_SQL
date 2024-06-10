@@ -180,7 +180,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'No records found'));
     }
 
     const offset = (page - 1) * pageSize;
@@ -273,7 +273,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(404).json(apiResponseErr(null, 404, false, 'No records found'));
+      return res.status(400).json(apiResponseErr(null, false, 400, 'No records found'));
     }
 
     const offset = (page - 1) * pageSize;
