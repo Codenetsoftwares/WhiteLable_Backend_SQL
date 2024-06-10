@@ -11,6 +11,10 @@ export const depositTransaction = async (req, res) => {
     const adminId = req.params.adminId;
     const admin = await admins.findOne({ where: { adminId } });
 
+    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+      return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid amount'));
+    }
+
     if (!admin) {
       return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
     }
@@ -43,7 +47,7 @@ export const depositTransaction = async (req, res) => {
       transactionType: depositTransactionData.transactionType,
     });
 
-    return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Deposit Successfully'));
+    return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deposit Successfully'));
   } catch (error) {
     res
       .status(500)
@@ -55,11 +59,16 @@ export const transferAmount = async (req, res) => {
   try {
     const { receiveUserId, transferAmount, withdrawalAmt, remarks, password } = req.body;
     const adminId = req.params.adminId;
-    const senderAdmin = await admins.findOne({ where: { adminId } });
+    const senderAdmin = await admins.findOne({ where: { adminId } })
+    
+    if (isNaN(transferAmount) || isNaN(withdrawalAmt)) {
+      return res.status(400).json(apiResponseErr(null, 400, false, 'Invalid Amount'));
+    }
 
     if (!senderAdmin) {
       return res.status(401).json(apiResponseErr(null, 400, false, 'Admin not found'));
     }
+
     const isPasswordValid = await bcrypt.compare(password, senderAdmin.password);
     if (!isPasswordValid) {
       return res.status(401).json(apiResponseErr(null, 400, false, 'Invalid password for the transaction'));
@@ -76,6 +85,7 @@ export const transferAmount = async (req, res) => {
       return res.status(401).json(apiResponseErr(null, 400, false, 'Receiver Admin is inactive'));
     }
     if (withdrawalAmt && withdrawalAmt > 0) {
+      
       if (receiverAdmin.balance < withdrawalAmt) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Withdrawal'));
       }
@@ -115,7 +125,7 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
         transferToUserAccount: withdrawalRecord.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Deducted Successfully'));
+      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Deducted Successfully'));
     } else {
       if (senderAdmin.balance < transferAmount) {
         return res.status(401).json(apiResponseErr(null, 400, false, 'Insufficient Balance For Transfer'));
@@ -180,7 +190,7 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
         transferToUserAccount: transferRecordCredit.transferToUserAccount,
       });
-      return res.status(201).json(apiResponseSuccess(null, null, 201, true, 'Balance Debited Successfully'));
+      return res.status(201).json(apiResponseSuccess(null, 201, true, 'Balance Debited Successfully'));
     }
   } catch (error) {
     console.log(error);
@@ -243,7 +253,7 @@ export const transactionView = async (req, res) => {
       }
     });
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
-    return res.status(200).send(apiResponseSuccess(allData, paginationData, true, 200, 'Success'));
+    return res.status(200).send(apiResponseSuccess(allData, true, 200, 'Success', paginationData));
   } catch (error) {
     res
       .status(500)
@@ -273,7 +283,7 @@ export const accountStatement = async (req, res) => {
     const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount);
-    return res.status(200).send(apiResponseSuccess(paginatedData, paginationData, true, 200, 'Success'));
+    return res.status(200).send(apiResponseSuccess(paginatedData, true, 200, 'Success', paginationData));
   } catch (error) {
     res
       .status(500)
@@ -288,7 +298,7 @@ export const viewBalance = async (req, res) => {
     const amount = {
       balance: admin.balance,
     };
-    return res.status(200).json(apiResponseSuccess(amount, null, 200, true, 'Successfully'));
+    return res.status(200).json(apiResponseSuccess(amount, 200, true, 'Successfully'));
   } catch (error) {
     res
       .status(500)

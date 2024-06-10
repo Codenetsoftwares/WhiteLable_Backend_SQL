@@ -37,7 +37,7 @@ const admins = sequelize.define('admins', {
     type: DataTypes.DATE,
     allowNull: true,
   },
-  IP: {
+  ip: {
     type: DataTypes.STRING,
     allowNull: true,
   },
