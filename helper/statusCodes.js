@@ -1,0 +1,9 @@
+export const statusCode = {
+    success: 200,
+    create: 201,
+    badRequest: 400,
+    notFound: 404,
+    enteralServerError: 500,
+    inActive : 403
+  };
+  

@@ -1,12 +1,11 @@
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
-import { database } from '../dbConnection/database.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import admins from '../models/admin.model.js';
-import { string } from '../constructor/string.js';
+import { messages, string } from '../constructor/string.js';
 import { Op, fn, col } from 'sequelize';
 import sequelize from '../db.js';
+import { statusCode } from '../helper/statusCodes.js';
 
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
@@ -24,10 +23,10 @@ export const createAdmin = async (req, res) => {
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
     if (existingAdmin) {
-      throw apiResponseErr(null, false, 400, "Admin Already Exists")
+      throw apiResponseErr(null, false, statusCode.badRequest, messages.adminCreated)
     }
     if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, 400, "Account is Not Active")
+      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive)
     }
     const defaultPermission = ['all-access'];
 
@@ -57,11 +56,11 @@ export const createAdmin = async (req, res) => {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(201).json(apiResponseSuccess(newAdmin, true, 201, 'Admin created successfully'));
+    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, message.adminCreated));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -71,12 +70,12 @@ export const createSubAdmin = async (req, res) => {
     const user = req.user;
 
     if (user.isActive === false) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Account is in Inactive Mode'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
     }
 
     const existingAdmin = await admins.findOne({ where: { userName } });
     if (existingAdmin) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Admin already exists'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminExists));
     }
 
     let subRole = '';
@@ -92,7 +91,7 @@ export const createSubAdmin = async (req, res) => {
       } else if (user.roles[i].role.includes(string.masterAgent)) {
         subRole = string.subMasterAgent;
       } else {
-        return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid user role for creating sub-admin'));
+        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidRole));
       }
     }
 
@@ -109,11 +108,11 @@ export const createSubAdmin = async (req, res) => {
       createdByUser,
     });
 
-    return res.status(201).json(apiResponseSuccess(newSubAdmin, true, 201, 'Sub Admin created successfully'));
+    return res.status(statusCode.create).json(apiResponseSuccess(newSubAdmin, true, statusCode.create, messages.subAdminCreated));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -123,7 +122,7 @@ export const getIpDetail = async (req, res) => {
     console.log('userName', userName);
     let admin = await admins.findOne({ where: { userName } });
     if (!admin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
     const loginTime = admin.lastLoginTime;
     console.log('loginTime', loginTime);
@@ -148,11 +147,11 @@ export const getIpDetail = async (req, res) => {
       locked: admin.locked,
       lastLoginTime: loginTime,
     };
-    return res.status(200).json(apiResponseSuccess(responseObj, null, 200, true, 'Data Fetched'));
+    return res.status(statusCode.success).json(apiResponseSuccess(responseObj, null, statusCode.success, true, 'Data Fetched'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -180,7 +179,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'No records found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
@@ -226,12 +225,12 @@ export const viewAllCreates = async (req, res) => {
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return res.status(200).json(
+    return res.status(statusCode.success).json(
       apiResponseSuccess(
         users,
         true,
-        200,
-        'Success',
+        statusCode.success,
+        messages.success,
         {
           totalRecords,
           totalPages,
@@ -242,8 +241,8 @@ export const viewAllCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error fetching sub admins:', error);
-    return res.status(500).json(
-      apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message),
+    return res.status(statusCode.enteralServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message),
     );
   }
 };
@@ -273,7 +272,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'No records found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
@@ -319,12 +318,12 @@ export const viewAllSubAdminCreates = async (req, res) => {
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 
-    return res.status(200).json(
+    return res.status(statusCode.success).json(
       apiResponseSuccess(
         users,
         true,
-        200,
-        'Success',
+        statusCode.success,
+        messages.success,
         {
           totalRecords,
           totalPages,
@@ -335,8 +334,8 @@ export const viewAllSubAdminCreates = async (req, res) => {
     );
   } catch (error) {
     console.error('Error fetching sub admins:', error);
-    return res.status(500).json(
-      apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message),
+    return res.status(statusCode.enteralServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message),
     );
   }
 };
@@ -347,20 +346,20 @@ export const editCreditRef = async (req, res) => {
     const { creditRef, password } = req.body;
 
     if (typeof creditRef !== 'number') {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'CreditRef must be a number'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'CreditRef must be a number'));
     }
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin Not Found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid password'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(403).json(apiResponseErr(null, false, 403, 'Admin is Suspended or Locked'));
+      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
     }
 
     const newCreditRefEntry = {
@@ -373,7 +372,7 @@ export const editCreditRef = async (req, res) => {
       try {
         creditRefList = JSON.parse(admin.creditRefs);
       } catch (error) {
-        return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid creditRefs JSON'));
+        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidCreditRes));
       }
     } else if (Array.isArray(admin.creditRefs)) {
       creditRefList = admin.creditRefs;
@@ -393,11 +392,11 @@ export const editCreditRef = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(200).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, 200, 'CreditRef Edited successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess({ adminDetails, creditRef: creditRefList }, true, statusCode.success, 'CreditRef Edited successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -407,20 +406,20 @@ export const editPartnership = async (req, res) => {
     const { partnership, password } = req.body;
 
     if (typeof partnership !== 'number') {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'partnership must be a number'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPartnership));
     }
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Invalid password'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(403).json(apiResponseErr(null, false, 403, 'Admin is suspended or locked'));
+      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
     }
 
     const newPartnershipEntry = {
@@ -432,7 +431,7 @@ export const editPartnership = async (req, res) => {
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid partnerships data'));
+      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidPartnership));
     }
 
     partnershipsList.push(newPartnershipEntry);
@@ -449,11 +448,11 @@ export const editPartnership = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(200).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, 200, 'Partnership Edit successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess({ adminDetails, partnerships: partnershipsList }, true, statusCode.success, 'Partnership Edit successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -463,18 +462,18 @@ export const partnershipView = async (req, res) => {
 
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
     let partnershipsList;
     try {
       partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid partnerships data'));
+      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidPartnership));
     }
 
     if (!Array.isArray(partnershipsList)) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'partnerships not found or not an array'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'partnerships not found or not an array'));
     }
 
     const last10partnerships = partnershipsList.slice(-10);
@@ -484,9 +483,9 @@ export const partnershipView = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(200).json(apiResponseSuccess(transferData, true, 200, 'success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(transferData, true, statusCode.success, messages.success));
   } catch (error) {
-    return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    return res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -496,18 +495,18 @@ export const creditRefView = async (req, res) => {
 
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Admin not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
     let creditRefList;
     try {
       creditRefList = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
     } catch (error) {
-      return res.status(500).json(apiResponseErr(null, false, 500, 'Invalid creditRefs data'));
+      return res.status(statusCode.enteralServerError).json(apiResponseErr(null, false, statusCode.enteralServerError, messages.invalidCreditRes));
     }
 
     if (!Array.isArray(creditRefList)) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'creditRefs not found or not an array'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'creditRefs not found or not an array'));
     }
 
     const last10creditRefs = creditRefList.slice(-10);
@@ -517,9 +516,9 @@ export const creditRefView = async (req, res) => {
       userName: admin.userName,
     };
 
-    return res.status(200).json(apiResponseSuccess(transferData, 200, true, 'Success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(transferData, statusCode.success, true, messages.success));
   } catch (error) {
-    return res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    return res.status(statusCode.enteralServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -539,11 +538,11 @@ export const activeStatus = async (req, res) => {
             ? 'suspended'
             : '',
     };
-    return res.status(200).json(apiResponseSuccess(active, null, 200, true, 'successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(active, null, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -552,18 +551,18 @@ export const profileView = async (req, res) => {
     const userName = req.params.userName;
     const admin = await admins.findOne({ where: { userName } });
     if (!admin) {
-      return res.status(400).json(apiResponseErr(null, 400, false, 'Admin Not Found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
     const transferData = {
       adminId: admin.adminId,
       roles: admin.roles,
       userName: admin.userName,
     };
-    return res.status(200).json(apiResponseSuccess(transferData, null, 200, true, 'successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(transferData, null, statusCode.success, true, 'successfully'));
   } catch (error) {
     res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -579,13 +578,13 @@ export const buildRootPath = async (req, res) => {
     }
 
     if (!userName) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'userName parameter is required'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'userName parameter is required'));
     }
 
     const user = await admins.findOne({ where: { userName } });
 
     if (!user) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
     }
 
     if (action === 'store') {
@@ -646,7 +645,7 @@ export const buildRootPath = async (req, res) => {
       };
 
       const message = 'Path stored successfully';
-      return res.status(201).json(
+      return res.status(statusCode.create).json(
         apiResponseSuccess(
           {
             path: globalUsernames,
@@ -656,7 +655,7 @@ export const buildRootPath = async (req, res) => {
             totalPages,
           },
           true,
-          201,
+          statusCode.create,
           message
         )
       );
@@ -673,19 +672,19 @@ export const buildRootPath = async (req, res) => {
     } else if (action === 'clearAll') {
       globalUsernames.length = 0;
     } else {
-      throw { code: 400, message: 'Invalid action provided' };
+      throw { code: statusCode.badRequest, message: 'Invalid action provided' };
     }
 
     await user.update({ path: JSON.stringify(globalUsernames) });
 
     const successMessage = action === 'store' ? 'Path stored successfully' : 'Path cleared successfully';
-    return res.status(200).json(
-      apiResponseSuccess({ path: globalUsernames, page, pageSize, totalPages: 1 }, true, 200, successMessage)
+    return res.status(statusCode.success).json(
+      apiResponseSuccess({ path: globalUsernames, page, pageSize, totalPages: 1 }, true, statusCode.success, successMessage)
     );
   } catch (error) {
     return res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+      .status(statusCode.enteralServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -721,7 +720,7 @@ export const viewSubAdmins = async (req, res) => {
     });
 
     if (!subAdmins || subAdmins.length === 0) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'No data found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'No data found'));
     }
 
     const users = subAdmins.map(user => ({
@@ -735,13 +734,13 @@ export const viewSubAdmins = async (req, res) => {
     const totalPages = Math.ceil(totalCount / pageSize);
     const paginatedUsers = users.slice((page - 1) * pageSize, page * pageSize);
 
-    return res.status(200).json(apiResponseSuccess(paginatedUsers, true, 200, 'Success', {
+    return res.status(statusCode.success).json(apiResponseSuccess(paginatedUsers, true, statusCode.success, messages.success, {
       currentPage: page,
       totalPages: totalPages,
       totalCount: totalCount,
     }));
   } catch (error) {
-    return res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    return res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -757,7 +756,7 @@ export const singleSubAdmin = async (req, res) => {
     });
 
     if (!subAdmin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Sub Admin not found with the given Id'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Sub Admin not found with the given Id'));
     }
 
     const data = {
@@ -765,9 +764,9 @@ export const singleSubAdmin = async (req, res) => {
       roles: subAdmin.roles,
     };
 
-    return res.status(200).json(apiResponseSuccess(data, true, 200, 'Success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(data, true, statusCode.success, messages.success));
   } catch (error) {
-    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -777,7 +776,7 @@ export const subAdminPermission = async (req, res) => {
     const { permission } = req.body;
 
     if (!subAdminId) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Id not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Id not found'));
     }
 
     const subAdmin = await admins.findOne({
@@ -787,13 +786,13 @@ export const subAdminPermission = async (req, res) => {
     });
 
     if (!subAdmin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Sub Admin not found'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Sub Admin not found'));
     }
 
     let roles = subAdmin.roles;
 
     if (!roles || roles.length === 0) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Roles not found for Sub Admin'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Roles not found for Sub Admin'));
     }
 
     roles[0].permission = [...roles[0].permission, permission];
@@ -807,9 +806,9 @@ export const subAdminPermission = async (req, res) => {
       }
     );
 
-    return res.status(200).json(apiResponseSuccess(null, true, 200, `${subAdmin.userName} permissions edited successfully`));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, `${subAdmin.userName} permissions edited successfully`));
   } catch (error) {
-    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -824,16 +823,16 @@ export const userStatus = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'User not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
     }
 
     const userStatus = {
       status: user.isActive ? 'active' : user.locked ? 'locked' : 'suspended',
     };
 
-    return res.status(200).json(apiResponseSuccess(userStatus, true, 200, 'success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(userStatus, true, statusCode.success, messages.success));
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(statusCode.enteralServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.enteralServerError, error.errMessage ?? error.message));
   }
 };

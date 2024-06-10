@@ -48,10 +48,32 @@ export const depositAmountSchema = [
 export const transferAmountSchema = [
   param('adminId').exists().withMessage('Admin ID is required.'),
   body('receiveUserId').exists().withMessage('Receiver ID is required.'),
-  body('transferAmount').exists().withMessage('Transfer Amount is required'),
-  body('withdrawalAmt').exists().withMessage('Withdraw Amount is required'),
+  body('transferAmount').optional().custom(value => {
+    if (isNaN(value)) {
+      throw new Error('Transfer Amount must be a number');
+    }
+    if (parseFloat(value) <= 0) {
+      throw new Error('Transfer Amount must be a positive number');
+    }
+    return true;
+  }),
+  body('withdrawalAmt').optional().custom(value => {
+    if (isNaN(value)) {
+      throw new Error('Withdrawal Amount must be a number');
+    }
+    if (parseFloat(value) <= 0) {
+      throw new Error('Withdrawal Amount must be a positive number');
+    }
+    return true;
+  }),
   body('remarks').exists().withMessage('Remark is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
+  body().custom((value, { req }) => {
+    if ((req.body.transferAmount && req.body.withdrawalAmt) || (!req.body.transferAmount && !req.body.withdrawalAmt)) {
+      throw new Error('Either transferAmount or withdrawalAmt must be provided, but not both.');
+    }
+    return true;
+  })
 ];
 
 export const transactionViewSchema = [
