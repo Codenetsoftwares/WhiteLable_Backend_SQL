@@ -55,7 +55,7 @@ export const createAdmin = async (req, res) => {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, message.adminCreated));
+    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, messages.adminCreated));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -476,10 +476,16 @@ export const partnershipView = async (req, res) => {
     }
 
     let partnershipsList;
-    try {
-      partnershipsList = admin.partnerships ? JSON.parse(admin.partnerships) : [];
-    } catch (error) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidPartnership));
+    if (typeof admin.partnerships === 'string') {
+      try {
+        partnershipsList = JSON.parse(admin.partnerships);
+      } catch (error) {
+        return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidPartnership));
+      }
+    } else if (Array.isArray(admin.partnerships)) {
+      partnershipsList = admin.partnerships;
+    } else {
+      partnershipsList = [];
     }
 
     if (!Array.isArray(partnershipsList)) {
@@ -509,14 +515,20 @@ export const creditRefView = async (req, res) => {
     }
 
     let creditRefList;
-    try {
-      creditRefList = admin.creditRefs ? JSON.parse(admin.creditRefs) : [];
-    } catch (error) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidCreditRes));
+    if (typeof admin.creditRefs === 'string') {
+      try {
+        creditRefList = JSON.parse(admin.creditRefs);
+      } catch (error) {
+        return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, messages.invalidCreditRes));
+      }
+    } else if (Array.isArray(admin.creditRefs)) {
+      creditRefList = admin.creditRefs;
+    } else {
+      creditRefList = [];
     }
 
     if (!Array.isArray(creditRefList)) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'creditRefs not found or not an array'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'creditRefs not found or not an array'));
     }
 
     const last10creditRefs = creditRefList.slice(-10);
@@ -525,8 +537,7 @@ export const creditRefView = async (req, res) => {
       creditRefs: last10creditRefs,
       userName: admin.userName,
     };
-
-    return res.status(statusCode.success).json(apiResponseSuccess(transferData, statusCode.success, true, messages.success));
+    return res.status(statusCode.success).json(apiResponseSuccess(transferData, true, statusCode.success, messages.success));
   } catch (error) {
     return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
