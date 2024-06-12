@@ -816,7 +816,7 @@ export const subAdminPermission = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Roles not found for Sub Admin'));
     }
 
-    roles[0].permission = [...roles[0].permission, permission];
+    roles[0].permission =  permission ;
 
     await admins.update(
       { roles: roles },
