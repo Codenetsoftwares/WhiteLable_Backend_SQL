@@ -286,7 +286,7 @@ export const adminRoute = (app) => {
   );
 
   // edit-subAdmin-permissions ("DONE")
-  app.put('/admin/edit-subAdmin-permissions/:adminId',
+  app.put('/api/admin/edit-subAdmin-permissions/:adminId',
     subAdminPermissionSchema,
     customErrorHandler,
     Authorize([
