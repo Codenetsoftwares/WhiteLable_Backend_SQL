@@ -1,4 +1,5 @@
 import { validationResult } from 'express-validator';
+import { statusCode } from './statusCodes.js';
 
 const customErrorHandler = function (req, res, next) {
   const errors = validationResult(req);

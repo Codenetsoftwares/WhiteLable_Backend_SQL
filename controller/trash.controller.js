@@ -11,17 +11,17 @@ export const moveAdminToTrash = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId: requestId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, `Admin User not found with id: ${requestId}`));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, `Admin User not found with id: ${requestId}`));
     }
 
     if (admin.balance !== 0) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, statusCode.badRequest, false, `Balance should be 0 to move the Admin User to Trash`));
+        .json(apiResponseErr(null, false, statusCode.badRequest, `Balance should be 0 to move the Admin User to Trash`));
     }
 
     if (!admin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Admin is inactive or locked`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin is inactive or locked`));
     }
 
     const updatedTransactionData = {
@@ -77,9 +77,9 @@ export const viewTrash = async (req, res) => {
   try {
     const viewTrash = await trash.findAll();
     if (!viewTrash || viewTrash.length === 0) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, 'No entries found in Trash'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'No entries found in Trash'));
     }
-    return res.status(statusCode.success).json(apiResponseSuccess(viewTrash, statusCode.success, true, 'successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(viewTrash, true, statusCode.success, 'successfully'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -95,7 +95,7 @@ export const deleteTrashData = async (req, res) => {
       return res.status(statusCode.notFound).json(apiResponseErr('Data not found', false, statusCode.notFound, 'Data not found'));
     }
     await record.destroy();
-    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Data deleted successfully'));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Data deleted successfully'));
   } catch (error) {
     console.error('Error in deleteTrashData:', error);
     res
@@ -110,7 +110,7 @@ export const restoreAdminUser = async (req, res) => {
     const existingAdminUser = await trash.findOne({ where: { adminId } });
 
     if (!existingAdminUser) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, 'Admin not found in trash'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Admin not found in trash'));
     }
 
     const restoreRemoveData = {
@@ -129,7 +129,7 @@ export const restoreAdminUser = async (req, res) => {
     const restoreResult = await admins.create(restoreRemoveData);
 
     if (!restoreResult) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, 'Failed to restore Admin User'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, 'Failed to restore Admin User'));
     }
 
     // Delete the user from the trash table
@@ -137,8 +137,8 @@ export const restoreAdminUser = async (req, res) => {
 
     if (!deleteResult) {
       return res
-        .status(statusCode.internalServerError)
-        .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, statusCode.badRequest, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
     }
 
     return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash successfully!'));

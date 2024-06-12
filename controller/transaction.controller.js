@@ -203,7 +203,6 @@ export const transferAmount = async (req, res) => {
   }
 };
 
-
 export const transactionView = async (req, res) => {
   try {
     const userName = req.params.userName;
