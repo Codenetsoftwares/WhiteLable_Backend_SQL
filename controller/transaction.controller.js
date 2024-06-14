@@ -5,6 +5,8 @@ import admins from '../models/admin.model.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { statusCode } from '../helper/statusCodes.js';
+import { Sequelize } from 'sequelize';
+import { messages } from '../constructor/string.js';
 
 export const depositTransaction = async (req, res) => {
   try {
