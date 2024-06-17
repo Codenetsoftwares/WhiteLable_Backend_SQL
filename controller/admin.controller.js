@@ -674,6 +674,7 @@ export const buildRootPath = async (req, res) => {
             page,
             pageSize,
             totalPages,
+            totalRecords
           },
           true,
           statusCode.create,
