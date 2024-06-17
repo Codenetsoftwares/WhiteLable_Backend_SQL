@@ -590,8 +590,8 @@ export const profileView = async (req, res) => {
 export const buildRootPath = async (req, res) => {
   try {
     const { userName, action } = req.params;
-    const searchName = req.body.searchName;
-    const page = parseInt(req.body.page) || 1;
+    const searchName = req.query.searchName;
+    const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 5;
 
     if (!globalUsernames) {
@@ -817,7 +817,7 @@ export const subAdminPermission = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Roles not found for Sub Admin'));
     }
 
-    roles[0].permission =  permission ;
+    roles[0].permission = permission;
 
     await admins.update(
       { roles: roles },
