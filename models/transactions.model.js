@@ -41,6 +41,10 @@ const transaction = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    remarks: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
   {
     timestamps: false,

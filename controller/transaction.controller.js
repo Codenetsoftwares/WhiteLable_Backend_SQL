@@ -246,17 +246,19 @@ export const transactionView = async (req, res) => {
     let allData = JSON.parse(JSON.stringify(paginatedData));
 
     allData.forEach((data) => {
-      if (data.transactionType === 'Credit') {
+      console.log("data",data);
+      if (data.transactionType === 'credit') {
         balances += data.amount;
-        data.balance = balances;
-      } else if (data.transactionType === 'Debit') {
+        data.balance = balances || 0;
+      } else if (data.transactionType === 'debit') {
         debitBalances += data.amount;
-        data.debitBalance = debitBalances;
-      } else if (data.transactionType === 'Withdrawal') {
+        data.debitBalance = debitBalances || 0;
+      } else if (data.transactionType === 'withdrawal') {
         withdrawalBalances += data.withdraw;
         data.withdrawalBalance = withdrawalBalances || 0;
       }
     });
+    console.log("all", allData);
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
