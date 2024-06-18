@@ -99,7 +99,7 @@ export const adminRoute = (app) => {
   // View All Creates API ("DONE")
   app.get('/api/view-all-creates/:createdById',
     viewAllCreatesSchema,
-    customErrorHandler,
+    customErrorHandler, 
     Authorize([
       string.superAdmin,
       string.whiteLabel,

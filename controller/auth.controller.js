@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import admins from '../models/admin.model.js';
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
-import { string } from '../constructor/string.js';
+import { messages, string } from '../constructor/string.js';
 import { statusCode } from '../helper/statusCodes.js';
 
 // done

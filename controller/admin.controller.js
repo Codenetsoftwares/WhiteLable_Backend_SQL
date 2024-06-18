@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import admins from '../models/admin.model.js';
 import { messages, string } from '../constructor/string.js';
-import { Op, fn, col } from 'sequelize';
+import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
 
@@ -593,7 +593,13 @@ export const buildRootPath = async (req, res) => {
     const searchName = req.query.searchName;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 5;
-
+    const allowedRoles = [
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+    ];
     if (!globalUsernames) {
       globalUsernames = [];
     }
@@ -623,6 +629,7 @@ export const buildRootPath = async (req, res) => {
         where: {
           createdByUser: user.userName,
           ...likeCondition,
+          [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
         },
       });
 
@@ -632,6 +639,7 @@ export const buildRootPath = async (req, res) => {
         where: {
           createdByUser: user.userName,
           ...likeCondition,
+          [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
         },
         offset: (page - 1) * pageSize,
         limit: pageSize,
@@ -858,3 +866,834 @@ export const userStatus = async (req, res) => {
     res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+// export const activateAdmin = async (adminId, isActive, locked) => {
+//   try {
+//     console.log("adminId:", adminId);
+
+//     const admin = await admins.findByPk(adminId);
+
+//     const rolesToFind = [
+//       { role: string.whiteLabel },
+//       { role: string.hyperAgent, },
+//       { role: string.masterAgent, },
+//       { role: string.superAgent, },
+//       { role: "SubWhiteLabel" },
+//       { role: "SubHyperAgent" },
+//       { role: "SubMasterAgent" },
+//       { role: "SubSuperAgent" },
+//       { role: "SubAdmin" }
+//     ];
+
+//     const roleQueries = rolesToFind.map(role =>
+//       admins.findAll({
+//         where: {
+//           createdById: adminId,
+//           roles: {
+//             [Sequelize.Op.contains]: [role]
+//           }
+//         }
+//       })
+//     );
+
+//     const [
+//       whiteLabel, hyperAgent, masterAgent, superAgent,
+//       subwhiteLabel, subhyperAgent, submasterAgent,
+//       subsuperAgent, subAdmin
+//     ] = await Promise.all(roleQueries);
+
+
+
+//     if (whiteLabel.length == 0 && hyperAgent.length == 0 && masterAgent.length == 0 && superAgent.length == 0
+//       && subwhiteLabel.length == 0 && subhyperAgent.length == 0 && submasterAgent.length == 0 && subsuperAgent.length == 0 && subAdmin.length === 0) {
+//       if (isActive === true) {
+//         admin.isActive = true;
+//         admin.locked = true;
+//       }
+//       else if (isActive === false) {
+//         if (locked === false) {
+//           admin.locked = false;
+//           admin.isActive = false;
+//         }
+//         else {
+//           admin.isActive = false;
+//           admin.locked = true;
+//         }
+//       }
+
+//       await admin.save();
+//       await Promise.all(hyperAgent.map(data => data.save()));
+//       await Promise.all(masterAgent.map(data => data.save()));
+//       await Promise.all(whiteLabel.map(data => data.save()));
+//       await Promise.all(superAgent.map(data => data.save()));
+//       await Promise.all(subhyperAgent.map(data => data.save()));
+//       await Promise.all(submasterAgent.map(data => data.save()));
+//       await Promise.all(subwhiteLabel.map(data => data.save()));
+//       await Promise.all(subsuperAgent.map(data => data.save()));
+//       await Promise.all(subAdmin.map(data => data.save()));
+//       return
+//     }
+//     if (!admin) {
+//       throw { code: 404, message: "Admin not found" };
+//     }
+//     if (isActive === true) {
+//       admin.isActive = true;
+//       admin.locked = true;
+//       superAgent.map((data) => {
+//         if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.superActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.superActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.superActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.superActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+//       })
+
+//       hyperAgent.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.hyperActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.hyperActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.hyperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.hyperActive = false;
+//           data.checkActive = false;
+//         } //checked
+
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+//       })
+//       masterAgent.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.masterActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.masterActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.masterActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.masterActive = false;
+//           data.checkActive = false;
+//         } //checked
+
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+//       })
+//       whiteLabel.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.whiteActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.whiteActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.whiteActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.whiteActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+
+//       })
+
+//       subAdmin.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subAdminActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.subAdminActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subAdminActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+
+//       })
+
+
+//       // added sub
+
+
+//       subsuperAgent.map((data) => {
+//         if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subsuperActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.subsuperActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.subsuperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subsuperActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+//       })
+
+//       subhyperAgent.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subhyperActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.subhyperActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.subhyperActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subhyperActive = false;
+//           data.checkActive = false;
+//         } //checked
+
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+//       })
+//       submasterAgent.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.submasterActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.submasterActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.submasterActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.submasterActive = false;
+//           data.checkActive = false;
+//         } //checked
+
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+//       })
+//       subwhiteLabel.forEach((data) => {
+//         if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subwhiteActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === false) {
+
+//           data.locked = true;
+//           data.subwhiteActive = false;
+//         } //checked
+//         else if (data.isActive === false && data.locked === true && data.subwhiteActive === true && data.checkActive === true) {
+
+//           data.isActive = true;
+//           data.locked = true;
+//           data.subwhiteActive = false;
+//           data.checkActive = false;
+//         } //checked
+//         activateAdmin(data._id, data.isActive, data.locked)
+
+
+
+//       })
+
+
+//       await admin.save();
+//       await Promise.all(hyperAgent.map(data => data.save()));
+//       await Promise.all(masterAgent.map(data => data.save()));
+//       await Promise.all(whiteLabel.map(data => data.save()));
+//       await Promise.all(superAgent.map(data => data.save()));
+//       await Promise.all(subhyperAgent.map(data => data.save()));
+//       await Promise.all(submasterAgent.map(data => data.save()));
+//       await Promise.all(subwhiteLabel.map(data => data.save()));
+//       await Promise.all(subsuperAgent.map(data => data.save()));
+//       await Promise.all(subAdmin.map(data => data.save()));
+//       return { message: "Admin Activated Successfully" };
+//     }
+//     else if (isActive === false) {
+//       if (locked === false) {
+//         admin.locked = false;
+//         admin.isActive = false;
+
+
+//         superAgent.forEach((data) => {
+
+//           if (data.isActive === true && data.locked === true && data.superActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.superActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.superActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.superActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.superActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.superActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.superActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         hyperAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.hyperActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.hyperActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.hyperActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.hyperActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.hyperActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.hyperActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.hyperActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         masterAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.masterActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.masterActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.masterActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.masterActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.masterActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.masterActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.masterActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         whiteLabel.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.whiteActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.whiteActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.whiteActive === true) { ///not use
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.whiteActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.whiteActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.whiteActive === true && data.checkActive === true) {///not use
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.whiteActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         subAdmin.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.subAdminActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.subAdminActive === true) { ///not use
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.subAdminActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.subAdminActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.subAdminActive === true && data.checkActive === true) {///not use
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.subAdminActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+
+
+//         // added sub
+
+//         subsuperAgent.forEach((data) => {
+
+//           if (data.isActive === true && data.locked === true && data.subsuperActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.subsuperActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.subsuperActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.superActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.subsuperActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.subsuperActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.subsuperActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         subhyperAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subhyperActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.subhyperActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.subhyperActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.subhyperActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.subhyperActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.subhyperActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.subhyperActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         submasterAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.submasterActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.submasterActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.submasterActive === true) {
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.submasterActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.submasterActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.submasterActive === true && data.checkActive === true) {
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.submasterActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+//         subwhiteLabel.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subwhiteActive === false && data.checkActive === false) {
+
+//             data.isActive = false;
+//             data.locked = false;
+//             data.subwhiteActive = true;
+//             data.checkActive = true
+//           } //checked
+
+//           else if (data.isActive === false && data.locked === true && data.subwhiteActive === true) { ///not use
+//             data.isActive = false;
+//             data.locked = false;
+//             data.checkActive = true;
+
+//           }
+//           else if (data.isActive === false && data.locked === true && data.subwhiteActive === false && data.checkActive === false) {
+//             data.locked = false;
+//             data.subwhiteActive = true;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === true && data.subwhiteActive === true && data.checkActive === true) {///not use
+//             data.locked = false;
+
+//           } //checked
+//           else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
+//             data.isActive = true;
+//             data.locked = true;
+//             data.subwhiteActive = false;
+//             data.checkActive === false
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+//         });
+
+//         await admin.save();
+//         await Promise.all(hyperAgent.map(data => data.save()));
+//         await Promise.all(masterAgent.map(data => data.save()));
+//         await Promise.all(whiteLabel.map(data => data.save()));
+//         await Promise.all(superAgent.map(data => data.save()));
+//         await Promise.all(subhyperAgent.map(data => data.save()));
+//         await Promise.all(submasterAgent.map(data => data.save()));
+//         await Promise.all(subwhiteLabel.map(data => data.save()));
+//         await Promise.all(subsuperAgent.map(data => data.save()));
+//         await Promise.all(subAdmin.map(data => data.save()));
+//         return { message: "Admin Locked Successfully" };
+//       } else {
+
+//         admin.isActive = false;
+//         admin.locked = true;
+//         superAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.superActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.superActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.superActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.superActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         hyperAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.hyperActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.hyperActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.hyperActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.hyperActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         masterAgent.forEach((data) => {
+
+//           if (data.isActive === true && data.locked === true && data.masterActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.masterActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.masterActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.masterActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         whiteLabel.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.whiteActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.whiteActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.whiteActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.whiteActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         subAdmin.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subAdminActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.subAdminActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.subAdminActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subAdminActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+
+
+//         // added sub
+
+//         subsuperAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subsuperActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.subsuperActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.subsuperActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subsuperActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         subhyperAgent.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subhyperActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.subhyperActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.subhyperActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subhyperActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         submasterAgent.forEach((data) => {
+
+//           if (data.isActive === true && data.locked === true && data.submasterActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.submasterActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.submasterActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.submasterActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+//         subwhiteLabel.forEach((data) => {
+//           if (data.isActive === true && data.locked === true && data.subwhiteActive === false) {
+//             data.isActive = false;
+//             data.locked = true;
+//             data.subwhiteActive = true;
+//             data.checkActive = true
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === false) {
+//             data.locked = true;
+//             data.subwhiteActive = false;
+//           }
+//           else if (data.isActive === false && data.locked === false && data.subwhiteActive === true && data.checkActive === true) {
+//             data.locked = true;
+//           }
+//           activateAdmin(data._id, data.isActive, data.locked)
+
+
+//         });
+
+//         await admin.save();
+//         await Promise.all(hyperAgent.map(data => data.save()));
+//         await Promise.all(masterAgent.map(data => data.save()));
+//         await Promise.all(whiteLabel.map(data => data.save()));
+//         await Promise.all(superAgent.map(data => data.save()));
+//         await Promise.all(subAdmin.map(data => data.save()));
+//         await Promise.all(subhyperAgent.map(data => data.save()));
+//         await Promise.all(submasterAgent.map(data => data.save()));
+//         await Promise.all(subwhiteLabel.map(data => data.save()));
+//         await Promise.all(subsuperAgent.map(data => data.save()));
+
+//         return { message: "Admin Suspended Successfully" };
+//       }
+//     }
+
+//   } catch (err) {
+//     throw { code: err.code || 500, message: err.message || "Internal Server Error" };
+//   }
+// }
