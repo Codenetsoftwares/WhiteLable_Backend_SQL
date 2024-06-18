@@ -98,11 +98,13 @@ export const createSubAdmin = async (req, res) => {
     const createdByUser = user.userName;
     const createdById = user.adminId;
 
+    const permissionsArray = Array.isArray(roles[0].permission) ? roles[0].permission : [roles[0].permission];
+
     const newSubAdmin = await admins.create({
       adminId,
       userName,
       password,
-      roles: [{ role: subRole, permission: roles[0].permission }],
+      roles: [{ role: subRole, permission: permissionsArray }],
       createdById,
       createdByUser,
     });
@@ -825,7 +827,13 @@ export const subAdminPermission = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Roles not found for Sub Admin'));
     }
 
-    roles[0].permission = permission;
+    const permissionsArray = Array.isArray(permission) ? permission : [permission];
+
+    if (!roles[0]) {
+      roles[0] = { permission: [] };
+    }
+
+    roles[0].permission = permissionsArray;
 
     await admins.update(
       { roles: roles },
