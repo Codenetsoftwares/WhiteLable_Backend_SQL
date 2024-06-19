@@ -1,4 +1,5 @@
 import { body, param, query } from 'express-validator';
+import { string } from '../constructor/string.js';
 
 
 export const createAdminSchema = [
@@ -18,15 +19,41 @@ export const createAdminSchema = [
 export const createSubAdminSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').trim().notEmpty().withMessage('Password is required'),
-  // body('roles')
-  //   .isArray({ min: 1 })
-  //   .withMessage('At least one permission is required')
-  //   .custom((value) => {
-  //     if (value.some(role => !role.permission || role.permission.trim() === '')) {
-  //       throw new Error('Permission cannot be empty');
-  //     }
-  //     return true;
-  //   })
+  body('roles')
+    .isArray({ min: 1 }).withMessage('Roles must be an array with at least one role')
+    .custom((value) => {
+      const allowedPermissions = [
+        string.transferBalance,
+        string.status,
+        string.creditRefEdit,
+        string.partnershipEdit,
+        string.creditRefView,
+        string.partnershipView,
+        string.userProfileView,
+        string.profileView,
+        string.viewAdminData,
+        string.createAdmin,
+        string.createUser,
+        string.accountStatement,
+        string.activityLog,
+        string.deleteAdmin,
+        string.restoreAdmin,
+        string.moveToTrash,
+        string.trashView,
+        string.viewSubAdmin,
+      ];
+      for (let i = 0; i < value.length; i++) {
+        if (!value[i].permission || !Array.isArray(value[i].permission) || value[i].permission.length === 0) {
+          throw new Error('Permission must be a non-empty array');
+        }
+        for (let j = 0; j < value[i].permission.length; j++) {
+          if (!allowedPermissions.includes(value[i].permission[j])) {
+            throw new Error(`Invalid permission: ${value[i].permission[j]}`);
+          }
+        }
+      }
+      return true;
+    })
 ];
 
 export const adminLoginSchema = [
@@ -136,7 +163,21 @@ export const singleSubAdminSchema = [param('adminId').exists().withMessage('Admi
 
 export const subAdminPermissionSchema = [
   param('adminId').exists().withMessage('Admin Id is required'),
-  body('permission').exists().withMessage('Permission is required'),
+  body('permission').isArray({ min: 1 }).withMessage('Permission is required and must be an array').custom((value) => {
+    const allowedPermissions = [
+      'createAdmin', 'createSubAdmin', 'transferBalance', 'status',
+      'creditRefEdit', 'partnershipEdit', 'creditRefView', 'partnershipView',
+      'userProfileView', 'profileView', 'viewAdminData', 'createUser',
+      'accountStatement', 'activityLog', 'deleteAdmin', 'restoreAdmin',
+      'moveToTrash', 'trashView', 'viewSubAdmin'
+    ];
+    for (let i = 0; i < value.length; i++) {
+      if (!allowedPermissions.includes(value[i])) {
+        throw new Error(`Invalid permission: ${value[i]}`);
+      }
+    }
+    return true;
+  })
 ];
 
 export const accountStatementSchema = [
