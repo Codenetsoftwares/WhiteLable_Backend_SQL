@@ -271,7 +271,7 @@ export const transactionView = async (req, res) => {
 export const accountStatement = async (req, res) => {
   try {
     const adminId = req.params.adminId;
-    const ITEMS_PER_PAGE = 5;
+    const pageSize = parseInt(req.query.pageSize) || 5;
     const page = parseInt(req.query.page) || 1;
 
     const admin = await admins.findOne({ where: { adminId } });
@@ -285,11 +285,11 @@ export const accountStatement = async (req, res) => {
 
     const mergedData = transferAmount.concat(selfTransaction);
     const totalCount = mergedData.length;
-    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(totalCount / pageSize);
 
-    const paginatedData = mergedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
 
-    const paginationData = apiResponsePagination(page, totalPages, totalCount);
+    const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
     return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res

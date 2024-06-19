@@ -16,11 +16,11 @@ export const apiResponseSuccess = (data, success, successCode, message, paginati
   };
 };
 
-export const apiResponsePagination = (page, totalPages, totalItems, message) => {
+export const apiResponsePagination = (page, totalPages, totalItems, pageSize) => {
   return {
     page: page,
     totalPages: totalPages,
     totalItems: totalItems,
-    message: message,
+    pageSize: pageSize
   };
 };
