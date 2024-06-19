@@ -224,14 +224,28 @@ export const transactionView = async (req, res) => {
     }
 
     const adminId = admin.adminId;
-
-    let transactionQuery = { where: { adminId } };
-
-    if (startDate) {
-      transactionQuery.where.date = { [Sequelize.Op.gte]: startDate };
+    let transactionQuery = {
+      where: {
+        adminId
+      }
+    };
+    
+    if (startDate && endDate) {
+      transactionQuery.where.date = {
+        [Sequelize.Op.between]: [startDate, endDate]
+      };
+    } else if (startDate) {
+      transactionQuery.where.date = {
+        [Sequelize.Op.gte]: startDate
+      };
+    } else if (endDate) {
+      transactionQuery.where.date = {
+        [Sequelize.Op.lte]: endDate
+      };
     }
-
+    
     transactionQuery.order = [['date', 'DESC']];
+    
 
     const transactionData = await transaction.findAll(transactionQuery);
 
