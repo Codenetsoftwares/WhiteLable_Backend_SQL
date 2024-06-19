@@ -284,7 +284,20 @@ export const accountStatement = async (req, res) => {
     const selfTransaction = await selfTransactions.findAll({ where: { adminId } });
 
     const mergedData = transferAmount.concat(selfTransaction);
-    const totalCount = mergedData.length;
+    // const mapedData = mergedData.map(data => ({
+    //   transactionId : data.transactionId,
+    //   selfTransactionId : data.selfTransactionId,
+    //   adminId : data.adminId,
+    //   amount : data.amount,
+    //   userName : data.userName,
+    //   date : data.date,
+    //   transactionType : data.transactionType,
+    //   transferFromUserAccount : data.transferFromUserAccount || '',
+    //   transferToUserAccount : data.transferToUserAccount || '',
+    //   remarks : data.remarks
+    // }))
+
+    const totalCount = mergedData.length; 
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
