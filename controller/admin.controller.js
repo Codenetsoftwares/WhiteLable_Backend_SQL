@@ -351,6 +351,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
 export const editCreditRef = async (req, res) => {
   try {
     const adminId = req.params.adminId;
+    const authAdmin = req.user;
     const { creditRef, password } = req.body;
 
     if (typeof creditRef !== 'number') {
@@ -361,7 +362,7 @@ export const editCreditRef = async (req, res) => {
       return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    const isPasswordValid = await bcrypt.compare(password, authAdmin.password);
     if (!isPasswordValid) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
@@ -411,6 +412,7 @@ export const editCreditRef = async (req, res) => {
 export const editPartnership = async (req, res) => {
   try {
     const adminId = req.params.adminId;
+    const authAdmin = req.user;
     const { partnership, password } = req.body;
 
     if (typeof partnership !== 'number') {
@@ -422,7 +424,7 @@ export const editPartnership = async (req, res) => {
       return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
     }
 
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    const isPasswordValid = await bcrypt.compare(password, authAdmin.password);
     if (!isPasswordValid) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }

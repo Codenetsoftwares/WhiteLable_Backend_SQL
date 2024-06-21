@@ -293,23 +293,16 @@ export const accountStatement = async (req, res) => {
     if (!admin) {
       return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
     }
-
-    const transferAmount = await transaction.findAll({ where: { adminId } });
-    const selfTransaction = await selfTransactions.findAll({ where: { adminId } });
+    let transactionQuery = {
+      where: {
+        adminId
+      },
+      order: [['date', 'DESC']] 
+    };
+    const transferAmount = await transaction.findAll(transactionQuery);
+    const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
     const mergedData = transferAmount.concat(selfTransaction);
-    // const mapedData = mergedData.map(data => ({
-    //   transactionId : data.transactionId,
-    //   selfTransactionId : data.selfTransactionId,
-    //   adminId : data.adminId,
-    //   amount : data.amount,
-    //   userName : data.userName,
-    //   date : data.date,
-    //   transactionType : data.transactionType,
-    //   transferFromUserAccount : data.transferFromUserAccount || '',
-    //   transferToUserAccount : data.transferToUserAccount || '',
-    //   remarks : data.remarks
-    // }))
 
     const totalCount = mergedData.length; 
     const totalPages = Math.ceil(totalCount / pageSize);
