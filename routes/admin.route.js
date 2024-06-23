@@ -36,6 +36,7 @@ import {
   singleSubAdmin,
   subAdminPermission,
   userStatus,
+  userCreateColorGame
 } from '../controller/admin.controller.js';
 import { string } from '../constructor/string.js';
 
@@ -301,4 +302,6 @@ export const adminRoute = (app) => {
 
   // user-status ("DONE")
   app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, userStatus);
+
+  app.post('/api/admin/create-user-colorGame', customErrorHandler, userCreateColorGame);
 };
