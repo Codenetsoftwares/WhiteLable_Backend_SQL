@@ -57,6 +57,7 @@ colorGameUserSchema.init(
     marketListExposure: {
       type: DataTypes.JSON,
       allowNull: true,
+      defaultValue: []
     },
   },
   {
