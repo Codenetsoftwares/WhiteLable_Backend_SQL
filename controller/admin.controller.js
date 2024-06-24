@@ -1,11 +1,12 @@
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuid4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import admins from '../models/admin.model.js';
 import { messages, string } from '../constructor/string.js';
 import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
+
 
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
@@ -18,6 +19,7 @@ const globalUsernames = [];
 export const createAdmin = async (req, res) => {
   try {
     const user = req.user;
+    console.log("user", user);
     const { userName, password, roles } = req.body;
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
@@ -35,7 +37,7 @@ export const createAdmin = async (req, res) => {
     }));
 
     const newAdmin = await admins.create({
-      adminId: uuidv4(),
+      adminId: uuid4(),
       userName,
       password,
       roles: rolesWithDefaultPermission,
@@ -55,7 +57,7 @@ export const createAdmin = async (req, res) => {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, messages.adminCreated));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, messages.adminCreated));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -94,7 +96,7 @@ export const createSubAdmin = async (req, res) => {
       }
     }
 
-    const adminId = uuidv4();
+    const adminId = uuid4();
     const createdByUser = user.userName;
     const createdById = user.adminId;
 
@@ -169,6 +171,7 @@ export const viewAllCreates = async (req, res) => {
       string.hyperAgent,
       string.superAgent,
       string.masterAgent,
+      string.user
     ];
 
     const totalRecords = await admins.count({
@@ -227,7 +230,7 @@ export const viewAllCreates = async (req, res) => {
         status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
       };
     });
-
+      console.log("users", users);
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
@@ -346,7 +349,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message),
     );
   }
-};
+}; 
 // done
 export const editCreditRef = async (req, res) => {
   try {
@@ -603,6 +606,7 @@ export const buildRootPath = async (req, res) => {
       string.hyperAgent,
       string.superAgent,
       string.masterAgent,
+      string.user
     ];
     if (!globalUsernames) {
       globalUsernames = [];
@@ -1707,3 +1711,7 @@ export const userStatus = async (req, res) => {
 //     throw { code: err.code || 500, message: err.message || "Internal Server Error" };
 //   }
 // }
+
+
+
+

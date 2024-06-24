@@ -71,7 +71,7 @@ const admins = sequelize.define('admins', {
   },
   locked: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    defaultValue: true,
   },
   hyperActive: {
     type: DataTypes.BOOLEAN,

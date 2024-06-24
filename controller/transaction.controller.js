@@ -300,6 +300,7 @@ export const accountStatement = async (req, res) => {
       order: [['date', 'DESC']] 
     };
     const transferAmount = await transaction.findAll(transactionQuery);
+    console.log("transferAmount", transferAmount);
     const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
     const mergedData = transferAmount.concat(selfTransaction);

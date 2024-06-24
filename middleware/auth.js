@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { database } from '../dbConnection/database.service.js';
 import { apiResponseErr } from '../helper/errorHandler.js';
-import { Long } from 'mongodb';
 import { statusCode } from '../helper/statusCodes.js';
+import admins from '../models/admin.model.js';
 
 export const Authorize = (roles) => {
   return async (req, res, next) => {
@@ -24,9 +23,8 @@ export const Authorize = (roles) => {
         return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid login attempt (3)'));
       }
 
-      const [rows] = await database.execute('SELECT * FROM Admins WHERE adminId = ?', [user.adminId]);
-
-      const existingUser = rows[0];
+      const existingUser = await admins.findOne({ where: { adminId: user.adminId } });
+      
 
       if (!existingUser) {
         return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Unauthorized access'));

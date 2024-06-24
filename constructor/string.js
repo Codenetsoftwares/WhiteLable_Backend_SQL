@@ -7,6 +7,7 @@ class stringConst {
         this.masterAgent = 'masterAgent';
         this.subWhiteLabel = 'subWhiteLabel';
         this.subAdmin = 'subAdmin';
+        this.user = 'user'
         this.subHyperAgent = 'subHyperAgent';
         this.subSuperAgent = 'subSuperAgent';
         this.subMasterAgent = 'subMasterAgent';
