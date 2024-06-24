@@ -2,6 +2,8 @@ import colorGameUserSchema from '../models/colorGameUser.model.js';
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
 import { statusCode } from '../helper/statusCodes.js';
 import axios from 'axios';
+import { v4 as uuid4 } from 'uuid';
+import bcrypt from 'bcrypt';
 
 export const userCreateColorGame = async (req, res) => {
     const { firstName, lastName, userName, phoneNumber, password } = req.body;
