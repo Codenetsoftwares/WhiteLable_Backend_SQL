@@ -219,17 +219,18 @@ export const transactionView = async (req, res) => {
     let withdrawalBalances = 0;
 
     const admin = await admins.findOne({ where: { userName } });
+  
     if (!admin) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
-    const adminId = admin.adminId;
+    const adminuserName = admin.userName;
     let transactionQuery = {
       where: {
-        adminId
+        userName : adminuserName
       }
     };
-    
+
     if (startDate && endDate) {
       transactionQuery.where.date = {
         [Sequelize.Op.between]: [startDate, endDate]
@@ -260,7 +261,6 @@ export const transactionView = async (req, res) => {
     let allData = JSON.parse(JSON.stringify(paginatedData));
 
     allData.forEach((data) => {
-      console.log("data",data);
       if (data.transactionType === 'credit') {
         balances += data.amount;
         data.balance = balances || 0;
@@ -272,7 +272,7 @@ export const transactionView = async (req, res) => {
         data.withdrawalBalance = withdrawalBalances || 0;
       }
     });
-    console.log("all", allData);
+
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
@@ -313,9 +313,7 @@ export const accountStatement = async (req, res) => {
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
     return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
