@@ -6,8 +6,7 @@ import { messages, string } from '../constructor/string.js';
 import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
-import colorGameUserSchema from '../models/colorGameUser.model.js';
-import axios from 'axios';
+
 
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
@@ -20,6 +19,7 @@ const globalUsernames = [];
 export const createAdmin = async (req, res) => {
   try {
     const user = req.user;
+    console.log("user", user);
     const { userName, password, roles } = req.body;
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
@@ -57,7 +57,7 @@ export const createAdmin = async (req, res) => {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, messages.adminCreated));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, messages.adminCreated));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -171,6 +171,7 @@ export const viewAllCreates = async (req, res) => {
       string.hyperAgent,
       string.superAgent,
       string.masterAgent,
+      string.user
     ];
 
     const totalRecords = await admins.count({
@@ -229,7 +230,7 @@ export const viewAllCreates = async (req, res) => {
         status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
       };
     });
-
+      console.log("users", users);
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
@@ -348,7 +349,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message),
     );
   }
-};
+}; 
 // done
 export const editCreditRef = async (req, res) => {
   try {
@@ -605,6 +606,7 @@ export const buildRootPath = async (req, res) => {
       string.hyperAgent,
       string.superAgent,
       string.masterAgent,
+      string.user
     ];
     if (!globalUsernames) {
       globalUsernames = [];
@@ -1710,61 +1712,6 @@ export const userStatus = async (req, res) => {
 //   }
 // }
 
-export const userCreateColorGame = async (req, res) => {
-  try {
-    const { firstName, lastName, userName, phoneNumber, password } = req.body;
-    const existingUser = await colorGameUserSchema.findOne({ where: { userName } });
 
-    if (existingUser) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
-    }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create the new user in the local database
-    const newUser = await colorGameUserSchema.create({
-      firstName,
-      lastName,
-      userName,
-      userId: uuid4(),
-      walletId: uuid4(),
-      phoneNumber,
-      password: hashedPassword,
-      roles: 'user',
-    }); 
-
-    console.log("newUser", newUser);
-
-    // Prepare data to be sent to the external API
-    const data = {
-      firstName,
-      lastName,
-      userName,
-      userId: newUser.userId,
-      phoneNumber,
-      walletId : newUser.walletId,
-      password: hashedPassword,
-      roles: 'user',
-    };
-
-    console.log("data", data);
-
-    // Send data to another backend
-    const createUserResponse = await axios.post('http://localhost:8080/api/user-create', data);
-
-    return res.status(statusCode.create).send({
-      success: true,
-      message: 'User created successfully',
-      data: {
-        localUser: newUser,
-        externalUser: createUserResponse.data,
-      },
-    });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
-  }
-};
