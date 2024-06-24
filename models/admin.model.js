@@ -17,6 +17,14 @@ const admins = sequelize.define('admins', {
     allowNull: false,
     unique: false, 
   },
+  userId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  walletId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   password: {
     type: DataTypes.STRING,
     allowNull: false,

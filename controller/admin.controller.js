@@ -64,6 +64,7 @@ export const createAdmin = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 // done
 export const createSubAdmin = async (req, res) => {
   try {

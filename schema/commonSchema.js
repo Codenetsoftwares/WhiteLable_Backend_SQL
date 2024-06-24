@@ -200,3 +200,15 @@ export const createdUserSchema = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long'),
 ];
+
+export const sendBalanceSchema = [
+  body('balance')
+    .notEmpty()
+    .withMessage('Balance is required')
+    .isNumeric()
+    .withMessage('Balance must be a numeric value')
+    .custom((value) => parseFloat(value) > 0)
+    .withMessage('Balance must be greater than 0'),
+  body('adminId').notEmpty().withMessage('Admin ID is required'),
+  body('userId').notEmpty().withMessage('User ID is required'),
+];
