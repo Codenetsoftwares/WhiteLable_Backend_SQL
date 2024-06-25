@@ -74,10 +74,11 @@ export const moveAdminToTrash = async (req, res) => {
 };
 
 export const viewTrash = async (req, res) => {
+  console.log("zsjnsdjunosnfjsn");
   try {
     const viewTrash = await trash.findAll();
     if (!viewTrash || viewTrash.length === 0) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'No entries found in Trash'));
+      return res.status(statusCode.success).json(apiResponseSuccess([], true, statusCode.success, 'No entries found in Trash'));
     }
     return res.status(statusCode.success).json(apiResponseSuccess(viewTrash, true, statusCode.success, 'successfully'));
   } catch (error) {
