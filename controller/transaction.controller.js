@@ -134,23 +134,24 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
         transferToUserAccount: withdrawalRecord.transferToUserAccount,
       });
-
-      const dataToSend = {
-        amount : parsedWithdrawalAmt,
-        userId : receiveUserId,
-        type : 'debit'
-      };
-  
-      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
-  
-      console.log('Reset password response:', response.data);
-      let message;
+      let message = '';
+      if(receiverAdmin.roles[0].role === 'user'){
+        const dataToSend = {
+          amount : parsedWithdrawalAmt,
+          userId : receiveUserId,
+          type : 'debit'
+        };
+        const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
+        console.log('Reset password response:', response.data);
+      
       if (!response.success) {
         // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
         message = 'user balance not updated'
       } else {
         message = 'user balance updated'
       }
+      }
+      
 
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully' + ' ' + message));
     } else {
@@ -214,24 +215,25 @@ export const transferAmount = async (req, res) => {
         transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
         transferToUserAccount: transferRecordCredit.transferToUserAccount,
       });
-
+      let message = '';
+      if(receiverAdmin.roles[0].role === 'user'){
       const dataToSend = {
         amount : parsedTransferAmount,
         userId : receiveUserId,
         type: 'credit'
       };
-  
+    
       const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
   
       console.log('Reset password response:', response.data);
-      let message;
+  
       if (!response.success) {
         // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
         message = 'user balance not updated'
       } else {
         message = 'user balance updated'
       }
-
+    }
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully' + ' ' + message));
     }
   } catch (error) {
