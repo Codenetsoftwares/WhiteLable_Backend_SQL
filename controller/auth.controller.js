@@ -115,7 +115,7 @@ export const adminPasswordResetCode = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     try {
-        const { userName, password, newPassword } = req.body;
+        const { userName, oldPassword, newPassword } = req.body;
 
         const existingAdmin = await admins.findOne({ where: { userName } });
 
@@ -123,7 +123,7 @@ export const resetPassword = async (req, res) => {
             return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
 
-        const passwordValid = await bcrypt.compare(password, existingAdmin.password);
+        const passwordValid = await bcrypt.compare(oldPassword, existingAdmin.password);
         if (!passwordValid) {
             return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
