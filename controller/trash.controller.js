@@ -11,13 +11,13 @@ export const moveAdminToTrash = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId: requestId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, `Admin User not found with id: ${requestId}`));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, `Admin User not found with id: ${requestId}`));
     }
 
     if (admin.balance !== 0) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, `Balance should be 0 to move the Admin User to Trash`));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
     }
 
     if (!admin.isActive) {
