@@ -63,7 +63,7 @@ export const adminLoginSchema = [
 
 export const resetPasswordSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
-  body('password').notEmpty().withMessage('Password is required'),
+  body('oldPassword').notEmpty().withMessage('Old Password is required'),
 ];
 
 export const adminPasswordResetSchema = [
