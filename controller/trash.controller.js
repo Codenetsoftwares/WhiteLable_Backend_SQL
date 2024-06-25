@@ -74,7 +74,6 @@ export const moveAdminToTrash = async (req, res) => {
 };
 
 export const viewTrash = async (req, res) => {
-  console.log("zsjnsdjunosnfjsn");
   try {
     const viewTrash = await trash.findAll();
     if (!viewTrash || viewTrash.length === 0) {
