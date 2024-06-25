@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import { statusCode } from '../helper/statusCodes.js';
 import { Sequelize } from 'sequelize';
 import { messages } from '../constructor/string.js';
+import axios from 'axios';
 
 export const depositTransaction = async (req, res) => {
   try {
@@ -134,7 +135,24 @@ export const transferAmount = async (req, res) => {
         transferToUserAccount: withdrawalRecord.transferToUserAccount,
       });
 
-      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully'));
+      const dataToSend = {
+        amount : parsedWithdrawalAmt,
+        userId : receiveUserId,
+        type : 'debit'
+      };
+  
+      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
+  
+      console.log('Reset password response:', response.data);
+      let message;
+      if (!response.success) {
+        // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
+        message = 'user balance not updated'
+      } else {
+        message = 'user balance updated'
+      }
+
+      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully' + ' ' + message));
     } else {
       if (senderAdmin.balance < parsedTransferAmount) {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
@@ -197,7 +215,24 @@ export const transferAmount = async (req, res) => {
         transferToUserAccount: transferRecordCredit.transferToUserAccount,
       });
 
-      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully'));
+      const dataToSend = {
+        amount : parsedTransferAmount,
+        userId : receiveUserId,
+        type: 'credit'
+      };
+  
+      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
+  
+      console.log('Reset password response:', response.data);
+      let message;
+      if (!response.success) {
+        // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
+        message = 'user balance not updated'
+      } else {
+        message = 'user balance updated'
+      }
+
+      return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully' + ' ' + message));
     }
   } catch (error) {
     console.log(error);
