@@ -64,7 +64,7 @@ export const moveAdminToTrash = async (req, res) => {
         .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin User moved to Trash'));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash'));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
     res
