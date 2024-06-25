@@ -193,6 +193,12 @@ export const accountStatementSchema = [
 
 export const userStatusSchema = [param('userName').exists().withMessage('User Name is required.')];
 
+export const exUpdateBalanceSchema = [body('userId').notEmpty().withMessage('user ID is required'),
+  body('amount').notEmpty().withMessage('amount is required'),
+  body('type').notEmpty().withMessage('type is required').isIn(['credit', 'debit'])
+  .withMessage('type must be either "credit" or "debit".'),
+];
+
 export const createdUserSchema = [
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   body('lastName').trim().notEmpty().withMessage('Last name is required'),

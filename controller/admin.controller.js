@@ -1713,6 +1713,32 @@ export const userStatus = async (req, res) => {
 //   }
 // }
 
+export const  syncWithUserBackend = async (req, res) => {
+  try {
+    const { amount, userId } = req.body;
 
+    const user = await admins.findOne({ where: { adminId: userId } });
+    if (!user) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
+    }
+    
+    
+    await admins.update(
+      { balance: amount },
+      { where: { adminId: userId } },
+    );
+    
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successful'));
+  } catch (error) {
+    console.error('Error sending balance:', error);
+    res
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
 
 
