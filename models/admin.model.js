@@ -15,7 +15,7 @@ const admins = sequelize.define('admins', {
   userName: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: false, 
+    unique: false,
   },
   userId: {
     type: DataTypes.STRING,
@@ -127,12 +127,12 @@ const admins = sequelize.define('admins', {
   },
   creditRefs: {
     type: DataTypes.JSON,
-    allowNull: true, 
+    allowNull: true,
     defaultValue: [],
   },
   partnerships: {
     type: DataTypes.JSON,
-    allowNull: true, 
+    allowNull: true,
     defaultValue: [],
   },
 }, {
@@ -147,7 +147,7 @@ const admins = sequelize.define('admins', {
   },
 });
 
-admins.prototype.validPassword = async function(password) {
+admins.prototype.validPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 

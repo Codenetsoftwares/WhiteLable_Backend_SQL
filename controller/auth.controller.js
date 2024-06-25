@@ -113,3 +113,38 @@ export const adminPasswordResetCode = async (req, res) => {
     }
 };
 
+export const resetPassword = async (req, res) => {
+    try {
+        const { userName, password, newPassword } = req.body;
+
+        const existingAdmin = await admins.findOne({ where: { userName } });
+
+        if (!existingAdmin) {
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
+        }
+
+        const passwordValid = await bcrypt.compare(password, existingAdmin.password);
+        if (!passwordValid) {
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
+        }
+
+        const result = {
+            userId: existingAdmin.adminId,
+            userName: existingAdmin.userName,
+            balance: existingAdmin.balance,
+            authenticate: true
+        }
+
+        return res.status(statusCode.success).send(
+            apiResponseSuccess(
+                result,
+                true,
+                statusCode.success,
+                'Authenticate true',
+            ),
+        );
+    } catch (error) {
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    }
+};
+
