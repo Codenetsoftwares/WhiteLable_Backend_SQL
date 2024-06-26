@@ -24,7 +24,7 @@ export const createAdmin = async (req, res) => {
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
     if (existingAdmin) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.adminCreated)
+      throw apiResponseErr(null, false, statusCode.badRequest, messages.adminExists)
     }
     if (user.isActive === false || user.locked === false) {
       throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive)
