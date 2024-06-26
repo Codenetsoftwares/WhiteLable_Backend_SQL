@@ -141,7 +141,7 @@ export const transferAmount = async (req, res) => {
           userId : receiveUserId,
           type : 'debit'
         };
-        const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
+        const {data:response} = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
         console.log('Reset password response:', response.data);
       
       if (!response.success) {
@@ -223,7 +223,7 @@ export const transferAmount = async (req, res) => {
         type: 'credit'
       };
     
-      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
+      const {data:response} = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
   
       console.log('Reset password response:', response.data);
   
