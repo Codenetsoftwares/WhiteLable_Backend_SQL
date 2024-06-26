@@ -17,7 +17,7 @@ export const userCreateColorGame = async (req, res) => {
       const existingUser = await colorGameUserSchema.findOne({ where: { userName } });
   
       if (existingUser) {
-        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User already exists'));
       }
   
       const userId = uuid4();
@@ -68,7 +68,7 @@ export const userCreateColorGame = async (req, res) => {
       const createUserResponse = await axios.post('http://localhost:8080/api/user-create', data);
   
       if (createUserResponse.status !== statusCode.create) {
-        return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, 'Failed to create user in external backend'));
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Failed to create user in external backend'));
       }
   
       return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
@@ -88,7 +88,7 @@ export const userCreateColorGame = async (req, res) => {
       const externalApiResponse = await axios.get("http://localhost:8080/api/all-user");
   
       if (!externalApiResponse || !externalApiResponse.data.data) {
-        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch external data'));
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Failed to fetch external data'));
       }
   
       const externalData = externalApiResponse.data.data;
@@ -129,14 +129,10 @@ export const userCreateColorGame = async (req, res) => {
   export const addBalanceToColorGameUser = async (req, res) => {
     try {
       const { balance, adminId, userId } = req.body;
-  
-      // Check if admin exists
       const admin = await admins.findOne({ where: { adminId } });
       if (!admin) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Not Found'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Admin Not Found'));
       }
-  
-      // Fetch external user data
       let externalApiResponse;
       try {
         externalApiResponse = await axios.get("http://localhost:8080/api/all-user");
@@ -146,54 +142,52 @@ export const userCreateColorGame = async (req, res) => {
       }
       const externalData = externalApiResponse.data.data;
   
-      // Fetch local user data
+      
       const localData = await colorGameUserSchema.findAll();
       const localUserIds = localData.map(item => item.userId);
   
-      // Find matching data between external and local
+      
       const matchedData = externalData.filter(externalItem => localUserIds.includes(externalItem.userId));
       if (matchedData.length === 0) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'No matching users found'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'No matching users found'));
       }
   
-      // Validate and parse deposit amount
       const parsedDepositAmount = parseFloat(balance);
       if (isNaN(parsedDepositAmount) || parsedDepositAmount <= 0) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid or non-positive Balance'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Invalid or non-positive Balance'));
       }
   
-      // Check if admin has sufficient balance
       if (admin.balance < parsedDepositAmount) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Insufficient Balance For Transfer'));
       }
   
-      // Use Sequelize transaction to ensure atomicity
+     
       await Sequelize.transaction(async (t) => {
-        // Deduct balance from admin
+       
         await admins.update(
           { balance: Sequelize.literal(`balance - ${parsedDepositAmount}`) },
           { where: { adminId }, transaction: t }
         );
   
-        // Update balances for matched users in local database
+        
         for (const user of matchedData) {
           await colorGameUserSchema.update(
             { balance: Sequelize.literal(`balance + ${parsedDepositAmount}`) },
             { where: { userId: user.userId }, transaction: t }
           );
   
-          // Create transaction record in your local database
+          
           await colorGameTransactionRecord.create(
             {
               userId: user.userId,
               transactionType: 'credit',
               amount: parsedDepositAmount,
-              date: new Date(), // Use new Date() to get current date/time
+              date: new Date(), 
             },
             { transaction: t }
           );
   
-          // Send balance update to external API (assuming this is necessary)
+          
           try {
             await axios.post("http://localhost:8080/api/sendBalance-user", {
               userId: user.userId,
@@ -201,12 +195,12 @@ export const userCreateColorGame = async (req, res) => {
             });
           } catch (err) {
             console.error('Failed to send balance update to external API:', err);
-            // Handle failure to send balance update if necessary
+            
           }
         }
       });
   
-      // Respond with success
+      
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance added to user(s) successfully'));
     } catch (error) {
       console.error('Error:', error);

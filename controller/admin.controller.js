@@ -19,15 +19,14 @@ const globalUsernames = [];
 export const createAdmin = async (req, res) => {
   try {
     const user = req.user;
-    console.log("user", user);
     const { userName, password, roles } = req.body;
 
     const existingAdmin = await admins.findOne({ where: { userName: userName } });
     if (existingAdmin) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.adminCreated)
+      throw apiResponseSuccess(null, true, statusCode.success, messages.adminExists)
     }
     if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive)
+      throw apiResponseSuccess(null, true, statusCode.success, messages.accountInactive)
     }
     const defaultPermission = ['all-access'];
 
@@ -72,12 +71,12 @@ export const createSubAdmin = async (req, res) => {
     const user = req.user;
 
     if (user.isActive === false) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.accountInactive));
     }
 
     const existingAdmin = await admins.findOne({ where: { userName } });
     if (existingAdmin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminExists));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminExists));
     }
 
     let subRole = '';
@@ -93,7 +92,7 @@ export const createSubAdmin = async (req, res) => {
       } else if (user.roles[i].role.includes(string.masterAgent)) {
         subRole = string.subMasterAgent;
       } else {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidRole));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.invalidRole));
       }
     }
 
@@ -123,13 +122,11 @@ export const createSubAdmin = async (req, res) => {
 export const getIpDetail = async (req, res) => {
   try {
     const userName = req.params.userName;
-    console.log('userName', userName);
     let admin = await admins.findOne({ where: { userName } });
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
     const loginTime = admin.lastLoginTime;
-    console.log('loginTime', loginTime);
     let clientIP = req.ip;
     const forwardedFor = req.headers['x-forwarded-for'];
     if (forwardedFor) {
@@ -184,7 +181,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.noRecordsFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
@@ -231,7 +228,6 @@ export const viewAllCreates = async (req, res) => {
         status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
       };
     });
-      console.log("users", users);
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
@@ -281,7 +277,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.noRecordsFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
@@ -359,20 +355,20 @@ export const editCreditRef = async (req, res) => {
     const { creditRef, password } = req.body;
 
     if (typeof creditRef !== 'number') {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'CreditRef must be a number'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'CreditRef must be a number'));
     }
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, authAdmin.password);
     if (!isPasswordValid) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.invalidPassword));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.inActiveAdmin));
     }
 
     const newCreditRefEntry = {
@@ -420,21 +416,21 @@ export const editPartnership = async (req, res) => {
     const { partnership, password } = req.body;
 
     if (typeof partnership !== 'number') {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.numberPartnership));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.numberPartnership));
     }
 
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, authAdmin.password);
     if (!isPasswordValid) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.invalidPassword));
     }
 
     if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.inActiveAdmin));
     }
 
     const newPartnershipEntry = {
@@ -480,7 +476,7 @@ export const partnershipView = async (req, res) => {
 
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     let partnershipsList;
@@ -497,7 +493,7 @@ export const partnershipView = async (req, res) => {
     }
 
     if (!Array.isArray(partnershipsList)) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'partnerships not found or not an array'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'partnerships not found or not an array'));
     }
 
     const last10partnerships = partnershipsList.slice(-10);
@@ -519,7 +515,7 @@ export const creditRefView = async (req, res) => {
 
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     let creditRefList;
@@ -536,7 +532,7 @@ export const creditRefView = async (req, res) => {
     }
 
     if (!Array.isArray(creditRefList)) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'creditRefs not found or not an array'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'creditRefs not found or not an array'));
     }
 
     const last10creditRefs = creditRefList.slice(-10);
@@ -580,7 +576,7 @@ export const profileView = async (req, res) => {
     const userName = req.params.userName;
     const admin = await admins.findOne({ where: { userName } });
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, messages.adminNotFound));
     }
     const transferData = {
       adminId: admin.adminId,
@@ -614,13 +610,13 @@ export const buildRootPath = async (req, res) => {
     }
 
     if (!userName) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'userName parameter is required'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'userName parameter is required'));
     }
 
     const user = await admins.findOne({ where: { userName } });
 
     if (!user) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.userNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.userNotFound));
     }
 
     if (action === 'store') {
@@ -759,7 +755,7 @@ export const viewSubAdmins = async (req, res) => {
     });
 
     if (!subAdmins || subAdmins.length === 0) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'No data found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'No data found'));
     }
 
     const users = subAdmins.map(user => ({
@@ -795,7 +791,7 @@ export const singleSubAdmin = async (req, res) => {
     });
 
     if (!subAdmin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Sub Admin not found with the given Id'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Sub Admin not found with the given Id'));
     }
 
     const data = {
@@ -815,7 +811,7 @@ export const subAdminPermission = async (req, res) => {
     const { permission } = req.body;
 
     if (!subAdminId) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Id not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Id not found'));
     }
 
     const subAdmin = await admins.findOne({
@@ -825,13 +821,13 @@ export const subAdminPermission = async (req, res) => {
     });
 
     if (!subAdmin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Sub Admin not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Sub Admin not found'));
     }
 
     let roles = subAdmin.roles;
 
     if (!roles || roles.length === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Roles not found for Sub Admin'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Roles not found for Sub Admin'));
     }
 
     const permissionsArray = Array.isArray(permission) ? permission : [permission];
@@ -868,7 +864,7 @@ export const userStatus = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.userNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.userNotFound));
     }
 
     const userStatus = {
@@ -1720,8 +1716,8 @@ export const  syncWithUserBackend = async (req, res) => {
     const user = await admins.findOne({ where: { adminId: userId } });
     if (!user) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'User Not Found'));
     }
     
     

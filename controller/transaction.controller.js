@@ -16,11 +16,11 @@ export const depositTransaction = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid amount'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Invalid amount'));
     }
 
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     const depositAmount = Math.round(parseFloat(amount));
@@ -64,40 +64,40 @@ export const transferAmount = async (req, res) => {
     const senderAdmin = await admins.findOne({ where: { adminId } });
 
     if (!senderAdmin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     const isPasswordValid = await bcrypt.compare(password, senderAdmin.password);
     if (!isPasswordValid) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password for the transaction'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Invalid password for the transaction'));
     }
 
     const receiverAdmin = await admins.findOne({ where: { adminId: receiveUserId } });
     if (!receiverAdmin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Receiver Admin not found'));
     }
 
     if (!senderAdmin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Sender Admin is inactive'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Sender Admin is inactive'));
     }
 
     if (!receiverAdmin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin is inactive'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Receiver Admin is inactive'));
     }
 
     if (transferAmount !== undefined && typeof transferAmount !== 'number') {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Transfer amount must be a number'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Transfer amount must be a number'));
     }
 
     if (withdrawalAmt !== undefined && typeof withdrawalAmt !== 'number') {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Withdrawal amount must be a number'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Withdrawal amount must be a number'));
     }
     const parsedTransferAmount = parseFloat(transferAmount);
     const parsedWithdrawalAmt = parseFloat(withdrawalAmt);
 
     if (parsedWithdrawalAmt) {
       if (receiverAdmin.balance < parsedWithdrawalAmt) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Withdrawal'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Insufficient Balance For Withdrawal'));
       }
 
       const withdrawalRecord = {
@@ -156,7 +156,7 @@ export const transferAmount = async (req, res) => {
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully' + ' ' + message));
     } else {
       if (senderAdmin.balance < parsedTransferAmount) {
-        return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Insufficient Balance For Transfer'));
       }
 
       const transferRecordDebit = {
@@ -258,7 +258,7 @@ export const transactionView = async (req, res) => {
     const admin = await admins.findOne({ where: { userName } });
   
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.adminNotFound));
     }
 
     const adminuserName = admin.userName;
@@ -328,7 +328,7 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, messages.adminNotFound));
     }
     let transactionQuery = {
       where: {
