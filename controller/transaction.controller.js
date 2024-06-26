@@ -131,23 +131,20 @@ export const transferAmount = async (req, res) => {
       };
 
       let message = '';
-      if(receiverAdmin.roles[0].role === 'user'){
-        const dataToSend = {
-          amount : parsedWithdrawalAmt,
-          userId : receiveUserId,
-          type : 'debit'
-        };
-        const {data:response} = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
-        console.log('Reset password response:', response.data);
-      
-      if (!response.success) {
-        // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
-        message = 'user balance not updated'
-      } else {
-        message = 'user balance updated'
+
+      try {
+        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        console.log('Balance update response:', response);
+
+        if (!response.success) {
+          if (response.responseCode === 400 && response.errMessage === 'User Not Found') {
+            message = 'Failed to update user balance.';
+          }
+        } 
+      } catch (error) {
+        console.error('Error updating balance:', error);
+        message = 'Please register in the portal.';
       }
-      }
-      
 
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully' + ' ' + message));
     } else {
@@ -193,16 +190,21 @@ export const transferAmount = async (req, res) => {
         userId: receiveUserId,
         type: 'credit'
       };
-    
-      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
-  
-      console.log('Reset password response:', response.data);
-  
-      if (!response.success) {
-        // return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user balance'));
-        message = 'user balance not updated'
-      } else {
-        message = 'user balance updated'
+
+      let message = '';
+
+      try {
+        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        console.log('Balance update response:', response);
+
+        if (!response.success) {
+          if (response.responseCode === 400 && response.errMessage === 'User Not Found') {
+            message = 'Failed to update user balance.';
+          }
+        } 
+      } catch (error) {
+        console.error('Error updating balance:', error);
+        message = 'Please register in the portal.';
       }
 
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully' + ' ' + message));
