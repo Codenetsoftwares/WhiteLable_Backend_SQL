@@ -92,6 +92,7 @@ export const transferAmount = async (req, res) => {
     if (withdrawalAmt !== undefined && typeof withdrawalAmt !== 'number') {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Withdrawal amount must be a number'));
     }
+
     const parsedTransferAmount = parseFloat(transferAmount);
     const parsedWithdrawalAmt = parseFloat(withdrawalAmt);
 
@@ -123,17 +124,12 @@ export const transferAmount = async (req, res) => {
         balance: creditAmount,
       });
 
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId: adminId,
-        userName: withdrawalRecord.userName,
-        amount: withdrawalRecord.amount,
-        date: withdrawalRecord.date,
-        transactionType: withdrawalRecord.transactionType,
-        remarks: withdrawalRecord.remarks,
-        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
-        transferToUserAccount: withdrawalRecord.transferToUserAccount,
-      });
+      const dataToSend = {
+        amount: parsedWithdrawalAmt,
+        userId: receiveUserId,
+        type: 'debit'
+      };
+
       let message = '';
       if(receiverAdmin.roles[0].role === 'user'){
         const dataToSend = {
@@ -192,38 +188,13 @@ export const transferAmount = async (req, res) => {
         balance: senderBalance,
       });
 
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordDebit.userName,
-        amount: transferRecordDebit.amount,
-        date: transferRecordDebit.date,
-        transactionType: transferRecordDebit.transactionType,
-        remarks: transferRecordDebit.remarks,
-        transferFromUserAccount: transferRecordDebit.transferFromUserAccount,
-        transferToUserAccount: transferRecordDebit.transferToUserAccount,
-      });
-
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordCredit.userName,
-        amount: transferRecordCredit.amount,
-        date: transferRecordCredit.date,
-        transactionType: transferRecordCredit.transactionType,
-        remarks: transferRecordCredit.remarks,
-        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
-        transferToUserAccount: transferRecordCredit.transferToUserAccount,
-      });
-      let message = '';
-      if(receiverAdmin.roles[0].role === 'user'){
       const dataToSend = {
-        amount : parsedTransferAmount,
-        userId : receiveUserId,
+        amount: parsedTransferAmount,
+        userId: receiveUserId,
         type: 'credit'
       };
     
-      const {data:response} = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+      const {data:response} = await axios.post('http://localhost:8080/api/extrnal/balance-update', dataToSend);
   
       console.log('Reset password response:', response.data);
   
@@ -233,14 +204,15 @@ export const transferAmount = async (req, res) => {
       } else {
         message = 'user balance updated'
       }
-    }
+
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully' + ' ' + message));
     }
   } catch (error) {
-    console.log(error);
+    console.error('Error in transferAmount:', error);
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const transactionView = async (req, res) => {
   try {
