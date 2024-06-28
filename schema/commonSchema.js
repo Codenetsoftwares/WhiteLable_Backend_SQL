@@ -170,11 +170,11 @@ export const subAdminPermissionSchema = [
   param('adminId').exists().withMessage('Admin Id is required'),
   body('permission').isArray({ min: 1 }).withMessage('Permission is required and must be an array').custom((value) => {
     const allowedPermissions = [
-      'createAdmin', 'createSubAdmin', 'transferBalance', 'status',
-      'creditRefEdit', 'partnershipEdit', 'creditRefView', 'partnershipView',
-      'userProfileView', 'profileView', 'viewAdminData', 'createUser',
-      'accountStatement', 'activityLog', 'deleteAdmin', 'restoreAdmin',
-      'moveToTrash', 'trashView', 'viewSubAdmin'
+      'create-Admin', 'create-subAdmin', 'transferBalance', 'status',
+      'creditRef-Edit', 'partnership-Edit', 'creditRef-View', 'partnership-view',
+      'user-profile-view', 'profile-view', 'view-admin-data', 'create-user',
+      'accountStatement', 'activityLog', 'delete-admin', 'restore-admin',
+      'move-to-trash', 'trash-view', 'view-subAdmin'
     ];
     for (let i = 0; i < value.length; i++) {
       if (!allowedPermissions.includes(value[i])) {
