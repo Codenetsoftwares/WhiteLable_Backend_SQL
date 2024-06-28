@@ -20,9 +20,9 @@ export const moveAdminToTrash = async (req, res) => {
         .json(apiResponseSuccess(null, true, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
     }
 
-    if (!admin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin is inactive or locked`));
-    }
+    // if (!admin.isActive) {
+    //   return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin is inactive or locked`));
+    // }
 
     const updatedTransactionData = {
       adminId: admin.adminId,

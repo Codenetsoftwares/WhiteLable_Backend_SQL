@@ -371,9 +371,9 @@ export const editCreditRef = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newCreditRefEntry = {
       value: creditRef,
@@ -433,9 +433,9 @@ export const editPartnership = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newPartnershipEntry = {
       value: partnership,
