@@ -3,38 +3,39 @@ import admins from '../models/admin.model.js';
 import { v4 as uuidv4 } from 'uuid';
 import trash from '../models/trash.model.js';
 import { statusCode } from '../helper/statusCodes.js';
+import axios from 'axios';
 
 export const moveAdminToTrash = async (req, res) => {
   try {
     const { requestId } = req.body;
 
-    const admin = await admins.findOne({ where: { adminId: requestId } });
-
-    if (!admin) {
-      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, `Admin User not found with id: ${requestId}`));
+    const adminId = await admins.findOne({ where: { adminId: requestId } });
+     
+    if (!adminId) {
+      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, `Admin User not found with id: ${requestId}`));
     }
 
-    if (admin.balance !== 0) {
+    if (adminId.balance !== 0) {
       return res
         .status(statusCode.success)
-        .json(apiResponseSuccess(null, true, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
+        .json(apiResponseErr(null, false, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
     }
 
-    if (!admin.isActive) {
+    if (!adminId.isActive) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin is inactive or locked`));
     }
 
     const updatedTransactionData = {
-      adminId: admin.adminId,
-      roles: admin.roles || [],
-      userName: admin.userName,
-      password: admin.password,
-      balance: admin.balance || 0,
-      loadBalance: admin.loadBalance || 0,
-      creditRefs: admin.creditRefs || [],
-      partnerships: admin.partnerships || [],
-      createdById: admin.createdById || '',
-      createdByUser: admin.createdByUser || '',
+      adminId: adminId.adminId,
+      roles: adminId.roles || [],
+      userName: adminId.userName,
+      password: adminId.password,
+      balance: adminId.balance || 0,
+      loadBalance: adminId.loadBalance || 0,
+      creditRefs: adminId.creditRefs || [],
+      partnerships: adminId.partnerships || [],
+      createdById: adminId.createdById || '',
+      createdByUser: adminId.createdByUser || '',
     };
 
     const trashEntry = await trash.create({
@@ -55,16 +56,27 @@ export const moveAdminToTrash = async (req, res) => {
       return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup Admin User`));
     }
 
-    // Delete the admin user from the Admins table
-    const deleteResult = await admin.destroy();
+    const deleteResult = await adminId.destroy();
 
     if (!deleteResult) {
-      return res
-        .status(statusCode.internalServerError)
-        .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
     }
 
-    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash'));
+    // sync with colorgame user
+    let message = '';
+    const dataToSend = {
+      userId : requestId,
+    };
+   
+    const { data: response }  = await axios.post('http://localhost:7000/api/internal/trash-user', dataToSend);
+
+    if(!response.success) {
+      message = 'Failed to move user data to trash';
+    } else {
+      message = "successfully";
+    }
+
+    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash' + " " + message));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
     res
@@ -132,16 +144,27 @@ export const restoreAdminUser = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, 'Failed to restore Admin User'));
     }
 
-    // Delete the user from the trash table
     const deleteResult = await existingAdminUser.destroy();
 
     if (!deleteResult) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, statusCode.badRequest, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Failed to delete Admin User from Trash with adminId: ${adminId}`));
+    }
+    
+    // sync with colorgame user
+    let message = '';
+    const dataToSend = {
+      userId : adminId,
+    };
+   
+    const { data: response }  = await axios.post('http://localhost:7000/api/extrernal/restore-trash-user', dataToSend);
+
+    if(!response.success) {
+      message = 'Failed restored user';
+    } else {
+      message = "successfully";
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash successfully!'));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash' + " " + message));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
