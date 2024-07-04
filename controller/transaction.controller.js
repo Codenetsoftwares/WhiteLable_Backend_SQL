@@ -124,16 +124,35 @@ export const transferAmount = async (req, res) => {
         balance: creditAmount,
       });
 
+      const withdrawTransaction = await transaction.create({
+        transactionId: uuidv4(),
+        adminId: adminId,
+        userName: withdrawalRecord.userName,
+        amount: withdrawalRecord.amount,
+        date: withdrawalRecord.date,
+        transactionType: withdrawalRecord.transactionType,
+        remarks: withdrawalRecord.remarks,
+        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
+        transferToUserAccount: withdrawalRecord.transferToUserAccount,
+      });
+
       const dataToSend = {
         amount: parsedWithdrawalAmt,
         userId: receiveUserId,
+        transactionId: withdrawTransaction.transactionId,
+        transactionType: withdrawTransaction.transactionType,
+        amount: withdrawTransaction.amount,
+        date: withdrawTransaction.date,
+        remarks: withdrawTransaction.remarks,
+        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
+        transferToUserAccount: withdrawalRecord.transferToUserAccount,
         type: 'debit'
       };
 
       let message = '';
 
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const { data: response } = await axios.post('http://localhost:7000/api/extrnal/balance-update', dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {
@@ -185,16 +204,47 @@ export const transferAmount = async (req, res) => {
         balance: senderBalance,
       });
 
+      await transaction.create({
+        transactionId: uuidv4(),
+        adminId: adminId,
+        userName: transferRecordDebit.userName,
+        amount: transferRecordDebit.amount,
+        date: transferRecordDebit.date,
+        transactionType: transferRecordDebit.transactionType,
+        remarks: transferRecordDebit.remarks,
+        transferFromUserAccount: transferRecordDebit.transferFromUserAccount,
+        transferToUserAccount: transferRecordDebit.transferToUserAccount,
+      });
+
+      await transaction.create({
+        transactionId: uuidv4(),
+        adminId: adminId,
+        userName: transferRecordCredit.userName,
+        amount: transferRecordCredit.amount,
+        date: transferRecordCredit.date,
+        transactionType: transferRecordCredit.transactionType,
+        remarks: transferRecordCredit.remarks,
+        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
+        transferToUserAccount: transferRecordCredit.transferToUserAccount,
+      });
+
       const dataToSend = {
         amount: parsedTransferAmount,
         userId: receiveUserId,
+        transactionId: transferRecordCredit.transactionId,
+        transactionType: transferRecordCredit.transactionType,
+        amount: transferRecordCredit.amount,
+        date: transferRecordCredit.date,
+        remarks: transferRecordCredit.remarks,
+        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
+        transferToUserAccount: transferRecordCredit.transferToUserAccount,
         type: 'credit'
       };
 
       let message = '';
 
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const { data: response } = await axios.post('http://localhost:7000/api/extrnal/balance-update', dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {
