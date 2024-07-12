@@ -68,7 +68,7 @@ export const moveAdminToTrash = async (req, res) => {
       userId : requestId,
     };
    
-    const { data: response }  = await axios.post('http://localhost:7000/api/internal/trash-user', dataToSend);
+    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/internal/trash-user', dataToSend);
 
     if(!response.success) {
       message = 'Failed to move user data to trash';
@@ -156,7 +156,7 @@ export const restoreAdminUser = async (req, res) => {
       userId : adminId,
     };
    
-    const { data: response }  = await axios.post('http://localhost:7000/api/extrernal/restore-trash-user', dataToSend);
+    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/restore-trash-user', dataToSend);
 
     if(!response.success) {
       message = 'Failed restored user';
