@@ -40,6 +40,7 @@ class ResponseMessages {
         this.adminCreated = 'Admin created successfully';
         this.subAdminCreated = 'Sub Admin created successfully';
         this.adminExists = 'Admin already exists';
+        this.userExists = 'User Already Exist';
         this.accountInactive = 'Account is in Inactive Mode';
         this.invalidRole = 'Invalid user role for creating sub-admin';
         this.adminNotFound = 'Admin not found';

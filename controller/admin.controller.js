@@ -19,21 +19,25 @@ const globalUsernames = [];
 export const createAdmin = async (req, res) => {
   try {
     const user = req.user;
-    console.log("user", user);
     const { userName, password, roles } = req.body;
 
-    const existingAdmin = await admins.findOne({ where: { userName: userName } });
-    if (existingAdmin) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.adminExists)
-    }
-    if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive)
-    }
-    const defaultPermission = ['all-access'];
+    const isUserRole = roles.includes('user');
 
-    const rolesWithDefaultPermission = roles.map(role => ({
+    const existingAdmin = await admins.findOne({ where: { userName } });
+
+    if (existingAdmin) {
+      const errorMessage = isUserRole ? messages.userExists : messages.adminExists;
+      throw apiResponseErr(null, false, statusCode.exist, errorMessage);
+    }
+
+    if (user.isActive === false || user.locked === false) {
+      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive);
+    }
+
+    const defaultPermission = ['all-access'];
+    const rolesWithDefaultPermission = roles.map((role) => ({
       role,
-      permission: defaultPermission
+      permission: defaultPermission,
     }));
 
     const newAdmin = await admins.create({
@@ -50,20 +54,23 @@ export const createAdmin = async (req, res) => {
       string.subAdmin,
       string.subHyperAgent,
       string.subSuperAgent,
-      string.subMasterAgent
+      string.subMasterAgent,
     ].includes(user.roles[0].role);
 
     if (isSubRole) {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, messages.adminCreated));
+    const successMessage = isUserRole ? 'User created successfully' : 'Admin created successfully';
+
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 // done
 export const createSubAdmin = async (req, res) => {
