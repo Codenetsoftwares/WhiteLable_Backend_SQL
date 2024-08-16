@@ -218,7 +218,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-    return res.status(statusCode.success).json(apiResponseSuccess(responseObj, null, statusCode.success, true, 'No records found'));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
