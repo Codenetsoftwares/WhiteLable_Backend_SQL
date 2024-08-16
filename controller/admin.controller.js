@@ -60,7 +60,9 @@ export const createAdmin = async (req, res) => {
     if (isSubRole) {
       await newAdmin.update({ createdById: user.createdById || user.adminId });
     }
-
+    if (user.adminId) {
+      await calculateLoadBalance(user.adminId);
+    }
     const successMessage = isUserRole ? 'User created successfully' : 'Admin created successfully';
 
     return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage));
@@ -165,6 +167,31 @@ export const getIpDetail = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+export const calculateLoadBalance = async (adminId) => {
+  const admin = await admins.findOne({ where: { adminId } });
+  if (!admin) return 0;
+
+  let totalBalance = admin.balance;
+
+  const children = await admins.findAll({
+    where: { createdById: adminId },
+  });
+
+  for (const child of children) {
+    const childBalance = await calculateLoadBalance(child.adminId);
+    totalBalance += childBalance;
+  }
+
+  if (admin.loadBalance !== totalBalance) {
+    console.log(`Updating loadBalance for adminId ${adminId}: ${admin.loadBalance} -> ${totalBalance}`);
+    await admin.update({ loadBalance: totalBalance });
+  }
+
+  return totalBalance;
+};
+
+
 // done
 export const viewAllCreates = async (req, res) => {
   try {
@@ -191,7 +218,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.noRecordsFound));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
@@ -205,40 +232,19 @@ export const viewAllCreates = async (req, res) => {
       limit: pageSize,
     });
 
-    const users = adminsData.map(admin => {
-      let creditRefs = [];
-      let partnerships = [];
+    const users = adminsData.map(admin => ({
+      adminId: admin.adminId,
+      userName: admin.userName,
+      roles: admin.roles,
+      balance: admin.balance,
+      loadBalance: admin.loadBalance,
+      creditRefs: admin.creditRefs || [],
+      createdById: admin.createdById,
+      createdByUser: admin.createdByUser,
+      partnerships: admin.partnerships || [],
+      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
+    }));
 
-      if (admin.creditRefs) {
-        try {
-          creditRefs = JSON.parse(admin.creditRefs);
-        } catch {
-          creditRefs = [];
-        }
-      }
-
-      if (admin.partnerships) {
-        try {
-          partnerships = JSON.parse(admin.partnerships);
-        } catch {
-          partnerships = [];
-        }
-      }
-
-      return {
-        adminId: admin.adminId,
-        userName: admin.userName,
-        roles: admin.roles,
-        balance: admin.balance,
-        loadBalance: admin.loadBalance,
-        creditRefs,
-        createdById: admin.createdById,
-        createdByUser: admin.createdByUser,
-        partnerships,
-        status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
-      };
-    });
-      console.log("users", users);
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
@@ -261,6 +267,7 @@ export const viewAllCreates = async (req, res) => {
     );
   }
 };
+
 
 // done
 export const viewAllSubAdminCreates = async (req, res) => {
@@ -378,9 +385,9 @@ export const editCreditRef = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newCreditRefEntry = {
       value: creditRef,
@@ -440,9 +447,9 @@ export const editPartnership = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newPartnershipEntry = {
       value: partnership,

@@ -8,6 +8,7 @@ import { statusCode } from '../helper/statusCodes.js';
 import { Sequelize } from 'sequelize';
 import { messages } from '../constructor/string.js';
 import axios from 'axios';
+import { calculateLoadBalance } from './admin.controller.js';
 
 export const depositTransaction = async (req, res) => {
   try {
@@ -62,7 +63,6 @@ export const transferAmount = async (req, res) => {
     const adminId = req.params.adminId;
 
     const senderAdmin = await admins.findOne({ where: { adminId } });
-
     if (!senderAdmin) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
@@ -112,45 +112,25 @@ export const transferAmount = async (req, res) => {
       };
 
       const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
-      const deductionLoadBalance = receiverAdmin.loadBalance - parsedWithdrawalAmt;
       const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
 
-      await receiverAdmin.update({
-        balance: deductionBalance,
-        loadBalance: deductionLoadBalance,
-      });
+      await receiverAdmin.update({ balance: deductionBalance });
+      await senderAdmin.update({ balance: creditAmount });
 
-      await senderAdmin.update({
-        balance: creditAmount,
-      });
-
-      const withdrawTransaction = await transaction.create({
+      await transaction.create({
         transactionId: uuidv4(),
-        adminId: adminId,
-        userName: withdrawalRecord.userName,
-        amount: withdrawalRecord.amount,
-        date: withdrawalRecord.date,
-        transactionType: withdrawalRecord.transactionType,
-        remarks: withdrawalRecord.remarks,
-        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
-        transferToUserAccount: withdrawalRecord.transferToUserAccount,
+        adminId,
+        ...withdrawalRecord,
       });
 
       const dataToSend = {
-        amount: parsedWithdrawalAmt,
+        ...withdrawalRecord,
         userId: receiveUserId,
-        transactionId: withdrawTransaction.transactionId,
-        transactionType: withdrawTransaction.transactionType,
-        amount: withdrawTransaction.amount,
-        date: withdrawTransaction.date,
-        remarks: withdrawTransaction.remarks,
-        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
-        transferToUserAccount: withdrawalRecord.transferToUserAccount,
-        type: 'debit'
+        transactionId: withdrawalRecord.transactionId,
+        type: 'debit',
       };
 
       let message = '';
-
       try {
         const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
         console.log('Balance update response:', response);
@@ -159,11 +139,13 @@ export const transferAmount = async (req, res) => {
           if (response.responseCode === 400 && response.errMessage === 'User Not Found') {
             message = 'Failed to update user balance.';
           }
-        } 
+        }
       } catch (error) {
         console.error('Error updating balance:', error);
         message = 'Please register in the portal.';
       }
+
+      await calculateLoadBalance(adminId);
 
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Deducted Successfully' + ' ' + message));
     } else {
@@ -193,56 +175,30 @@ export const transferAmount = async (req, res) => {
 
       const senderBalance = senderAdmin.balance - parsedTransferAmount;
       const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
-      const receiverLoadBalance = receiverAdmin.loadBalance + parsedTransferAmount;
 
-      await receiverAdmin.update({
-        balance: receiverBalance,
-        loadBalance: receiverLoadBalance,
-      });
+      await receiverAdmin.update({ balance: receiverBalance });
+      await senderAdmin.update({ balance: senderBalance });
 
-      await senderAdmin.update({
-        balance: senderBalance,
+      await transaction.create({
+        transactionId: uuidv4(),
+        adminId,
+        ...transferRecordDebit,
       });
 
       await transaction.create({
         transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordDebit.userName,
-        amount: transferRecordDebit.amount,
-        date: transferRecordDebit.date,
-        transactionType: transferRecordDebit.transactionType,
-        remarks: transferRecordDebit.remarks,
-        transferFromUserAccount: transferRecordDebit.transferFromUserAccount,
-        transferToUserAccount: transferRecordDebit.transferToUserAccount,
-      });
-
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordCredit.userName,
-        amount: transferRecordCredit.amount,
-        date: transferRecordCredit.date,
-        transactionType: transferRecordCredit.transactionType,
-        remarks: transferRecordCredit.remarks,
-        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
-        transferToUserAccount: transferRecordCredit.transferToUserAccount,
+        adminId,
+        ...transferRecordCredit,
       });
 
       const dataToSend = {
-        amount: parsedTransferAmount,
+        ...transferRecordCredit,
         userId: receiveUserId,
         transactionId: transferRecordCredit.transactionId,
-        transactionType: transferRecordCredit.transactionType,
-        amount: transferRecordCredit.amount,
-        date: transferRecordCredit.date,
-        remarks: transferRecordCredit.remarks,
-        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
-        transferToUserAccount: transferRecordCredit.transferToUserAccount,
-        type: 'credit'
+        type: 'credit',
       };
 
       let message = '';
-
       try {
         const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
         console.log('Balance update response:', response);
@@ -251,11 +207,13 @@ export const transferAmount = async (req, res) => {
           if (response.responseCode === 400 && response.errMessage === 'User Not Found') {
             message = 'Failed to update user balance.';
           }
-        } 
+        }
       } catch (error) {
         console.error('Error updating balance:', error);
         message = 'Please register in the portal.';
       }
+
+      await calculateLoadBalance(adminId);
 
       return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Balance Debited Successfully' + ' ' + message));
     }
