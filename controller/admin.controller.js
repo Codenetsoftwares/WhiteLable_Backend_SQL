@@ -201,12 +201,12 @@ export const viewAllCreates = async (req, res) => {
 
     const searchQuery = req.query.userName ? { userName: { [Op.like]: `%${req.query.userName}%` } } : {};
     const allowedRoles = [
-      'superAdmin',
-      'whiteLabel',
-      'hyperAgent',
-      'superAgent',
-      'masterAgent',
-      'user'
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+      string.user
     ];
 
     const totalRecords = await admins.count({
@@ -218,7 +218,7 @@ export const viewAllCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(400).json({ message: 'No records found' });
+    return res.status(statusCode.success).json(apiResponseSuccess(responseObj, null, statusCode.success, true, 'No records found'));
     }
 
     const offset = (page - 1) * pageSize;
@@ -385,9 +385,9 @@ export const editCreditRef = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newCreditRefEntry = {
       value: creditRef,
@@ -447,9 +447,9 @@ export const editPartnership = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
-    }
+    // if (!admin.isActive || admin.locked) {
+    //   return res.status(statusCode.inActive).json(apiResponseErr(null, false, statusCode.inActive, messages.inActiveAdmin));
+    // }
 
     const newPartnershipEntry = {
       value: partnership,

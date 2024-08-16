@@ -119,27 +119,15 @@ export const transferAmount = async (req, res) => {
 
       await transaction.create({
         transactionId: uuidv4(),
-        adminId: adminId,
-        userName: withdrawalRecord.userName,
-        amount: withdrawalRecord.amount,
-        date: withdrawalRecord.date,
-        transactionType: withdrawalRecord.transactionType,
-        remarks: withdrawalRecord.remarks,
-        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
-        transferToUserAccount: withdrawalRecord.transferToUserAccount,
+        adminId,
+        ...withdrawalRecord,
       });
 
       const dataToSend = {
-        amount: parsedWithdrawalAmt,
+        ...withdrawalRecord,
         userId: receiveUserId,
         transactionId: withdrawalRecord.transactionId,
-        transactionType: withdrawalRecord.transactionType,
-        amount: withdrawalRecord.amount,
-        date: withdrawalRecord.date,
-        remarks: withdrawalRecord.remarks,
-        transferFromUserAccount: withdrawalRecord.transferFromUserAccount,
-        transferToUserAccount: withdrawalRecord.transferToUserAccount,
-        type: 'debit'
+        type: 'debit',
       };
 
       let message = '';
@@ -193,39 +181,21 @@ export const transferAmount = async (req, res) => {
 
       await transaction.create({
         transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordDebit.userName,
-        amount: transferRecordDebit.amount,
-        date: transferRecordDebit.date,
-        transactionType: transferRecordDebit.transactionType,
-        remarks: transferRecordDebit.remarks,
-        transferFromUserAccount: transferRecordDebit.transferFromUserAccount,
-        transferToUserAccount: transferRecordDebit.transferToUserAccount,
+        adminId,
+        ...transferRecordDebit,
       });
 
       await transaction.create({
         transactionId: uuidv4(),
-        adminId: adminId,
-        userName: transferRecordCredit.userName,
-        amount: transferRecordCredit.amount,
-        date: transferRecordCredit.date,
-        transactionType: transferRecordCredit.transactionType,
-        remarks: transferRecordCredit.remarks,
-        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
-        transferToUserAccount: transferRecordCredit.transferToUserAccount,
+        adminId,
+        ...transferRecordCredit,
       });
 
       const dataToSend = {
-        amount: parsedTransferAmount,
+        ...transferRecordCredit,
         userId: receiveUserId,
         transactionId: transferRecordCredit.transactionId,
-        transactionType: transferRecordCredit.transactionType,
-        amount: transferRecordCredit.amount,
-        date: transferRecordCredit.date,
-        remarks: transferRecordCredit.remarks,
-        transferFromUserAccount: transferRecordCredit.transferFromUserAccount,
-        transferToUserAccount: transferRecordCredit.transferToUserAccount,
-        type: 'credit'
+        type: 'credit',
       };
 
       let message = '';
