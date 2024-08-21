@@ -6,6 +6,7 @@ import { messages, string } from '../constructor/string.js';
 import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
+import trash from '../models/trash.model.js';
 
 
 /**
@@ -25,7 +26,10 @@ export const createAdmin = async (req, res) => {
 
     const existingAdmin = await admins.findOne({ where: { userName } });
 
-    if (existingAdmin) {
+    // Check if the username exists in the trash table
+    const existingTrashUser = await trash.findOne({ where: { userName } });
+
+    if (existingAdmin || existingTrashUser) {
       const errorMessage = isUserRole ? messages.userExists : messages.adminExists;
       throw apiResponseErr(null, false, statusCode.exist, errorMessage);
     }
@@ -226,7 +230,6 @@ export const viewAllCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
-
         [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
       },
       offset,
@@ -234,20 +237,40 @@ export const viewAllCreates = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    const users = adminsData.map(admin => ({
-      adminId: admin.adminId,
-      userName: admin.userName,
-      roles: admin.roles,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs || [],
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships || [],
-      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
-    }));
+    const users = adminsData.map(admin => {
+      let creditRefs = [];
+      let partnerships = [];
 
+      if (admin.creditRefs) {
+        try {
+          creditRefs = JSON.parse(admin.creditRefs);
+        } catch {
+          creditRefs = [];
+        }
+      }
 
+      if (admin.partnerships) {
+        try {
+          partnerships = JSON.parse(admin.partnerships);
+        } catch {
+          partnerships = [];
+        }
+      }
+
+      return {
+        adminId: admin.adminId,
+        userName: admin.userName,
+        roles: admin.roles,
+        balance: admin.balance,
+        loadBalance: admin.loadBalance,
+        creditRefs,
+        createdById: admin.createdById,
+        createdByUser: admin.createdByUser,
+        partnerships,
+        status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
+      };
+    });
+    
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
