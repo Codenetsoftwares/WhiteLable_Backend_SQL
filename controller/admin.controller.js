@@ -333,6 +333,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       },
       offset,
       limit: pageSize,
+      order: [['createdAt', 'DESC']],
     });
 
     const users = adminsData.map(admin => {
