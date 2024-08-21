@@ -87,7 +87,8 @@ export const moveAdminToTrash = async (req, res) => {
 
 export const viewTrash = async (req, res) => {
   try {
-    const viewTrash = await trash.findAll();
+    const adminId = req.params.adminId;
+    const viewTrash = await trash.findAll({where:{createdById:adminId}});
     if (!viewTrash || viewTrash.length === 0) {
       return res.status(statusCode.success).json(apiResponseSuccess([], true, statusCode.success, 'No entries found in Trash'));
     }

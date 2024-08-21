@@ -23,7 +23,7 @@ export const trashRoute = (app) => {
 
   // View Trash API ("DONE")
   app.get(
-    '/api/admin/view-trash',
+    '/api/admin/view-trash/:adminId',
     customErrorHandler,
     Authorize([
       string.superAdmin,
