@@ -226,10 +226,12 @@ export const viewAllCreates = async (req, res) => {
       where: {
         createdById,
         ...searchQuery,
+
         [Op.or]: allowedRoles.map(role => fn('JSON_CONTAINS', col('roles'), JSON.stringify({ role }))),
       },
       offset,
       limit: pageSize,
+      order: [['createdAt', 'DESC']],
     });
 
     const users = adminsData.map(admin => ({
@@ -244,6 +246,7 @@ export const viewAllCreates = async (req, res) => {
       partnerships: admin.partnerships || [],
       status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
     }));
+
 
     const totalPages = Math.ceil(totalRecords / pageSize);
 

@@ -12,13 +12,13 @@ export const moveAdminToTrash = async (req, res) => {
     const adminId = await admins.findOne({ where: { adminId: requestId } });
      
     if (!adminId) {
-      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, `Admin User not found with id: ${requestId}`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin User not found with id: ${requestId}`));
     }
 
     if (adminId.balance !== 0) {
       return res
-        .status(statusCode.success)
-        .json(apiResponseErr(null, false, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, `Balance should be 0 to move the Admin User to Trash`));
     }
 
     if (!adminId.isActive) {
@@ -53,29 +53,29 @@ export const moveAdminToTrash = async (req, res) => {
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup Admin User`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Failed to backup Admin User`));
     }
 
     const deleteResult = await adminId.destroy();
-
+    
     if (!deleteResult) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Failed to delete Admin User with id: ${requestId}`));
     }
-
+    
     // sync with colorgame user
     let message = '';
     const dataToSend = {
       userId : requestId,
     };
    
-    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/internal/trash-user', dataToSend);
+    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/trash-user', dataToSend);
 
-    if(!response.success) {
-      message = 'Failed to move user data to trash';
-    } else {
-      message = "successfully";
-    }
-
+    // if(!response.success) {
+    //   message = 'Failed to move user data to trash';
+    // } else {
+    //   message = "successfully";
+    // }
+    
     return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash' + " " + message));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
@@ -158,13 +158,13 @@ export const restoreAdminUser = async (req, res) => {
    
     const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/restore-trash-user', dataToSend);
 
-    if(!response.success) {
-      message = 'Failed restored user';
-    } else {
-      message = "successfully";
-    }
+    // if(!response.success) {
+    //   message = 'Failed restored user';
+    // } else {
+    //   message = "successfully";
+    // }
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash' + " " + message));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin restored from trash' + " " + message));
   } catch (error) {
     res
       .status(statusCode.internalServerError)

@@ -136,7 +136,7 @@ const admins = sequelize.define('admins', {
     defaultValue: [],
   },
 }, {
-  timestamps: false,
+  timestamps: true,
   hooks: {
     beforeCreate: async (admin) => {
       if (admin.password) {
