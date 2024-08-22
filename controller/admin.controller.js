@@ -44,10 +44,13 @@ export const createAdmin = async (req, res) => {
       permission: defaultPermission,
     }));
 
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newAdmin = await admins.create({
       adminId: uuid4(),
       userName,
-      password,
+      password: hashedPassword,
       roles: rolesWithDefaultPermission,
       createdById: user.adminId,
       createdByUser: user.userName,
@@ -76,7 +79,6 @@ export const createAdmin = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
-
 
 // done
 export const createSubAdmin = async (req, res) => {
@@ -116,10 +118,13 @@ export const createSubAdmin = async (req, res) => {
 
     const permissionsArray = Array.isArray(roles[0].permission) ? roles[0].permission : [roles[0].permission];
 
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newSubAdmin = await admins.create({
       adminId,
       userName,
-      password,
+      password: hashedPassword,
       roles: [{ role: subRole, permission: permissionsArray }],
       createdById,
       createdByUser,

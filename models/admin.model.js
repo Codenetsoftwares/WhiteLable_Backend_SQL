@@ -137,14 +137,6 @@ const admins = sequelize.define('admins', {
   },
 }, {
   timestamps: true,
-  hooks: {
-    beforeCreate: async (admin) => {
-      if (admin.password) {
-        const salt = await bcrypt.genSalt(10);
-        admin.password = await bcrypt.hash(admin.password, salt);
-      }
-    },
-  },
 });
 
 admins.prototype.validPassword = async function (password) {
