@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import trash from '../models/trash.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import axios from 'axios';
+import { string } from '../constructor/string.js';
 
 export const moveAdminToTrash = async (req, res) => {
   try {
@@ -64,18 +65,19 @@ export const moveAdminToTrash = async (req, res) => {
     
     // sync with colorgame user
     let message = '';
-    const dataToSend = {
-      userId : requestId,
-    };
-   
-    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/trash-user', dataToSend);
+    if (adminId.roles[0].role === string.user) {
+      const dataToSend = {
+        userId: requestId,
+      };
 
-    // if(!response.success) {
-    //   message = 'Failed to move user data to trash';
-    // } else {
-    //   message = "successfully";
-    // }
-    
+      const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrernal/trash-user', dataToSend);
+      if (!response.success) {
+        message = 'Failed to move user data to trash';
+      } else {
+        message = "successfully";
+      }
+    }
+
     return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash' + " " + message));
   } catch (error) {
     console.error('Error in moveAdminToTrash:', error);
@@ -153,18 +155,19 @@ export const restoreAdminUser = async (req, res) => {
     
     // sync with colorgame user
     let message = '';
+    if (existingAdminUser.roles[0].role === string.user) {
     const dataToSend = {
       userId : adminId,
     };
    
     const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/restore-trash-user', dataToSend);
 
-    // if(!response.success) {
-    //   message = 'Failed restored user';
-    // } else {
-    //   message = "successfully";
-    // }
-
+    if(!response.success) {
+      message = 'Failed restored user';
+    } else {
+      message = "successfully";
+    }
+  }
     return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin restored from trash' + " " + message));
   } catch (error) {
     res
