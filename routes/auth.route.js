@@ -12,7 +12,7 @@ export const authRoute = (app) => {
 
     //  Password Reset API ("DONE")
     app.post('/api/admin/reset-password',
-        adminPasswordResetSchema,
+        //adminPasswordResetSchema,
         customErrorHandler,
         Authorize([
             string.superAdmin,
