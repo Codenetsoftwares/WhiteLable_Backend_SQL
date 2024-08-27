@@ -7,6 +7,7 @@ import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
 import trash from '../models/trash.model.js';
+import axios from 'axios';
 
 
 /**
@@ -25,8 +26,6 @@ export const createAdmin = async (req, res) => {
     const isUserRole = roles.includes('user');
 
     const existingAdmin = await admins.findOne({ where: { userName } });
-
-    // Check if the username exists in the trash table
     const existingTrashUser = await trash.findOne({ where: { userName } });
 
     if (existingAdmin || existingTrashUser) {
@@ -56,6 +55,27 @@ export const createAdmin = async (req, res) => {
       createdByUser: user.userName,
     });
 
+    let message = '';
+
+    if (isUserRole) {
+      const dataToSend = {
+        userId: newAdmin.adminId,
+        userName,
+        password,
+      };
+
+      console.log("data to send", dataToSend);
+
+      const response = await axios.post('http://localhost:7000/api/user-create', dataToSend);
+      console.log("response from API", response.data);
+
+      if (!response.data.success) {
+        message = 'Failed to restore user';
+      } else {
+        message = "successfully";
+      }
+    }
+
     const isSubRole = [
       string.subWhiteLabel,
       string.subAdmin,
@@ -70,15 +90,18 @@ export const createAdmin = async (req, res) => {
     if (user.adminId) {
       await calculateLoadBalance(user.adminId);
     }
-    const successMessage = isUserRole ? 'User created successfully' : 'Admin created successfully';
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage));
+    const successMessage = isUserRole ? 'User created' : 'Admin created successfully';
+
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
     res
       .status(statusCode.internalServerError)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 // done
 export const createSubAdmin = async (req, res) => {
@@ -632,6 +655,7 @@ export const profileView = async (req, res) => {
       adminId: admin.adminId,
       roles: admin.roles,
       userName: admin.userName,
+      createdById : admin.createdById
     };
     return res.status(statusCode.success).json(apiResponseSuccess(transferData, null, statusCode.success, true, 'successfully'));
   } catch (error) {
