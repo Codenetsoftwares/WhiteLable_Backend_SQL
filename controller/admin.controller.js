@@ -679,7 +679,7 @@ export const buildRootPath = async (req, res) => {
             refProfitLoss = createdUser.refProfitLoss ? JSON.parse(createdUser.refProfitLoss) : [];
             partnership = createdUser.partnerships ? JSON.parse(createdUser.partnerships) : [];
           } catch (e) {
-            console.error('JSON parsing error:', e);
+            // console.error('JSON parsing error:', e);
           }
 
           return {

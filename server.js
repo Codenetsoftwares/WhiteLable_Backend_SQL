@@ -9,6 +9,7 @@ import { authRoute } from './routes/auth.route.js';
 import { transactionRoute } from './routes/transaction.route.js';
 import { trashRoute } from './routes/trash.route.js';
 import { colorGameUserRoute } from './routes/colorGameUser.route.js';
+import { activeAdminRoute } from './routes/activeAdmin.route.js';
 
 dotenv.config();
 const app = express();
@@ -28,6 +29,7 @@ authRoute(app);
 transactionRoute(app);
 trashRoute(app);
 colorGameUserRoute(app);
+activeAdminRoute(app)
 
 sequelize.sync({ alter: true })
   .then(() => {
