@@ -37,5 +37,5 @@ export const colorGameUserRoute = (app) => {
 
   app.get('/api/user-colorGame-games', userGame);
 
-  app.get('/api/user-colorgame-betHistory/:userName/:gameId',getUserBetHistory);
+  app.get('/api/user-colorGame-betHistory/:userName/:gameId',getUserBetHistory);
 }
