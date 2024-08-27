@@ -289,7 +289,6 @@ export const userCreateColorGame = async (req, res) => {
       const { data, pagination } = response.data;
   
       const totalPages = pagination ? pagination.totalPages : 1;
-      const pageSize = limit;
       const totalItems = pagination ? pagination.totalItems : 0;
   
       return res
@@ -299,7 +298,7 @@ export const userCreateColorGame = async (req, res) => {
           true,
           statusCode.success,
           'Success',
-          { totalPages, pageSize, totalItems, page }
+          { totalPages, limit: parseInt(limit), totalItems, page : parseInt(page) }
         ));
     } catch (error) {
       console.error("Error from API:", error.response ? error.response.data : error.message);
