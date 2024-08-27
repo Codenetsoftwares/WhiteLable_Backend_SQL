@@ -376,7 +376,7 @@ export const viewAddBalance = async (req, res) => {
     });
 
     const totalItems = await selfTransactions.count({ where: { adminId } });
-    const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalItems / limit)
 
     const balanceInfo = {
       transactions: paginatedTransactions.map((transaction) => ({
@@ -390,7 +390,7 @@ export const viewAddBalance = async (req, res) => {
       .json(apiResponseSuccess(balanceInfo, statusCode.success, true, 'Balance Retrieved Successfully!',{ 
         page : parseInt(page),
         limit,
-          totalItems,  
+        totalItems,  
         totalPages,
       }));
   } catch (error) {
