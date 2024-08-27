@@ -133,7 +133,7 @@ export const adminPasswordResetCode = async (req, res) => {
         }
         const isAdminPasswordCorrect = await bcrypt.compare(adminPassword, admin.password);
         if (!isAdminPasswordCorrect) {
-            return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid Admin password'));
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid Admin password'));
         }
 
         const passwordIsDuplicate = await bcrypt.compare(password, existingUser.password);
