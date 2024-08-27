@@ -115,6 +115,9 @@ export const adminLogin = async (req, res) => {
 
 export const adminPasswordResetCode = async (req, res) => {
     try {
+
+        const admin = req.user
+
         const { userName, adminPassword, password } = req.body;
 
         const existingUser = await admins.findOne({ where: { userName } });
@@ -123,13 +126,12 @@ export const adminPasswordResetCode = async (req, res) => {
             return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
         }
 
-        const creatorAdmin = await admins.findOne({ where: { createdById: existingUser.createdById } });
-        
-        if (!creatorAdmin) {
-            return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Admin who created this user not found'));
-        }
+        if(admin.adminId !== existingUser.createdById){
 
-        const isAdminPasswordCorrect = await bcrypt.compare(adminPassword, creatorAdmin.password);
+            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does not have permission to reset Password'));
+
+        }
+        const isAdminPasswordCorrect = await bcrypt.compare(adminPassword, admin.password);
         if (!isAdminPasswordCorrect) {
             return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid Admin password'));
         }
