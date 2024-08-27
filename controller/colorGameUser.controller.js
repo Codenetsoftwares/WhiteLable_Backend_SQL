@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import Sequelize from '../db.js';
 import admins from '../models/admin.model.js';
 import colorGameTransactionRecord from '../models/colorGameTransactions.model.js'
+import moment from 'moment';
 
 export const userCreateColorGame = async (req, res) => {
     try {
@@ -211,5 +212,97 @@ export const userCreateColorGame = async (req, res) => {
     } catch (error) {
       console.error('Error:', error);
       return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
+  };
+
+  export const userGame = async (req, res) => {
+    try {
+      const response = await axios.get('http://localhost:7000/api/user-games');
+      console.log("response from API", response.data);
+  
+      if (!response.data.success) {
+        return res
+          .status(statusCode.badRequest)
+          .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch games'));
+      }
+  
+      const { data, success, message, pagination } = response.data;
+  
+      // If you need to handle pagination in your response
+      const paginationData = pagination || {};
+      const gameData = data || [];
+  
+      return res
+        .status(statusCode.success)
+        .json(apiResponseSuccess(gameData, success, statusCode.success, message, paginationData));
+    } catch (error) {
+      console.error('Error fetching games:', error.message || error);  // Log only the message or error
+      res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
+  };
+  
+  export const getUserBetHistory = async (req, res) => {
+    try {
+      const { gameId, userName } = req.params;
+      const { startDate, endDate, page = 1, limit = 5 } = req.query;
+  
+      let start = null;
+      let end = null;
+  
+      if (startDate) {
+        start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+        if (!start.isValid()) {
+          throw new Error('startDate is not a valid date');
+        }
+      }
+  
+      if (endDate) {
+        end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+        if (!end.isValid()) {
+          throw new Error('endDate is not a valid date');
+        }
+        if (end.isAfter(moment())) {
+          throw new Error('Invalid End Date');
+        }
+      }
+  
+      if (start && end && end.isBefore(start)) {
+        throw new Error('endDate should be after startDate');
+      }
+  
+      const params = {
+        gameId,
+        userName,
+        startDate: start ? start.format('YYYY-MM-DD') : undefined,
+        endDate: end ? end.format('YYYY-MM-DD') : undefined,
+        page,
+        limit
+      };
+      const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, { params });
+  
+      if (!response.data.success) {
+        return res
+          .status(statusCode.badRequest)
+          .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch bet history'));
+      }
+  
+      const { data, pagination } = response.data;
+  
+      const totalPages = pagination ? pagination.totalPages : 1;
+      const pageSize = limit;
+      const totalItems = pagination ? pagination.totalItems : 0;
+  
+      return res
+        .status(statusCode.success)
+        .json(apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          'Success',
+          { totalPages, pageSize, totalItems, page }
+        ));
+    } catch (error) {
+      console.error("Error from API:", error.response ? error.response.data : error.message);
+      res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
   };
