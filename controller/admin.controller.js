@@ -98,10 +98,10 @@ export const createAdmin = async (req, res) => {
       await calculateLoadBalance(user.adminId);
     }
 
-    await transaction.commit(); 
+    await transaction.commit();
     const successMessage = isUserRole ? 'User created' : 'Admin created successfully';
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
+    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
     await transaction.rollback();
