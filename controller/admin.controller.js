@@ -8,7 +8,9 @@ import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
 import trash from '../models/trash.model.js';
 import axios from 'axios';
-
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
@@ -19,6 +21,7 @@ import axios from 'axios';
 const globalUsernames = [];
 // done
 export const createAdmin = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const user = req.user;
     const { userName, password, roles } = req.body;
@@ -55,8 +58,9 @@ export const createAdmin = async (req, res) => {
       createdByUser: user.userName,
     });
 
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
     let message = '';
-
+    console.log("token", token)
     if (isUserRole) {
       const dataToSend = {
         userId: newAdmin.adminId,
@@ -64,9 +68,12 @@ export const createAdmin = async (req, res) => {
         password,
       };
 
-      console.log("data to send", dataToSend);
-
-      const response = await axios.post('http://localhost:7000/api/user-create', dataToSend);
+      // Send token in the Authorization header to the User API
+      const response = await axios.post('http://localhost:7000/api/user-create', dataToSend, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       console.log("response from API", response.data);
 
       if (!response.data.success) {
@@ -91,17 +98,18 @@ export const createAdmin = async (req, res) => {
       await calculateLoadBalance(user.adminId);
     }
 
+    await transaction.commit(); 
     const successMessage = isUserRole ? 'User created' : 'Admin created successfully';
 
     return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
+    await transaction.rollback();
     res
       .status(statusCode.internalServerError)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
-
 
 // done
 export const createSubAdmin = async (req, res) => {

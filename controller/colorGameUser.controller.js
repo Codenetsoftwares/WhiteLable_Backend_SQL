@@ -240,6 +240,7 @@ export const userGame = async (req, res) => {
   }
 };
 
+// authorization is pending
 export const getUserBetHistory = async (req, res) => {
   try {
     const { gameId, userName } = req.params;

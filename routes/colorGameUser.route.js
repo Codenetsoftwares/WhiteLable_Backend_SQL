@@ -36,12 +36,45 @@ export const colorGameUserRoute = (app) => {
 
   app.get('/api/user-colorGame-games', userGame);
 
-  app.get('/api/user-colorGame-betHistory/:userName/:gameId', betHistorySchema, getUserBetHistory);
+  app.get('/api/user-colorGame-betHistory/:userName/:gameId', betHistorySchema, customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
+    getUserBetHistory
+  );
 
-  app.get('/api/user-colorGame-profitLoss/:userName', calculateProfitLossSchema, customErrorHandler, getColorGameProfitLoss);
+  app.get('/api/user-colorGame-profitLoss/:userName', calculateProfitLossSchema, customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
+    getColorGameProfitLoss);
 
-  app.get('/api/user-colorGame-market_profitLoss/:userName/:gameId', marketProfitLossSchema, customErrorHandler, marketProfitLoss);
+  app.get('/api/user-colorGame-market_profitLoss/:userName/:gameId', marketProfitLossSchema, customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
+    marketProfitLoss);
 
-  app.get('/api/user-colorGame-runner_profitLoss/:userName/:marketId', runnerProfitLossSchema, customErrorHandler, runnerProfitLoss);
+  app.get('/api/user-colorGame-runner_profitLoss/:userName/:marketId', runnerProfitLossSchema, customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
+    runnerProfitLoss);
 
 }
