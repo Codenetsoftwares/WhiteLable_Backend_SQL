@@ -268,10 +268,10 @@ export const runnerProfitLossSchema = [
 ];
 
 export const betHistorySchema = [
-  query("userName")
+  param("userName")
     .notEmpty()
     .withMessage("Username is required."),
-  query("gameId")
+  param("gameId")
     .notEmpty()
     .withMessage("Game Id is required.")
 ];
