@@ -8,6 +8,9 @@ import Sequelize from '../db.js';
 import admins from '../models/admin.model.js';
 import colorGameTransactionRecord from '../models/colorGameTransactions.model.js'
 import moment from 'moment';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const userCreateColorGame = async (req, res) => {
   try {
@@ -269,6 +272,7 @@ export const getUserBetHistory = async (req, res) => {
     if (start && end && end.isBefore(start)) {
       throw new Error('endDate should be after startDate');
     }
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       gameId,
@@ -278,7 +282,13 @@ export const getUserBetHistory = async (req, res) => {
       page,
       limit
     };
-    const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, { params });
+
+    const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.data.success) {
       return res
@@ -311,6 +321,7 @@ export const getColorGameProfitLoss = async (req, res) => {
     const userName = req.params.userName
     const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
     const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       userName,
@@ -318,7 +329,13 @@ export const getColorGameProfitLoss = async (req, res) => {
       endDate,
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`, { params });
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`,{
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
 
     if (!response.data.success) {
       return res
@@ -352,7 +369,8 @@ export const marketProfitLoss = async (req, res) => {
     const { gameId, userName } = req.params;
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
-  
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
     const params = {
       userName,
       gameId,
@@ -360,7 +378,12 @@ export const marketProfitLoss = async (req, res) => {
       endDate,
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_market/${userName}/${gameId}`, { params });
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_market/${userName}/${gameId}`,{
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.data.success) {
       return res
@@ -394,7 +417,8 @@ export const runnerProfitLoss = async (req, res) => {
     const { marketId, userName } = req.params;
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
-   
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
     const params = {
       userName,
       marketId,
@@ -402,7 +426,12 @@ export const runnerProfitLoss = async (req, res) => {
       endDate,
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_runner/${userName}/${marketId}`, { params });
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_runner/${userName}/${marketId}`, {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.data.success) {
       return res

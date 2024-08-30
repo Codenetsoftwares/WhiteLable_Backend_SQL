@@ -56,11 +56,11 @@ export const createAdmin = async (req, res) => {
       roles: rolesWithDefaultPermission,
       createdById: user.adminId,
       createdByUser: user.userName,
-    });
+    }, { transaction });
 
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
     let message = '';
-    console.log("token", token)
     if (isUserRole) {
       const dataToSend = {
         userId: newAdmin.adminId,
@@ -68,18 +68,21 @@ export const createAdmin = async (req, res) => {
         password,
       };
 
-      // Send token in the Authorization header to the User API
-      const response = await axios.post('http://localhost:7000/api/user-create', dataToSend, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log("response from API", response.data);
+      try {
+        const response = await axios.post('http://localhost:7000/api/user-create', dataToSend, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.data.success) {
-        message = 'Failed to restore user';
-      } else {
-        message = "successfully";
+        if (!response.data.success) {
+          throw new Error('Failed to create user');
+        } else {
+          message = 'successfully';
+        }
+      } catch (error) {
+        console.error("Error from API:", error.response ? error.response.data : error.message);
+        throw new Error('Failed to create user in external system');
       }
     }
 
@@ -92,10 +95,10 @@ export const createAdmin = async (req, res) => {
     ].includes(user.roles[0].role);
 
     if (isSubRole) {
-      await newAdmin.update({ createdById: user.createdById || user.adminId });
+      await newAdmin.update({ createdById: user.createdById || user.adminId }, { transaction });
     }
     if (user.adminId) {
-      await calculateLoadBalance(user.adminId);
+      await calculateLoadBalance(user.adminId, transaction);
     }
 
     await transaction.commit();
@@ -103,11 +106,11 @@ export const createAdmin = async (req, res) => {
 
     return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
-    console.error("Error from API:", error.response ? error.response.data : error.message);
-    await transaction.rollback();
-    res
+    console.error("Error during creation:", error.message);
+    await transaction.rollback(); // Rollback on any error
+    return res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
