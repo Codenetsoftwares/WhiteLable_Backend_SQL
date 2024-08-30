@@ -117,30 +117,23 @@ export const adminPasswordResetCode = async (req, res) => {
     try {
 
         const admin = req.user
-
         const { userName, adminPassword, password } = req.body;
-
         const existingUser = await admins.findOne({ where: { userName } });
-
         if (!existingUser) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
         }
-
         if(admin.adminId !== existingUser.createdById){
 
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does not have permission to reset Password'));
-
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does not have permission to reset Password'));
         }
         const isAdminPasswordCorrect = await bcrypt.compare(adminPassword, admin.password);
         if (!isAdminPasswordCorrect) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid Admin password'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid Admin password'));
         }
-
         const passwordIsDuplicate = await bcrypt.compare(password, existingUser.password);
         if (passwordIsDuplicate) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'New Password Cannot Be The Same As Existing Password'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'New Password Cannot Be The Same As Existing Password'));
         }
-
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
         await admins.update({ password: encryptedPassword }, { where: { userName } });

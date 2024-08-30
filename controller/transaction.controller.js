@@ -355,40 +355,32 @@ export const viewBalance = async (req, res) => {
 export const viewAddBalance = async (req, res) => {
   try {
     const { adminId } = req.params;
-    let { page = 1, limit} = req.query; 
-    
-    limit = parseInt(limit) || 10;
+    let { page = 1, limit = 10} = req.query; 
+    page = parseInt(page)
+    limit = parseInt(limit)
     const offset = (page - 1) * limit;
-
-    const allTransactions = await selfTransactions.findAll({ where: { adminId } });
-   
-
+    const allTransactions = await selfTransactions.findAll({ where: { adminId } }); 
     if (allTransactions.length === 0) {
       return res
-        .status(statusCode.notFound)
-        .json(apiResponseErr(null, statusCode.notFound, false, 'Admin ID Not Found'));
+        .status(statusCode.success)
+        .send(apiResponseSuccess(null,true, statusCode.success, 'Data Not Found'));
     }
-
     const paginatedTransactions = await selfTransactions.findAll({
       where: { adminId },
       offset,
       limit,  
     });
-
     const totalItems = await selfTransactions.count({ where: { adminId } });
     const totalPages = Math.ceil(totalItems / limit)
-
     const balanceInfo = {
       transactions: paginatedTransactions.map((transaction) => ({
         amount: transaction.amount,  
-      })),
-     
+      })),  
     };
-
     return res
       .status(statusCode.success)
-      .json(apiResponseSuccess(balanceInfo, statusCode.success, true, 'Balance Retrieved Successfully!',{ 
-        page : parseInt(page),
+      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!',{ 
+        page ,
         limit,
         totalItems,  
         totalPages,
