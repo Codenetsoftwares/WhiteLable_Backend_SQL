@@ -303,7 +303,7 @@ export const getUserBetHistory = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(apiResponseSuccess(
+      .send(apiResponseSuccess(
         data,
         true,
         statusCode.success,
@@ -318,7 +318,9 @@ export const getUserBetHistory = async (req, res) => {
 
 export const getColorGameProfitLoss = async (req, res) => {
   try {
-    const userName = req.params.userName
+    const userName = req.params.userName;
+    const { page = 1, pageSize = 10 } = req.query;
+    const limit = parseInt(pageSize); 
     const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
     const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
@@ -327,25 +329,31 @@ export const getColorGameProfitLoss = async (req, res) => {
       userName,
       startDate,
       endDate,
+      page,
+      limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`,{
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
     }
 
     const { data, pagination } = response.data;
 
-    const paginationData = pagination || {};
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit || limit
+    };
 
     return res
       .status(statusCode.success)
@@ -364,9 +372,12 @@ export const getColorGameProfitLoss = async (req, res) => {
   }
 };
 
+
 export const marketProfitLoss = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
+    const { page = 1, pageSize = 10 } = req.query;
+    const limit = parseInt(pageSize); 
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
@@ -376,9 +387,11 @@ export const marketProfitLoss = async (req, res) => {
       gameId,
       startDate,
       endDate,
+      page,
+      limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_market/${userName}/${gameId}`,{
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_market/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -388,12 +401,18 @@ export const marketProfitLoss = async (req, res) => {
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
     }
 
     const { data, pagination } = response.data;
 
-    const paginationData = pagination || {};
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit || limit
+    };
+
 
     return res
       .status(statusCode.success)
@@ -415,6 +434,8 @@ export const marketProfitLoss = async (req, res) => {
 export const runnerProfitLoss = async (req, res) => {
   try {
     const { marketId, userName } = req.params;
+    const { page = 1, pageSize = 10 } = req.query;
+    const limit = parseInt(pageSize); 
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
@@ -424,6 +445,8 @@ export const runnerProfitLoss = async (req, res) => {
       marketId,
       startDate,
       endDate,
+      page,
+      limit
     };
 
     const response = await axios.get(`http://localhost:7000/api/external-profit_loss_runner/${userName}/${marketId}`, {
@@ -436,12 +459,18 @@ export const runnerProfitLoss = async (req, res) => {
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
     }
 
     const { data, pagination } = response.data;
 
-    const paginationData = pagination || {};
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit || limit
+    };
+
 
     return res
       .status(statusCode.success)
