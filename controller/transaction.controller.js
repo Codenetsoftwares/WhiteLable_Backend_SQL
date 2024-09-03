@@ -367,6 +367,7 @@ export const viewAddBalance = async (req, res) => {
     }
     const paginatedTransactions = await selfTransactions.findAll({
       where: { adminId },
+      order: [['createdAt', 'DESC']],
       offset,
       limit,  
     });
@@ -374,7 +375,8 @@ export const viewAddBalance = async (req, res) => {
     const totalPages = Math.ceil(totalItems / limit)
     const balanceInfo = {
       transactions: paginatedTransactions.map((transaction) => ({
-        amount: transaction.amount,  
+        amount: transaction.amount, 
+        date: transaction.date 
       })),  
     };
     return res
