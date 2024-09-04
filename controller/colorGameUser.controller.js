@@ -378,15 +378,11 @@ export const marketProfitLoss = async (req, res) => {
     const { gameId, userName } = req.params;
     const { page = 1, pageSize = 10 } = req.query;
     const limit = parseInt(pageSize); 
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       userName,
       gameId,
-      startDate,
-      endDate,
       page,
       limit
     };
@@ -436,15 +432,11 @@ export const runnerProfitLoss = async (req, res) => {
     const { marketId, userName } = req.params;
     const { page = 1, pageSize = 10 } = req.query;
     const limit = parseInt(pageSize); 
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       userName,
       marketId,
-      startDate,
-      endDate,
       page,
       limit
     };

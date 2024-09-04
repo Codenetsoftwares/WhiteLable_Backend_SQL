@@ -238,27 +238,11 @@ export const calculateProfitLossSchema = [
 export const marketProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
   param("gameId").notEmpty().withMessage("Game ID is required"),
-  query("startDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const runnerProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
   param("marketId").notEmpty().withMessage("Market ID is required"),
-  query("startDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const betHistorySchema = [
