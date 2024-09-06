@@ -238,7 +238,7 @@ export const userGame = async (req, res) => {
       .status(statusCode.success)
       .json(apiResponseSuccess(gameData, success, statusCode.success, message, paginationData));
   } catch (error) {
-    console.error('Error fetching games:', error.message || error);  
+    console.error('Error fetching games:', error.message || error);
     res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
@@ -319,14 +319,15 @@ export const getUserBetHistory = async (req, res) => {
 export const getColorGameProfitLoss = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const { page = 1, pageSize = 10 } = req.query;
-    const limit = parseInt(pageSize); 
+    const { page = 1, pageSize = 10, search = '' } = req.query;
+    const limit = parseInt(pageSize);
     const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
     const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       userName,
+      search,
       startDate,
       endDate,
       page,
@@ -372,17 +373,17 @@ export const getColorGameProfitLoss = async (req, res) => {
   }
 };
 
-
 export const marketProfitLoss = async (req, res) => {
   try {
-    const { gameId, userName } = req.params;
-    const { page = 1, pageSize = 10 } = req.query;
-    const limit = parseInt(pageSize); 
+    const { gameId, userName, } = req.params;
+    const { page = 1, pageSize = 10 , search = ''} = req.query;
+    const limit = parseInt(pageSize);
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
+console.log("first",search)
     const params = {
       userName,
       gameId,
+      search,
       page,
       limit
     };
@@ -430,13 +431,14 @@ export const marketProfitLoss = async (req, res) => {
 export const runnerProfitLoss = async (req, res) => {
   try {
     const { marketId, userName } = req.params;
-    const { page = 1, pageSize = 10 } = req.query;
-    const limit = parseInt(pageSize); 
+    const { page = 1, pageSize = 10, search = '' } = req.query;
+    const limit = parseInt(pageSize);
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
       userName,
       marketId,
+      search,
       page,
       limit
     };
