@@ -223,3 +223,33 @@ export const sendBalanceSchema = [
   body('adminId').notEmpty().withMessage('Admin ID is required'),
   body('userId').notEmpty().withMessage('User ID is required'),
 ];
+export const calculateProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  query("startDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const marketProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+];
+
+export const runnerProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("marketId").notEmpty().withMessage("Market ID is required"),
+];
+
+export const betHistorySchema = [
+  param("userName")
+    .notEmpty()
+    .withMessage("Username is required."),
+  param("gameId")
+    .notEmpty()
+    .withMessage("Game Id is required.")
+];

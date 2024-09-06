@@ -91,23 +91,23 @@ export const adminPasswordResetCode = async (req, res) => {
         const { userName, oldPassword, password } = req.body;
         const existingUser = await admins.findOne({ where: { userName } });
         if (!existingUser) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
         }
         //   if (!existingUser.isActive || !existingUser.locked) {
         //     return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Account is Not Active'));
         //   }
         const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, existingUser.password);
         if (!oldPasswordIsCorrect) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password'));
         }
         const passwordIsDuplicate = await bcrypt.compare(password, existingUser.password);
         if (passwordIsDuplicate) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'New Password Cannot Be The Same As Existing Password'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'New Password Cannot Be The Same As Existing Password'));
         }
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
         await admins.update({ password: encryptedPassword }, { where: { userName } });
-        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successful!'));
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successful!'));
     } catch (error) {
         res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
