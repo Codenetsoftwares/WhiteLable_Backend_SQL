@@ -220,7 +220,7 @@ export const addBalanceToColorGameUser = async (req, res) => {
 
 export const userGame = async (req, res) => {
   try {
-    const response = await axios.get('http://localhost:7000/api/user-games');
+    const response = await axios.get('https://cg.server.dummydoma.in/api/user-games');
     console.log("response from API", response.data);
 
     if (!response.data.success) {
@@ -283,7 +283,7 @@ export const getUserBetHistory = async (req, res) => {
       limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, {
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -334,7 +334,7 @@ export const getColorGameProfitLoss = async (req, res) => {
       limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`, {
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -388,7 +388,7 @@ console.log("first",search)
       limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_market/${userName}/${gameId}`, {
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_market/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -443,7 +443,7 @@ export const runnerProfitLoss = async (req, res) => {
       limit
     };
 
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_runner/${userName}/${marketId}`, {
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_runner/${userName}/${marketId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,

@@ -69,7 +69,7 @@ export const createAdmin = async (req, res) => {
       };
 
       try {
-        const response = await axios.post('http://localhost:7000/api/user-create', dataToSend, {
+        const response = await axios.post('https://cg.server.dummydoma.in/api/user-create', dataToSend, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
