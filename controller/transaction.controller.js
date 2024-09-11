@@ -106,7 +106,7 @@ export const transferAmount = async (req, res) => {
         amount: Math.round(parsedWithdrawalAmt),
         transferFromUserAccount: receiverAdmin.userName,
         transferToUserAccount: senderAdmin.userName,
-        userName: senderAdmin.userName,
+        userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
       };
@@ -153,15 +153,15 @@ export const transferAmount = async (req, res) => {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
       }
 
-      const transferRecordDebit = {
-        transactionType: 'debit',
-        amount: Math.round(parsedTransferAmount),
-        transferFromUserAccount: senderAdmin.userName,
-        transferToUserAccount: receiverAdmin.userName,
-        userName: senderAdmin.userName,
-        date: new Date(),
-        remarks,
-      };
+      // const transferRecordDebit = {
+      //   transactionType: 'debit',
+      //   amount: Math.round(parsedTransferAmount),
+      //   transferFromUserAccount: senderAdmin.userName,
+      //   transferToUserAccount: receiverAdmin.userName,
+      //   userName: senderAdmin.userName,
+      //   date: new Date(),
+      //   remarks,
+      // };
 
       const transferRecordCredit = {
         transactionType: 'credit',
@@ -179,11 +179,11 @@ export const transferAmount = async (req, res) => {
       await receiverAdmin.update({ balance: receiverBalance });
       await senderAdmin.update({ balance: senderBalance });
 
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId,
-        ...transferRecordDebit,
-      });
+      // await transaction.create({
+      //   transactionId: uuidv4(),
+      //   adminId,
+      //   ...transferRecordDebit,
+      // });
 
       await transaction.create({
         transactionId: uuidv4(),
@@ -223,7 +223,6 @@ export const transferAmount = async (req, res) => {
   }
 };
 
-
 export const transactionView = async (req, res) => {
   try {
     const userName = req.params.userName;
@@ -243,10 +242,10 @@ export const transactionView = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
-    const adminuserName = admin.userName;
+    const adminUserName = admin.userName;
     let transactionQuery = {
       where: {
-        userName : adminuserName
+        userName: adminUserName
       }
     };
 
@@ -265,9 +264,10 @@ export const transactionView = async (req, res) => {
     }
     
     transactionQuery.order = [['date', 'DESC']];
-    
 
     const transactionData = await transaction.findAll(transactionQuery);
+
+    console.log('Transaction Data:', transactionData); // Debugging statement
 
     const totalItems = transactionData.length;
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -280,17 +280,21 @@ export const transactionView = async (req, res) => {
     let allData = JSON.parse(JSON.stringify(paginatedData));
 
     allData.forEach((data) => {
+      console.log('Processing Data:', data); // Debugging statement
+      
       if (data.transactionType === 'credit') {
         balances += data.amount;
-        data.balance = balances || 0;
+        data.balance = balances;
       } else if (data.transactionType === 'debit') {
         debitBalances += data.amount;
-        data.debitBalance = debitBalances || 0;
+        data.debitBalance = debitBalances;
       } else if (data.transactionType === 'withdrawal') {
-        withdrawalBalances += data.withdraw;
-        data.withdrawalBalance = withdrawalBalances || 0;
+        withdrawalBalances += data.amount;
+        data.withdrawalBalance = withdrawalBalances;
       }
     });
+
+    console.log('Final Data:', allData); // Debugging statement
 
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
@@ -300,6 +304,7 @@ export const transactionView = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const accountStatement = async (req, res) => {
   try {
