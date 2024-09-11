@@ -35,8 +35,8 @@ export const getUserBetMarket = async (req, res) => {
             'Success',
         ));
     } catch (error) {
-    console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-  }
+        console.error("Error from API:", error.response ? error.response.data : error.message);
+        res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
 };
 
