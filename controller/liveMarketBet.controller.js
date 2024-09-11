@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export const getUserBetMarket = async (req, res) => {
     try {
-        const { marketId, userId } = req.params;
+        const { marketId } = req.params;
 
         if (!marketId) {
             return res
@@ -13,11 +13,10 @@ export const getUserBetMarket = async (req, res) => {
         }
 
         const params = {
-            userId,
             marketId
         };
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${userId}/${marketId}`, {
+        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}`, {
             params,
         });
         if (!response.data.success) {
@@ -40,3 +39,25 @@ export const getUserBetMarket = async (req, res) => {
     }
 };
 
+export const getLiveBetGames = async (req, res) => {
+    try {
+        const response = await axios.get(`http://localhost:7000/api/user-external-liveGamesBet`);
+        if (!response.data.success) {
+            return res
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        }
+
+        const { data } = response.data;
+
+        res.status(statusCode.success).send(apiResponseSuccess(
+            data,
+            true,
+            statusCode.success,
+            'Success',
+        ));
+    } catch (error) {
+        console.error("Error from API:", error.response ? error.response.data : error.message);
+        res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
+};
