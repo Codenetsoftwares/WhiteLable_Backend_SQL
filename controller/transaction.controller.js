@@ -363,7 +363,7 @@ export const viewAddBalance = async (req, res) => {
     if (allTransactions.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess([],true, statusCode.success, 'Data Not Found'));
+        .send(apiResponseSuccess({transactions:[]},true, statusCode.success, 'Data Not Found'));
     }
     const paginatedTransactions = await selfTransactions.findAll({
       where: { adminId },
