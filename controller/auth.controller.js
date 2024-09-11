@@ -13,16 +13,19 @@ export const adminLogin = async (req, res) => {
         const existingAdmin = await admins.findOne({ where: { userName } });
 
         if (!existingAdmin) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
 
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
-            return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
 
-        let adminIdToSend;
         const roles = existingAdmin.roles.map((role) => role.role);
+        if (roles.includes('user')) {
+            return res.status(statusCode.unauthorize).send(apiResponseErr(null, false, statusCode.unauthorize, 'User does not exist'));
+        }
+        let adminIdToSend;
 
         if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
             adminIdToSend = existingAdmin.adminId;

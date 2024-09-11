@@ -38,6 +38,7 @@ export const transactionRoute = (app) => {
       string.hyperAgent,
       string.superAgent,
       string.transferBalance,
+      string.masterAgent
     ]),
     transferAmount,
   );
