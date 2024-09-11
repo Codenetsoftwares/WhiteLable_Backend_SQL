@@ -35,7 +35,7 @@ const SelfTransaction = sequelize.define(
     },
   },
   {
-    timestamps: false,
+    timestamps: true,
   },
 );
 

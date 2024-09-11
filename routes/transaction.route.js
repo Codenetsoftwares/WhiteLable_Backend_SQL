@@ -3,6 +3,7 @@ import {
   depositTransaction,
   transactionView,
   transferAmount,
+  viewAddBalance,
   viewBalance,
 } from '../controller/transaction.controller.js';
 import customErrorHandler from '../helper/customErrorHandler.js';
@@ -108,4 +109,13 @@ export const transactionRoute = (app) => {
     ]),
     viewBalance,
   );
+
+  //view the main Balance
+  app.get(
+    '/api/view-main-balance/:adminId',
+    Authorize([
+      string.superAdmin,
+    ]),
+    viewAddBalance
+  )
 };

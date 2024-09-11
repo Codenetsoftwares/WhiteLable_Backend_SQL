@@ -350,3 +350,47 @@ export const viewBalance = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+
+export const viewAddBalance = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    let { page = 1, limit = 10} = req.query; 
+    page = parseInt(page)
+    limit = parseInt(limit)
+    const offset = (page - 1) * limit;
+    const allTransactions = await selfTransactions.findAll({ where: { adminId } }); 
+    if (allTransactions.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess(null,true, statusCode.success, 'Data Not Found'));
+    }
+    const paginatedTransactions = await selfTransactions.findAll({
+      where: { adminId },
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit,  
+    });
+    const totalItems = await selfTransactions.count({ where: { adminId } });
+    const totalPages = Math.ceil(totalItems / limit)
+    const balanceInfo = {
+      transactions: paginatedTransactions.map((transaction) => ({
+        amount: transaction.amount, 
+        date: transaction.date 
+      })),  
+    };
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!',{ 
+        page ,
+        limit,
+        totalItems,  
+        totalPages,
+      }));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
