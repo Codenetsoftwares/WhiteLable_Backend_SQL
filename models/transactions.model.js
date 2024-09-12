@@ -45,6 +45,10 @@ const transaction = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    currentBalance :{
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
   },
   {
     timestamps: true,
