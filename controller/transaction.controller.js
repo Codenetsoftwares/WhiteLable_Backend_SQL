@@ -270,14 +270,9 @@ export const transactionView = async (req, res) => {
     // Fetch all transactions for the admin
     const transactionData = await transaction.findAll(transactionQuery);
     const totalItems = transactionData.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    // Handle pagination
-    const skip = (page - 1) * pageSize;
-    const paginatedData = transactionData.slice(skip, skip + pageSize);
 
     // Convert the data into a plain object for modification
-    let allData = JSON.parse(JSON.stringify(paginatedData));
+    let allData = JSON.parse(JSON.stringify(transactionData));
 
     // Reverse the data for proper balance calculation (oldest to latest)
     const reversedData = [...allData].reverse();
@@ -300,13 +295,20 @@ export const transactionView = async (req, res) => {
     // Reverse the data back to display it in descending order
     allData = reversedData.reverse();
 
+    // Calculate total pages for pagination
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    // Handle pagination
+    const skip = (page - 1) * pageSize;
+    const paginatedData = allData.slice(skip, skip + pageSize);
+
     // Pagination response data
     const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
 
     // Send success response with paginated data and balances
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
+      .send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     // Handle errors and send the error response
     res.status(statusCode.internalServerError).send(
@@ -333,28 +335,49 @@ export const accountStatement = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
 
-    let transactionQuery = {
+    const transactionQuery = {
       where: {
         adminId
       },
-      order: [['date', 'DESC']]
+      order: [['date', 'DESC']] 
     };
 
     const transferAmount = await transaction.findAll(transactionQuery);
     const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    const mergedData = [...transferAmount, ...selfTransaction].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const mergedData = [...transferAmount, ...selfTransaction];
 
-    const totalCount = mergedData.length;
+    mergedData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let runningBalance = 0;
+ // Calculate the running balance for all transactions
+    const dataWithBalance = mergedData.reverse().map((transaction) => {
+      if (transaction.transactionType === 'credit') {
+        runningBalance += transaction.amount; 
+      } else if (transaction.transactionType === 'withdrawal') {
+        runningBalance -= transaction.amount;
+      } else if (transaction.transactionType === 'deposit') {
+        runningBalance += transaction.amount; 
+      }
+
+      return {
+        ...transaction.toJSON(), 
+        balance: runningBalance
+      };
+    }).reverse(); 
+
+    const totalCount = dataWithBalance.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
+    const paginatedData = dataWithBalance.slice((page - 1) * pageSize, page * pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
 
-    return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
+    return res.status(statusCode.success)
+      .send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
