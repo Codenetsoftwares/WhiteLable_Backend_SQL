@@ -47,7 +47,7 @@ const transaction = sequelize.define(
     },
   },
   {
-    timestamps: false,
+    timestamps: true,
   },
 );
 

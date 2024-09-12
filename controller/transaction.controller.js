@@ -77,13 +77,13 @@ export const transferAmount = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin not found'));
     }
 
-    if (!senderAdmin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Sender Admin is inactive'));
-    }
+    // if (!senderAdmin.isActive) {
+    //   return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Sender Admin is inactive'));
+    // }
 
-    if (!receiverAdmin.isActive) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin is inactive'));
-    }
+    // if (!receiverAdmin.isActive) {
+    //   return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin is inactive'));
+    // }
 
     if (transferAmount !== undefined && typeof transferAmount !== 'number') {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Transfer amount must be a number'));
@@ -106,7 +106,7 @@ export const transferAmount = async (req, res) => {
         amount: Math.round(parsedWithdrawalAmt),
         transferFromUserAccount: receiverAdmin.userName,
         transferToUserAccount: senderAdmin.userName,
-        userName: senderAdmin.userName,
+        userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
       };
@@ -153,15 +153,15 @@ export const transferAmount = async (req, res) => {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
       }
 
-      const transferRecordDebit = {
-        transactionType: 'debit',
-        amount: Math.round(parsedTransferAmount),
-        transferFromUserAccount: senderAdmin.userName,
-        transferToUserAccount: receiverAdmin.userName,
-        userName: senderAdmin.userName,
-        date: new Date(),
-        remarks,
-      };
+      // const transferRecordDebit = {
+      //   transactionType: 'debit',
+      //   amount: Math.round(parsedTransferAmount),
+      //   transferFromUserAccount: senderAdmin.userName,
+      //   transferToUserAccount: receiverAdmin.userName,
+      //   userName: senderAdmin.userName,
+      //   date: new Date(),
+      //   remarks,
+      // };
 
       const transferRecordCredit = {
         transactionType: 'credit',
@@ -179,11 +179,11 @@ export const transferAmount = async (req, res) => {
       await receiverAdmin.update({ balance: receiverBalance });
       await senderAdmin.update({ balance: senderBalance });
 
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId,
-        ...transferRecordDebit,
-      });
+      // await transaction.create({
+      //   transactionId: uuidv4(),
+      //   adminId,
+      //   ...transferRecordDebit,
+      // });
 
       await transaction.create({
         transactionId: uuidv4(),
@@ -223,7 +223,6 @@ export const transferAmount = async (req, res) => {
   }
 };
 
-
 export const transactionView = async (req, res) => {
   try {
     const userName = req.params.userName;
@@ -231,22 +230,21 @@ export const transactionView = async (req, res) => {
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
     endDate.setDate(endDate.getDate() + 1);
-    const pageSize = parseInt(req.query.pageSize) || 5;
+    const pageSize = parseInt(req.query.pageSize) || 10;
 
     let balances = 0;
-    let debitBalances = 0;
     let withdrawalBalances = 0;
 
     const admin = await admins.findOne({ where: { userName } });
-  
+
     if (!admin) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
-    const adminuserName = admin.userName;
+    const adminUserName = admin.userName;
     let transactionQuery = {
       where: {
-        userName : adminuserName
+        userName: adminUserName
       }
     };
 
@@ -263,11 +261,12 @@ export const transactionView = async (req, res) => {
         [Sequelize.Op.lte]: endDate
       };
     }
-    
+
     transactionQuery.order = [['date', 'DESC']];
-    
 
     const transactionData = await transaction.findAll(transactionQuery);
+
+    console.log('Transaction Data:', transactionData); // Debugging statement
 
     const totalItems = transactionData.length;
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -280,19 +279,20 @@ export const transactionView = async (req, res) => {
     let allData = JSON.parse(JSON.stringify(paginatedData));
 
     allData.forEach((data) => {
+      console.log('Processing Data:', data); // Debugging statement
+
       if (data.transactionType === 'credit') {
         balances += data.amount;
-        data.balance = balances || 0;
-      } else if (data.transactionType === 'debit') {
-        debitBalances += data.amount;
-        data.debitBalance = debitBalances || 0;
+        data.balance = balances;
       } else if (data.transactionType === 'withdrawal') {
-        withdrawalBalances += data.withdraw;
-        data.withdrawalBalance = withdrawalBalances || 0;
+        withdrawalBalances += data.amount;
+        data.withdrawalBalance = withdrawalBalances;
       }
     });
 
-    const paginationData = apiResponsePagination(page, totalPages, totalItems);
+    console.log('Final Data:', allData); // Debugging statement
+
+    const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
@@ -310,31 +310,34 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
+
     let transactionQuery = {
       where: {
         adminId
       },
-      order: [['date', 'DESC']] 
+      order: [['date', 'DESC']]
     };
+
     const transferAmount = await transaction.findAll(transactionQuery);
-  
     const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    const mergedData = transferAmount.concat(selfTransaction);
+    const mergedData = [...transferAmount, ...selfTransaction].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const totalCount = mergedData.length; 
+    const totalCount = mergedData.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
+
     return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const viewBalance = async (req, res) => {
   try {
@@ -350,3 +353,47 @@ export const viewBalance = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+
+export const viewAddBalance = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    let { page = 1, limit = 10 } = req.query;
+    page = parseInt(page)
+    limit = parseInt(limit)
+    const offset = (page - 1) * limit;
+    const allTransactions = await selfTransactions.findAll({ where: { adminId } });
+    if (allTransactions.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess({ transactions: [] }, true, statusCode.success, 'Data Not Found'));
+    }
+    const paginatedTransactions = await selfTransactions.findAll({
+      where: { adminId },
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit,
+    });
+    const totalItems = await selfTransactions.count({ where: { adminId } });
+    const totalPages = Math.ceil(totalItems / limit)
+    const balanceInfo = {
+      transactions: paginatedTransactions.map((transaction) => ({
+        amount: transaction.amount,
+        date: transaction.date
+      })),
+    };
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!', {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      }));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+

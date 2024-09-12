@@ -36,9 +36,9 @@ export const createAdmin = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.exist, errorMessage);
     }
 
-    if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive);
-    }
+    // if (user.isActive === false || user.locked === false) {
+    //   throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive);
+    // }
 
     const defaultPermission = ['all-access'];
     const rolesWithDefaultPermission = roles.map((role) => ({
@@ -120,9 +120,9 @@ export const createSubAdmin = async (req, res) => {
     const { userName, password, roles } = req.body;
     const user = req.user;
 
-    if (user.isActive === false) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
-    }
+    // if (user.isActive === false) {
+    //   return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
+    // }
 
     const existingAdmin = await admins.findOne({ where: { userName } });
     if (existingAdmin) {

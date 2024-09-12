@@ -69,7 +69,7 @@ export const resetPasswordSchema = [
 export const adminPasswordResetSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('oldPassword').notEmpty().withMessage('oldPassword is required'),
+  body('adminPassword').notEmpty().withMessage('Admin Password is required'),
 ];
 
 export const depositAmountSchema = [
