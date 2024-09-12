@@ -240,7 +240,7 @@ export const transactionView = async (req, res) => {
     const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const adminUserName = admin.userName;
@@ -273,8 +273,10 @@ export const transactionView = async (req, res) => {
 
     // Fetch all transactions for the admin
     const transactionData = await transaction.findAll(transactionQuery);
+    if (transactionData.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
     const totalItems = transactionData.length;
-
     // Convert the data into a plain object for modification
     let allData = JSON.parse(JSON.stringify(transactionData));
 
@@ -336,7 +338,7 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
 
     // Query configuration
@@ -355,6 +357,10 @@ export const accountStatement = async (req, res) => {
     const mergedData = [...transferAmount, ...selfTransaction]
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+      if (mergedData.length === 0) {
+        return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+      }
+  
     const totalCount = mergedData.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
