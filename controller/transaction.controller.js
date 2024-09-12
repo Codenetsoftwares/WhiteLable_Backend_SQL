@@ -305,7 +305,6 @@ export const transactionView = async (req, res) => {
   }
 };
 
-
 export const accountStatement = async (req, res) => {
   try {
     const adminId = req.params.adminId;
@@ -317,17 +316,18 @@ export const accountStatement = async (req, res) => {
     if (!admin) {
       return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
     }
+    
     let transactionQuery = {
       where: {
         adminId
       },
-      order: [['date', 'DESC']] 
+      order: [['date', 'DESC']]
     };
+
     const transferAmount = await transaction.findAll(transactionQuery);
-  
     const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    const mergedData = transferAmount.concat(selfTransaction);
+    const mergedData = [...transferAmount, ...selfTransaction].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const totalCount = mergedData.length; 
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -335,11 +335,13 @@ export const accountStatement = async (req, res) => {
     const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
+
     return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const viewBalance = async (req, res) => {
   try {
