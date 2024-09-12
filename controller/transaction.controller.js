@@ -229,12 +229,10 @@ export const transactionView = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
-    endDate.setDate(endDate.getDate() + 1);
+    endDate.setDate(endDate.getDate() + 1); // Include the full day in the range
     const pageSize = parseInt(req.query.pageSize) || 10;
 
-    let balances = 0;
-    let withdrawalBalances = 0;
-
+    // Find the admin by userName
     const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
@@ -242,64 +240,86 @@ export const transactionView = async (req, res) => {
     }
 
     const adminUserName = admin.userName;
+
+    // Query configuration to check for both sending and receiving transactions
     let transactionQuery = {
       where: {
-        userName: adminUserName
-      }
+        [Sequelize.Op.or]: [
+          { transferFromUserAccount: adminUserName }, // Transactions where the user sent money
+          { transferToUserAccount: adminUserName },   // Transactions where the user received money
+        ],
+      },
+      order: [['date', 'DESC']], // Sort by date in descending order to display latest first
     };
 
+    // Apply date filters if provided
     if (startDate && endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.between]: [startDate, endDate]
+        [Sequelize.Op.between]: [startDate, endDate],
       };
     } else if (startDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.gte]: startDate
+        [Sequelize.Op.gte]: startDate,
       };
     } else if (endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.lte]: endDate
+        [Sequelize.Op.lte]: endDate,
       };
     }
 
-    transactionQuery.order = [['date', 'DESC']];
-
+    // Fetch all transactions for the admin
     const transactionData = await transaction.findAll(transactionQuery);
-
-    console.log('Transaction Data:', transactionData); // Debugging statement
-
     const totalItems = transactionData.length;
     const totalPages = Math.ceil(totalItems / pageSize);
 
+    // Handle pagination
     const skip = (page - 1) * pageSize;
-    const endIndex = page * pageSize;
+    const paginatedData = transactionData.slice(skip, skip + pageSize);
 
-    const paginatedData = transactionData.slice(skip, endIndex);
-
+    // Convert the data into a plain object for modification
     let allData = JSON.parse(JSON.stringify(paginatedData));
 
-    allData.forEach((data) => {
-      console.log('Processing Data:', data); // Debugging statement
+    // Reverse the data for proper balance calculation (oldest to latest)
+    const reversedData = [...allData].reverse();
 
-      if (data.transactionType === 'credit') {
-        balances += data.amount;
-        data.balance = balances;
-      } else if (data.transactionType === 'withdrawal') {
-        withdrawalBalances += data.amount;
-        data.withdrawalBalance = withdrawalBalances;
+    // Initialize running balance
+    let runningBalance = 0;
+
+    // Calculate the running balance for each transaction starting from the oldest
+    reversedData.forEach((data) => {
+      if (data.transferFromUserAccount === adminUserName) {
+        // If the user sent money, it's a withdrawal
+        runningBalance -= data.amount;
+      } else if (data.transferToUserAccount === adminUserName) {
+        // If the user received money, it's a credit
+        runningBalance += data.amount;
       }
+      data.balance = runningBalance; // Attach the balance after each transaction
     });
 
-    console.log('Final Data:', allData); // Debugging statement
+    // Reverse the data back to display it in descending order
+    allData = reversedData.reverse();
 
+    // Pagination response data
     const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
-    return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
+
+    // Send success response with paginated data and balances
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    // Handle errors and send the error response
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        null,
+        false,
+        statusCode.internalServerError,
+        error.message
+      )
+    );
   }
 };
+
 
 export const accountStatement = async (req, res) => {
   try {
