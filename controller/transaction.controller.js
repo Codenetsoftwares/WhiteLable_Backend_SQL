@@ -230,14 +230,13 @@ export const transactionView = async (req, res) => {
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
     endDate.setDate(endDate.getDate() + 1);
-    const pageSize = parseInt(req.query.pageSize) || 5;
+    const pageSize = parseInt(req.query.pageSize) || 10;
 
     let balances = 0;
-    let debitBalances = 0;
     let withdrawalBalances = 0;
 
     const admin = await admins.findOne({ where: { userName } });
-  
+
     if (!admin) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
@@ -262,7 +261,7 @@ export const transactionView = async (req, res) => {
         [Sequelize.Op.lte]: endDate
       };
     }
-    
+
     transactionQuery.order = [['date', 'DESC']];
 
     const transactionData = await transaction.findAll(transactionQuery);
@@ -281,13 +280,10 @@ export const transactionView = async (req, res) => {
 
     allData.forEach((data) => {
       console.log('Processing Data:', data); // Debugging statement
-      
+
       if (data.transactionType === 'credit') {
         balances += data.amount;
         data.balance = balances;
-      } else if (data.transactionType === 'debit') {
-        debitBalances += data.amount;
-        data.debitBalance = debitBalances;
       } else if (data.transactionType === 'withdrawal') {
         withdrawalBalances += data.amount;
         data.withdrawalBalance = withdrawalBalances;
@@ -296,7 +292,7 @@ export const transactionView = async (req, res) => {
 
     console.log('Final Data:', allData); // Debugging statement
 
-    const paginationData = apiResponsePagination(page, totalPages, totalItems);
+    const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
     return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
     res
@@ -314,9 +310,9 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
-    
+
     let transactionQuery = {
       where: {
         adminId
@@ -329,7 +325,7 @@ export const accountStatement = async (req, res) => {
 
     const mergedData = [...transferAmount, ...selfTransaction].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const totalCount = mergedData.length; 
+    const totalCount = mergedData.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
@@ -362,36 +358,36 @@ export const viewBalance = async (req, res) => {
 export const viewAddBalance = async (req, res) => {
   try {
     const { adminId } = req.params;
-    let { page = 1, limit = 10} = req.query; 
+    let { page = 1, limit = 10 } = req.query;
     page = parseInt(page)
     limit = parseInt(limit)
     const offset = (page - 1) * limit;
-    const allTransactions = await selfTransactions.findAll({ where: { adminId } }); 
+    const allTransactions = await selfTransactions.findAll({ where: { adminId } });
     if (allTransactions.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess({transactions:[]},true, statusCode.success, 'Data Not Found'));
+        .send(apiResponseSuccess({ transactions: [] }, true, statusCode.success, 'Data Not Found'));
     }
     const paginatedTransactions = await selfTransactions.findAll({
       where: { adminId },
       order: [['createdAt', 'DESC']],
       offset,
-      limit,  
+      limit,
     });
     const totalItems = await selfTransactions.count({ where: { adminId } });
     const totalPages = Math.ceil(totalItems / limit)
     const balanceInfo = {
       transactions: paginatedTransactions.map((transaction) => ({
-        amount: transaction.amount, 
-        date: transaction.date 
-      })),  
+        amount: transaction.amount,
+        date: transaction.date
+      })),
     };
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!',{ 
-        page ,
+      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!', {
+        page,
         limit,
-        totalItems,  
+        totalItems,
         totalPages,
       }));
   } catch (error) {
