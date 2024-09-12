@@ -341,7 +341,7 @@ export const accountStatement = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
 
-    // Query configuration
+    // Query configuration for fetching transactions from the transaction table
     const transactionQuery = {
       where: {
         adminId
@@ -349,23 +349,19 @@ export const accountStatement = async (req, res) => {
       order: [['date', 'DESC']]
     };
 
-    // Fetch transactions from both tables
+    // Fetch transactions from the transaction table
     const transferAmount = await transaction.findAll(transactionQuery);
-    const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    // Merge and sort the transactions
-    const mergedData = [...transferAmount, ...selfTransaction]
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Check if there are no transactions
+    if (transferAmount.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
 
-      if (mergedData.length === 0) {
-        return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
-      }
-  
-    const totalCount = mergedData.length;
+    const totalCount = transferAmount.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     // Handle pagination
-    const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
+    const paginatedData = transferAmount.slice((page - 1) * pageSize, page * pageSize);
 
     // Calculate the running balance dynamically
     let runningBalance = 0;
@@ -396,6 +392,7 @@ export const accountStatement = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 
 export const viewBalance = async (req, res) => {
