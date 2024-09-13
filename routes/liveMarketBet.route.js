@@ -4,7 +4,7 @@ import { Authorize } from "../middleware/auth.js";
 
 export const liveMarketBetRoute = (app) => {
   app.get(
-    '/api/get-userBetMarket/:marketId',
+    '/api/get-userBetMarket/:marketId/:userName',
     Authorize([
       string.superAdmin,
       string.whiteLabel,

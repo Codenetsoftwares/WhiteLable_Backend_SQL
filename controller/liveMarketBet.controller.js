@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export const getUserBetMarket = async (req, res) => {
     try {
-        const { marketId } = req.params;
+        const { marketId, userName } = req.params;
 
         if (!marketId) {
             return res
@@ -16,7 +16,7 @@ export const getUserBetMarket = async (req, res) => {
             marketId
         };
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}`, {
+        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}/${userName}`, {
             params,
         });
         if (!response.data.success) {
