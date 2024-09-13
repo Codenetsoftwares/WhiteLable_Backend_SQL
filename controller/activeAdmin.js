@@ -1,6 +1,7 @@
 import { Op, Sequelize } from "sequelize";
 import { string } from "../constructor/string.js";
 import admins from "../models/admin.model.js";
+import CustomError from "../helper/extendError.js";
 
 export const activateAdmin = async (adminId,isActive, locked ) => {
   try {
@@ -108,7 +109,7 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
       return;
     }
     if (!admin) {
-      throw { code: 404, message: "Admin not found" };
+      throw new CustomError("Admin not found" , null, statusCode.badRequest);
     }
     if (isActive === true) {
       admin.isActive = true;
@@ -294,32 +295,32 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         if (
           data.isActive === false &&
           data.locked === false &&
-          data.subsuperActive === true &&
+          data.subSuperActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subsuperActive = false;
+          data.subSuperActive = false;
           data.checkActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === false &&
-          data.subsuperActive === true &&
+          data.subSuperActive === true &&
           data.checkActive === false
         ) {
           data.locked = true;
-          data.subsuperActive = false;
+          data.subSuperActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === true &&
-          data.subsuperActive === true &&
+          data.subSuperActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subsuperActive = false;
+          data.subSuperActive = false;
           data.checkActive = false;
         } //checked
         activateAdmin(data.adminId, data.isActive, data.locked);
@@ -329,32 +330,32 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         if (
           data.isActive === false &&
           data.locked === false &&
-          data.subhyperActive === true &&
+          data.subHyperActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subhyperActive = false;
+          data.subHyperActive = false;
           data.checkActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === false &&
-          data.subhyperActive === true &&
+          data.subHyperActive === true &&
           data.checkActive === false
         ) {
           data.locked = true;
-          data.subhyperActive = false;
+          data.subHyperActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === true &&
-          data.subhyperActive === true &&
+          data.subHyperActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subhyperActive = false;
+          data.subHyperActive = false;
           data.checkActive = false;
         } //checked
 
@@ -364,32 +365,32 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         if (
           data.isActive === false &&
           data.locked === false &&
-          data.submasterActive === true &&
+          data.subMasterActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.submasterActive = false;
+          data.subMasterActive = false;
           data.checkActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === false &&
-          data.submasterActive === true &&
+          data.subMasterActive === true &&
           data.checkActive === false
         ) {
           data.locked = true;
-          data.submasterActive = false;
+          data.subMasterActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === true &&
-          data.submasterActive === true &&
+          data.subMasterActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.submasterActive = false;
+          data.subMasterActive = false;
           data.checkActive = false;
         } //checked
 
@@ -399,32 +400,32 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         if (
           data.isActive === false &&
           data.locked === false &&
-          data.subwhiteActive === true &&
+          data.subWhiteActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subwhiteActive = false;
+          data.subWhiteActive = false;
           data.checkActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === false &&
-          data.subwhiteActive === true &&
+          data.subWhiteActive === true &&
           data.checkActive === false
         ) {
           data.locked = true;
-          data.subwhiteActive = false;
+          data.subWhiteActive = false;
         } //checked
         else if (
           data.isActive === false &&
           data.locked === true &&
-          data.subwhiteActive === true &&
+          data.subWhiteActive === true &&
           data.checkActive === true
         ) {
           data.isActive = true;
           data.locked = true;
-          data.subwhiteActive = false;
+          data.subWhiteActive = false;
           data.checkActive = false;
         } //checked
         activateAdmin(data.adminId, data.isActive, data.locked);
@@ -707,18 +708,18 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subsuperActive === false &&
+            data.subSuperActive === false &&
             data.checkActive === false
           ) {
             data.isActive = false;
             data.locked = false;
-            data.subsuperActive = true;
+            data.subSuperActive = true;
             data.checkActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subsuperActive === true
+            data.subSuperActive === true
           ) {
             data.isActive = false;
             data.locked = false;
@@ -730,12 +731,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
             data.checkActive === false
           ) {
             data.locked = false;
-            data.subsuperActive = true;
+            data.subSuperActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subsuperActive === true &&
+            data.subSuperActive === true &&
             data.checkActive === true
           ) {
             data.locked = false;
@@ -743,12 +744,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subsuperActive === true &&
+            data.subSuperActive === true &&
             data.checkActive === true
           ) {
             data.isActive = true;
             data.locked = true;
-            data.subsuperActive = false;
+            data.subSuperActive = false;
             data.checkActive === false;
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
@@ -757,18 +758,18 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subhyperActive === false &&
+            data.subHyperActive === false &&
             data.checkActive === false
           ) {
             data.isActive = false;
             data.locked = false;
-            data.subhyperActive = true;
+            data.subHyperActive = true;
             data.checkActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subhyperActive === true
+            data.subHyperActive === true
           ) {
             data.isActive = false;
             data.locked = false;
@@ -776,16 +777,16 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           } else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subhyperActive === false &&
+            data.subHyperActive === false &&
             data.checkActive === false
           ) {
             data.locked = false;
-            data.subhyperActive = true;
+            data.subHyperActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subhyperActive === true &&
+            data.subHyperActive === true &&
             data.checkActive === true
           ) {
             data.locked = false;
@@ -793,12 +794,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subhyperActive === true &&
+            data.subHyperActive === true &&
             data.checkActive === true
           ) {
             data.isActive = true;
             data.locked = true;
-            data.subhyperActive = false;
+            data.subHyperActive = false;
             data.checkActive === false;
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
@@ -807,18 +808,18 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.submasterActive === false &&
+            data.subMasterActive === false &&
             data.checkActive === false
           ) {
             data.isActive = false;
             data.locked = false;
-            data.submasterActive = true;
+            data.subMasterActive = true;
             data.checkActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.submasterActive === true
+            data.subMasterActive === true
           ) {
             data.isActive = false;
             data.locked = false;
@@ -826,16 +827,16 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           } else if (
             data.isActive === false &&
             data.locked === true &&
-            data.submasterActive === false &&
+            data.subMasterActive === false &&
             data.checkActive === false
           ) {
             data.locked = false;
-            data.submasterActive = true;
+            data.subMasterActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.submasterActive === true &&
+            data.subMasterActive === true &&
             data.checkActive === true
           ) {
             data.locked = false;
@@ -843,12 +844,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           else if (
             data.isActive === false &&
             data.locked === false &&
-            data.submasterActive === true &&
+            data.subMasterActive === true &&
             data.checkActive === true
           ) {
             data.isActive = true;
             data.locked = true;
-            data.submasterActive = false;
+            data.subMasterActive = false;
             data.checkActive === false;
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
@@ -857,18 +858,18 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subwhiteActive === false &&
+            data.subWhiteActive === false &&
             data.checkActive === false
           ) {
             data.isActive = false;
             data.locked = false;
-            data.subwhiteActive = true;
+            data.subWhiteActive = true;
             data.checkActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subwhiteActive === true
+            data.subWhiteActive === true
           ) {
             ///not use
             data.isActive = false;
@@ -877,16 +878,16 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           } else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subwhiteActive === false &&
+            data.subWhiteActive === false &&
             data.checkActive === false
           ) {
             data.locked = false;
-            data.subwhiteActive = true;
+            data.subWhiteActive = true;
           } //checked
           else if (
             data.isActive === false &&
             data.locked === true &&
-            data.subwhiteActive === true &&
+            data.subWhiteActive === true &&
             data.checkActive === true
           ) {
             ///not use
@@ -895,12 +896,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subwhiteActive === true &&
+            data.subWhiteActive === true &&
             data.checkActive === true
           ) {
             data.isActive = true;
             data.locked = true;
-            data.subwhiteActive = false;
+            data.subWhiteActive = false;
             data.checkActive === false;
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
@@ -1068,24 +1069,24 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subsuperActive === false
+            data.subSuperActive === false
           ) {
             data.isActive = false;
             data.locked = true;
-            data.subsuperActive = true;
+            data.subSuperActive = true;
             data.checkActive = true;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subsuperActive === true &&
+            data.subSuperActive === true &&
             data.checkActive === false
           ) {
             data.locked = true;
-            data.subsuperActive = false;
+            data.subSuperActive = false;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subsuperActive === true &&
+            data.subSuperActive === true &&
             data.checkActive === true
           ) {
             data.locked = true;
@@ -1096,24 +1097,24 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subhyperActive === false
+            data.subHyperActive === false
           ) {
             data.isActive = false;
             data.locked = true;
-            data.subhyperActive = true;
+            data.subHyperActive = true;
             data.checkActive = true;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subhyperActive === true &&
+            data.subHyperActive === true &&
             data.checkActive === false
           ) {
             data.locked = true;
-            data.subhyperActive = false;
+            data.subHyperActive = false;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subhyperActive === true &&
+            data.subHyperActive === true &&
             data.checkActive === true
           ) {
             data.locked = true;
@@ -1125,24 +1126,24 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.submasterActive === false
+            data.subMasterActive === false
           ) {
             data.isActive = false;
             data.locked = true;
-            data.submasterActive = true;
+            data.subMasterActive = true;
             data.checkActive = true;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.submasterActive === true &&
+            data.subMasterActive === true &&
             data.checkActive === false
           ) {
             data.locked = true;
-            data.submasterActive = false;
+            data.subMasterActive = false;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.submasterActive === true &&
+            data.subMasterActive === true &&
             data.checkActive === true
           ) {
             data.locked = true;
@@ -1153,24 +1154,24 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           if (
             data.isActive === true &&
             data.locked === true &&
-            data.subwhiteActive === false
+            data.subWhiteActive === false
           ) {
             data.isActive = false;
             data.locked = true;
-            data.subwhiteActive = true;
+            data.subWhiteActive = true;
             data.checkActive = true;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subwhiteActive === true &&
+            data.subWhiteActive === true &&
             data.checkActive === false
           ) {
             data.locked = true;
-            data.subwhiteActive = false;
+            data.subWhiteActive = false;
           } else if (
             data.isActive === false &&
             data.locked === false &&
-            data.subwhiteActive === true &&
+            data.subWhiteActive === true &&
             data.checkActive === true
           ) {
             data.locked = true;
@@ -1192,10 +1193,9 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         return { message: "Admin Suspended Successfully" };
       }
     }
-  } catch (err) {
-    throw {
-      code: err.code || 500,
-      message: err.message || "Internal Server Error",
-    };
+  } catch (error) {
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message),
+    );
   }
 };
