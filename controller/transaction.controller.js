@@ -9,6 +9,7 @@ import { Sequelize } from 'sequelize';
 import { messages } from '../constructor/string.js';
 import axios from 'axios';
 import { calculateLoadBalance } from './admin.controller.js';
+import { Op } from 'sequelize'
 
 export const depositTransaction = async (req, res) => {
   try {
@@ -344,15 +345,44 @@ export const accountStatement = async (req, res) => {
     const adminId = req.params.adminId;
     const pageSize = parseInt(req.query.pageSize) || 5;
     const page = parseInt(req.query.page) || 1;
+    const dataType = req.query.dataType; 
+
+    console.log('Received dataType:', dataType);
+
+    let startDate, endDate;
+
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    } else if (dataType === 'olddata') {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+      endDate = new Date().toISOString(); 
+    } else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).toISOString();
+        endDate = new Date(req.query.endDate).toISOString();
+      } else {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().toISOString(); 
+      }
+    } else {
+      return res.status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+    }
 
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const adminUserName = admin.userName;
-    const adminMainBalance = admin.balance;  
+    const adminMainBalance = admin.balance;
 
     const transactionQuery = {
       where: {
@@ -360,27 +390,28 @@ export const accountStatement = async (req, res) => {
           { adminId },
           { transferToUserAccount: adminUserName },
         ],
+        date: {
+          [Op.between]: [startDate, endDate],
+        },
       },
-      order: [['date', 'DESC']]
+      order: [['date', 'DESC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     };
 
-    const transferAmount = await transaction.findAll(transactionQuery);
+    const transferAmount = await transaction.findAndCountAll(transactionQuery);
 
-    if (transferAmount.length === 0) {
+    if (transferAmount.rows.length === 0) {
       return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
     }
 
-    const totalCount = transferAmount.length;
+    const totalCount = transferAmount.count;
     const totalPages = Math.ceil(totalCount / pageSize);
-
-    const paginatedData = transferAmount.slice((page - 1) * pageSize, page * pageSize);
 
     let runningBalance = adminMainBalance;  
 
-    const dataWithBalance = paginatedData.map((transaction) => {
-      if (transaction.transactionType === 'credit') {
-        runningBalance = transaction.currentBalance;
-      } else if (transaction.transactionType === 'withdrawal') {
+    const dataWithBalance = transferAmount.rows.map((transaction) => {
+      if (transaction.transactionType === 'credit' || transaction.transactionType === 'withdrawal') {
         runningBalance = transaction.currentBalance;
       }
 
@@ -391,8 +422,8 @@ export const accountStatement = async (req, res) => {
 
       return {
         ...transaction.toJSON(),
-        balance: runningBalance, 
-        adminMainBalance: adminBalanceForTransaction  
+        balance: runningBalance,
+        adminMainBalance: adminBalanceForTransaction
       };
     });
 
@@ -400,11 +431,13 @@ export const accountStatement = async (req, res) => {
 
     return res.status(statusCode.success)
       .send(apiResponseSuccess(dataWithBalance, true, statusCode.success, messages.success, paginationData));
+
   } catch (error) {
     res.status(statusCode.internalServerError)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 
 export const viewBalance = async (req, res) => {
