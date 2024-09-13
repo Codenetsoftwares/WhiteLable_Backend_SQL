@@ -101,6 +101,10 @@ export const transferAmount = async (req, res) => {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Withdrawal'));
       }
 
+
+      const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
+      const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
+
       const withdrawalRecord = {
         transactionType: 'withdrawal',
         amount: Math.round(parsedWithdrawalAmt),
@@ -109,10 +113,8 @@ export const transferAmount = async (req, res) => {
         userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
+        currentBalance: deductionBalance
       };
-
-      const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
-      const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
 
       await receiverAdmin.update({ balance: deductionBalance });
       await senderAdmin.update({ balance: creditAmount });
@@ -163,6 +165,10 @@ export const transferAmount = async (req, res) => {
       //   remarks,
       // };
 
+
+      const senderBalance = senderAdmin.balance - parsedTransferAmount;
+      const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
+
       const transferRecordCredit = {
         transactionType: 'credit',
         amount: Math.round(parsedTransferAmount),
@@ -171,10 +177,8 @@ export const transferAmount = async (req, res) => {
         userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
-      };
-
-      const senderBalance = senderAdmin.balance - parsedTransferAmount;
-      const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
+        currentBalance: receiverBalance
+      }
 
       await receiverAdmin.update({ balance: receiverBalance });
       await senderAdmin.update({ balance: senderBalance });
@@ -232,72 +236,79 @@ export const transactionView = async (req, res) => {
     endDate.setDate(endDate.getDate() + 1);
     const pageSize = parseInt(req.query.pageSize) || 10;
 
-    let balances = 0;
-    let withdrawalBalances = 0;
-
     const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const adminUserName = admin.userName;
+
     let transactionQuery = {
       where: {
-        userName: adminUserName
-      }
+        [Sequelize.Op.or]: [
+          { transferFromUserAccount: adminUserName },
+          { transferToUserAccount: adminUserName },
+        ],
+      },
+      order: [['date', 'DESC']],
     };
 
     if (startDate && endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.between]: [startDate, endDate]
+        [Sequelize.Op.between]: [startDate, endDate],
       };
     } else if (startDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.gte]: startDate
+        [Sequelize.Op.gte]: startDate,
       };
     } else if (endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.lte]: endDate
+        [Sequelize.Op.lte]: endDate,
       };
     }
 
-    transactionQuery.order = [['date', 'DESC']];
-
     const transactionData = await transaction.findAll(transactionQuery);
-
-    console.log('Transaction Data:', transactionData); // Debugging statement
-
+    if (transactionData.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
     const totalItems = transactionData.length;
+    let allData = JSON.parse(JSON.stringify(transactionData));
+
+    const reversedData = [...allData].reverse();
+
+    let runningBalance = 0;
+
+    reversedData.forEach((data) => {
+      if (data.transferFromUserAccount === adminUserName) {
+        runningBalance = data.currentBalance;
+      } else if (data.transferToUserAccount === adminUserName) {
+        runningBalance = data.currentBalance;
+      }
+      data.balance = runningBalance;
+    });
+
+    allData = reversedData.reverse();
+
     const totalPages = Math.ceil(totalItems / pageSize);
 
     const skip = (page - 1) * pageSize;
-    const endIndex = page * pageSize;
-
-    const paginatedData = transactionData.slice(skip, endIndex);
-
-    let allData = JSON.parse(JSON.stringify(paginatedData));
-
-    allData.forEach((data) => {
-      console.log('Processing Data:', data); // Debugging statement
-
-      if (data.transactionType === 'credit') {
-        balances += data.amount;
-        data.balance = balances;
-      } else if (data.transactionType === 'withdrawal') {
-        withdrawalBalances += data.amount;
-        data.withdrawalBalance = withdrawalBalances;
-      }
-    });
-
-    console.log('Final Data:', allData); // Debugging statement
+    const paginatedData = allData.slice(skip, skip + pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
-    return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
+
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        null,
+        false,
+        statusCode.internalServerError,
+        error.message
+      )
+    );
   }
 };
 
@@ -310,31 +321,61 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
 
-    let transactionQuery = {
+    const adminUserName = admin.userName;
+    const adminMainBalance = admin.balance;  
+
+    const transactionQuery = {
       where: {
-        adminId
+        [Sequelize.Op.or]: [
+          { adminId },
+          { transferToUserAccount: adminUserName },
+        ],
       },
       order: [['date', 'DESC']]
     };
 
     const transferAmount = await transaction.findAll(transactionQuery);
-    const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    const mergedData = [...transferAmount, ...selfTransaction].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (transferAmount.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
 
-    const totalCount = mergedData.length;
+    const totalCount = transferAmount.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
+    const paginatedData = transferAmount.slice((page - 1) * pageSize, page * pageSize);
+
+    let runningBalance = adminMainBalance;  
+
+    const dataWithBalance = paginatedData.map((transaction) => {
+      if (transaction.transactionType === 'credit') {
+        runningBalance = transaction.currentBalance;
+      } else if (transaction.transactionType === 'withdrawal') {
+        runningBalance = transaction.currentBalance;
+      }
+
+      let adminBalanceForTransaction = null;
+      if (transaction.transferFromUserAccount === adminUserName) {
+        adminBalanceForTransaction = adminMainBalance;
+      }
+
+      return {
+        ...transaction.toJSON(),
+        balance: runningBalance, 
+        adminMainBalance: adminBalanceForTransaction  
+      };
+    });
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
 
-    return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
+    return res.status(statusCode.success)
+      .send(apiResponseSuccess(dataWithBalance, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 
