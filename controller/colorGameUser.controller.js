@@ -323,6 +323,8 @@ export const getColorGameProfitLoss = async (req, res) => {
     const limit = parseInt(pageSize);
     const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
     const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
+    const dataType = req.query.dataType; 
+
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
     const params = {
@@ -331,7 +333,8 @@ export const getColorGameProfitLoss = async (req, res) => {
       startDate,
       endDate,
       page,
-      limit
+      limit,
+      dataType
     };
 
     const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
