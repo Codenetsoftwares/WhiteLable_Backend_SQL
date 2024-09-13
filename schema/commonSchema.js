@@ -69,7 +69,7 @@ export const resetPasswordSchema = [
 export const adminPasswordResetSchema = [
   body('userName').trim().notEmpty().withMessage('User Name is required'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('oldPassword').notEmpty().withMessage('oldPassword is required'),
+  body('adminPassword').notEmpty().withMessage('Admin Password is required'),
 ];
 
 export const depositAmountSchema = [
@@ -222,4 +222,34 @@ export const sendBalanceSchema = [
     .withMessage('Balance must be greater than 0'),
   body('adminId').notEmpty().withMessage('Admin ID is required'),
   body('userId').notEmpty().withMessage('User ID is required'),
+];
+export const calculateProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  query("startDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const marketProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+];
+
+export const runnerProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("marketId").notEmpty().withMessage("Market ID is required"),
+];
+
+export const betHistorySchema = [
+  param("userName")
+    .notEmpty()
+    .withMessage("Username is required."),
+  param("gameId")
+    .notEmpty()
+    .withMessage("Game Id is required.")
 ];

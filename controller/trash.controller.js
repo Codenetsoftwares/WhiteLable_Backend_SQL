@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import trash from '../models/trash.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import axios from 'axios';
+import { string } from '../constructor/string.js';
 
 export const moveAdminToTrash = async (req, res) => {
   try {
@@ -12,13 +13,13 @@ export const moveAdminToTrash = async (req, res) => {
     const adminId = await admins.findOne({ where: { adminId: requestId } });
      
     if (!adminId) {
-      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, `Admin User not found with id: ${requestId}`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Admin User not found with id: ${requestId}`));
     }
 
     if (adminId.balance !== 0) {
       return res
-        .status(statusCode.success)
-        .json(apiResponseErr(null, false, statusCode.success, `Balance should be 0 to move the Admin User to Trash`));
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, `Balance should be 0 to move the Admin User to Trash`));
     }
 
     if (!adminId.isActive) {
@@ -53,27 +54,28 @@ export const moveAdminToTrash = async (req, res) => {
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup Admin User`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Failed to backup Admin User`));
     }
 
     const deleteResult = await adminId.destroy();
-
+    
     if (!deleteResult) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete Admin User with id: ${requestId}`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, statusCode.badRequest, false, `Failed to delete Admin User with id: ${requestId}`));
     }
-
+    
     // sync with colorgame user
     let message = '';
-    const dataToSend = {
-      userId : requestId,
-    };
-   
-    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/internal/trash-user', dataToSend);
+    if (adminId.roles[0].role === string.user) {
+      const dataToSend = {
+        userId: requestId,
+      };
 
-    if(!response.success) {
-      message = 'Failed to move user data to trash';
-    } else {
-      message = "successfully";
+      const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrernal/trash-user', dataToSend);
+      if (!response.success) {
+        message = 'Failed to move user data to trash';
+      } else {
+        message = "successfully";
+      }
     }
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin User moved to Trash' + " " + message));
@@ -87,7 +89,8 @@ export const moveAdminToTrash = async (req, res) => {
 
 export const viewTrash = async (req, res) => {
   try {
-    const viewTrash = await trash.findAll();
+    const adminId = req.params.createdById;
+    const viewTrash = await trash.findAll({where:{createdById:adminId}});
     if (!viewTrash || viewTrash.length === 0) {
       return res.status(statusCode.success).json(apiResponseSuccess([], true, statusCode.success, 'No entries found in Trash'));
     }
@@ -152,6 +155,7 @@ export const restoreAdminUser = async (req, res) => {
     
     // sync with colorgame user
     let message = '';
+    if (existingAdminUser.roles[0].role === string.user) {
     const dataToSend = {
       userId : adminId,
     };
@@ -163,8 +167,8 @@ export const restoreAdminUser = async (req, res) => {
     } else {
       message = "successfully";
     }
-
-    return res.status(statusCode.create).json(apiResponseSuccess(null, statusCode.create, true, 'Admin restored from trash' + " " + message));
+  }
+    return res.status(statusCode.success).json(apiResponseSuccess(null, statusCode.success, true, 'Admin restored from trash' + " " + message));
   } catch (error) {
     res
       .status(statusCode.internalServerError)

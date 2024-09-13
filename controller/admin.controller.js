@@ -6,7 +6,11 @@ import { messages, string } from '../constructor/string.js';
 import { Op, fn, col, Sequelize } from 'sequelize';
 import sequelize from '../db.js';
 import { statusCode } from '../helper/statusCodes.js';
-
+import trash from '../models/trash.model.js';
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
 /**
  *Op refers to the set of operators provided by Sequelize's query language ,
@@ -17,6 +21,7 @@ import { statusCode } from '../helper/statusCodes.js';
 const globalUsernames = [];
 // done
 export const createAdmin = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const user = req.user;
     const { userName, password, roles } = req.body;
@@ -24,15 +29,16 @@ export const createAdmin = async (req, res) => {
     const isUserRole = roles.includes('user');
 
     const existingAdmin = await admins.findOne({ where: { userName } });
+    const existingTrashUser = await trash.findOne({ where: { userName } });
 
-    if (existingAdmin) {
+    if (existingAdmin || existingTrashUser) {
       const errorMessage = isUserRole ? messages.userExists : messages.adminExists;
       throw apiResponseErr(null, false, statusCode.exist, errorMessage);
     }
 
-    if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive);
-    }
+    // if (user.isActive === false || user.locked === false) {
+    //   throw apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive);
+    // }
 
     const defaultPermission = ['all-access'];
     const rolesWithDefaultPermission = roles.map((role) => ({
@@ -40,14 +46,45 @@ export const createAdmin = async (req, res) => {
       permission: defaultPermission,
     }));
 
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newAdmin = await admins.create({
       adminId: uuid4(),
       userName,
-      password,
+      password: hashedPassword,
       roles: rolesWithDefaultPermission,
       createdById: user.adminId,
       createdByUser: user.userName,
-    });
+    }, { transaction });
+
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
+    let message = '';
+    if (isUserRole) {
+      const dataToSend = {
+        userId: newAdmin.adminId,
+        userName,
+        password,
+      };
+
+      try {
+        const response = await axios.post('https://cg.server.dummydoma.in/api/user-create', dataToSend, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.data.success) {
+          throw new Error('Failed to create user');
+        } else {
+          message = 'successfully';
+        }
+      } catch (error) {
+        console.error("Error from API:", error.response ? error.response.data : error.message);
+        throw new Error('Failed to create user in external system');
+      }
+    }
 
     const isSubRole = [
       string.subWhiteLabel,
@@ -58,21 +95,24 @@ export const createAdmin = async (req, res) => {
     ].includes(user.roles[0].role);
 
     if (isSubRole) {
-      await newAdmin.update({ createdById: user.createdById || user.adminId });
+      await newAdmin.update({ createdById: user.createdById || user.adminId }, { transaction });
     }
     if (user.adminId) {
-      await calculateLoadBalance(user.adminId);
+      await calculateLoadBalance(user.adminId, transaction);
     }
-    const successMessage = isUserRole ? 'User created successfully' : 'Admin created successfully';
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, successMessage));
+    await transaction.commit();
+    const successMessage = isUserRole ? 'User created' : 'Admin created successfully';
+
+    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
-    res
+    console.error("Error during creation:", error.message);
+    await transaction.rollback(); // Rollback on any error
+    return res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
-
 
 // done
 export const createSubAdmin = async (req, res) => {
@@ -80,9 +120,9 @@ export const createSubAdmin = async (req, res) => {
     const { userName, password, roles } = req.body;
     const user = req.user;
 
-    if (user.isActive === false) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
-    }
+    // if (user.isActive === false) {
+    //   return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.accountInactive));
+    // }
 
     const existingAdmin = await admins.findOne({ where: { userName } });
     if (existingAdmin) {
@@ -112,10 +152,13 @@ export const createSubAdmin = async (req, res) => {
 
     const permissionsArray = Array.isArray(roles[0].permission) ? roles[0].permission : [roles[0].permission];
 
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newSubAdmin = await admins.create({
       adminId,
       userName,
-      password,
+      password: hashedPassword,
       roles: [{ role: subRole, permission: permissionsArray }],
       createdById,
       createdByUser,
@@ -230,21 +273,43 @@ export const viewAllCreates = async (req, res) => {
       },
       offset,
       limit: pageSize,
+      order: [['createdAt', 'DESC']],
     });
 
-    const users = adminsData.map(admin => ({
-      adminId: admin.adminId,
-      userName: admin.userName,
-      roles: admin.roles,
-      balance: admin.balance,
-      loadBalance: admin.loadBalance,
-      creditRefs: admin.creditRefs || [],
-      createdById: admin.createdById,
-      createdByUser: admin.createdByUser,
-      partnerships: admin.partnerships || [],
-      status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
-    }));
+    const users = adminsData.map(admin => {
+      let creditRefs = [];
+      let partnerships = [];
 
+      if (admin.creditRefs) {
+        try {
+          creditRefs = JSON.parse(admin.creditRefs);
+        } catch {
+          creditRefs = [];
+        }
+      }
+
+      if (admin.partnerships) {
+        try {
+          partnerships = JSON.parse(admin.partnerships);
+        } catch {
+          partnerships = [];
+        }
+      }
+
+      return {
+        adminId: admin.adminId,
+        userName: admin.userName,
+        roles: admin.roles,
+        balance: admin.balance,
+        loadBalance: admin.loadBalance,
+        creditRefs,
+        createdById: admin.createdById,
+        createdByUser: admin.createdByUser,
+        partnerships,
+        status: admin.isActive ? 'active' : admin.locked ? 'locked' : 'suspended',
+      };
+    });
+    
     const totalPages = Math.ceil(totalRecords / pageSize);
 
     return res.status(statusCode.success).json(
@@ -307,6 +372,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
       },
       offset,
       limit: pageSize,
+      order: [['createdAt', 'DESC']],
     });
 
     const users = adminsData.map(admin => {
@@ -600,6 +666,7 @@ export const profileView = async (req, res) => {
       adminId: admin.adminId,
       roles: admin.roles,
       userName: admin.userName,
+      createdById : admin.createdById
     };
     return res.status(statusCode.success).json(apiResponseSuccess(transferData, null, statusCode.success, true, 'successfully'));
   } catch (error) {
