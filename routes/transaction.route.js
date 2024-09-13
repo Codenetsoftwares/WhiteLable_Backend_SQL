@@ -48,7 +48,7 @@ export const transactionRoute = (app) => {
     '/api/transaction-view/:userName',
     transactionViewSchema,
     customErrorHandler,
-    Authorize([
+     Authorize([
       string.superAdmin,
       string.whiteLabel,
       string.hyperAgent,

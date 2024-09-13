@@ -231,10 +231,37 @@ export const transactionView = async (req, res) => {
   try {
     const userName = req.params.userName;
     const page = parseInt(req.query.page) || 1;
-    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
-    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
-    endDate.setDate(endDate.getDate() + 1);
     const pageSize = parseInt(req.query.pageSize) || 10;
+    const dataType = req.query.dataType; 
+
+    console.log('Received dataType:', dataType);
+
+    let startDate, endDate;
+
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+    } else if (dataType === 'olddata') {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date().toISOString(); 
+    } else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).toISOString();
+        endDate = new Date(req.query.endDate).toISOString();
+      } else {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)).toISOString();
+        endDate = new Date().toISOString(); 
+      }
+    } else {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+    }
 
     const admin = await admins.findOne({ where: { userName } });
 
@@ -279,7 +306,7 @@ export const transactionView = async (req, res) => {
 
     let runningBalance = 0;
 
-    reversedData.forEach((data) => {
+    reversedData.forEach((data) => {    
       if (data.transferFromUserAccount === adminUserName) {
         runningBalance = data.currentBalance;
       } else if (data.transferToUserAccount === adminUserName) {
