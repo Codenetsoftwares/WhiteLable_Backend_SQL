@@ -113,7 +113,7 @@ export const transferAmount = async (req, res) => {
         userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
-        currentBalance: creditAmount
+        currentBalance: deductionBalance
       };
 
       await receiverAdmin.update({ balance: deductionBalance });
@@ -233,10 +233,9 @@ export const transactionView = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
-    endDate.setDate(endDate.getDate() + 1); // Include the full day in the range
+    endDate.setDate(endDate.getDate() + 1);
     const pageSize = parseInt(req.query.pageSize) || 10;
 
-    // Find the admin by userName
     const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
@@ -245,18 +244,16 @@ export const transactionView = async (req, res) => {
 
     const adminUserName = admin.userName;
 
-    // Query configuration to check for both sending and receiving transactions
     let transactionQuery = {
       where: {
         [Sequelize.Op.or]: [
-          { transferFromUserAccount: adminUserName }, // Transactions where the user sent money
-          { transferToUserAccount: adminUserName },   // Transactions where the user received money
+          { transferFromUserAccount: adminUserName },
+          { transferToUserAccount: adminUserName },
         ],
       },
-      order: [['date', 'DESC']], // Sort by date in descending order to display latest first
+      order: [['date', 'DESC']],
     };
 
-    // Apply date filters if provided
     if (startDate && endDate) {
       transactionQuery.where.date = {
         [Sequelize.Op.between]: [startDate, endDate],
@@ -271,52 +268,39 @@ export const transactionView = async (req, res) => {
       };
     }
 
-    // Fetch all transactions for the admin
     const transactionData = await transaction.findAll(transactionQuery);
     if (transactionData.length === 0) {
       return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
     }
     const totalItems = transactionData.length;
-    // Convert the data into a plain object for modification
     let allData = JSON.parse(JSON.stringify(transactionData));
 
-    // Reverse the data for proper balance calculation (oldest to latest)
     const reversedData = [...allData].reverse();
 
-    // Initialize running balance
     let runningBalance = 0;
 
-    // Calculate the running balance for each transaction starting from the oldest
     reversedData.forEach((data) => {
       if (data.transferFromUserAccount === adminUserName) {
-        // If the user sent money, it's a withdrawal
-        runningBalance -= data.amount;
+        runningBalance = data.currentBalance;
       } else if (data.transferToUserAccount === adminUserName) {
-        // If the user received money, it's a credit
-        runningBalance += data.amount;
+        runningBalance = data.currentBalance;
       }
-      data.balance = runningBalance; // Attach the balance after each transaction
+      data.balance = runningBalance;
     });
 
-    // Reverse the data back to display it in descending order
     allData = reversedData.reverse();
 
-    // Calculate total pages for pagination
     const totalPages = Math.ceil(totalItems / pageSize);
 
-    // Handle pagination
     const skip = (page - 1) * pageSize;
     const paginatedData = allData.slice(skip, skip + pageSize);
 
-    // Pagination response data
     const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
 
-    // Send success response with paginated data and balances
     return res
       .status(statusCode.success)
       .send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    // Handle errors and send the error response
     res.status(statusCode.internalServerError).send(
       apiResponseErr(
         null,
@@ -334,25 +318,27 @@ export const accountStatement = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 5;
     const page = parseInt(req.query.page) || 1;
 
-    // Find the admin by adminId
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
 
-    // Query configuration for fetching transactions from the transaction table
+    const adminUserName = admin.userName;
+    const adminMainBalance = admin.balance;  
+
     const transactionQuery = {
       where: {
-        adminId
+        [Sequelize.Op.or]: [
+          { adminId },
+          { transferToUserAccount: adminUserName },
+        ],
       },
       order: [['date', 'DESC']]
     };
 
-    // Fetch transactions from the transaction table
     const transferAmount = await transaction.findAll(transactionQuery);
 
-    // Check if there are no transactions
     if (transferAmount.length === 0) {
       return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
     }
@@ -360,13 +346,10 @@ export const accountStatement = async (req, res) => {
     const totalCount = transferAmount.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    // Handle pagination
     const paginatedData = transferAmount.slice((page - 1) * pageSize, page * pageSize);
 
-    // Calculate the running balance dynamically
-    let runningBalance = 0;
+    let runningBalance = adminMainBalance;  
 
-    // Modify the paginatedData to include balance calculation
     const dataWithBalance = paginatedData.map((transaction) => {
       if (transaction.transactionType === 'credit') {
         runningBalance = transaction.currentBalance;
@@ -374,25 +357,27 @@ export const accountStatement = async (req, res) => {
         runningBalance = transaction.currentBalance;
       }
 
+      let adminBalanceForTransaction = null;
+      if (transaction.transferFromUserAccount === adminUserName) {
+        adminBalanceForTransaction = adminMainBalance;
+      }
+
       return {
-        ...transaction.toJSON(), // Convert Sequelize instance to plain object
-        balance: runningBalance // Attach the calculated balance
+        ...transaction.toJSON(),
+        balance: runningBalance, 
+        adminMainBalance: adminBalanceForTransaction  
       };
     });
 
-    // Pagination response data
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
 
-    // Send success response with paginated data and balances
     return res.status(statusCode.success)
       .send(apiResponseSuccess(dataWithBalance, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    // Handle errors and send the error response
     res.status(statusCode.internalServerError)
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
-
 
 
 export const viewBalance = async (req, res) => {
