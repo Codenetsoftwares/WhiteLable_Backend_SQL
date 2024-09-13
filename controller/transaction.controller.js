@@ -101,18 +101,20 @@ export const transferAmount = async (req, res) => {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Withdrawal'));
       }
 
+
+      const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
+      const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
+
       const withdrawalRecord = {
         transactionType: 'withdrawal',
         amount: Math.round(parsedWithdrawalAmt),
         transferFromUserAccount: receiverAdmin.userName,
         transferToUserAccount: senderAdmin.userName,
-        userName: senderAdmin.userName,
+        userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
+        currentBalance: deductionBalance
       };
-
-      const deductionBalance = receiverAdmin.balance - parsedWithdrawalAmt;
-      const creditAmount = senderAdmin.balance + parsedWithdrawalAmt;
 
       await receiverAdmin.update({ balance: deductionBalance });
       await senderAdmin.update({ balance: creditAmount });
@@ -153,15 +155,19 @@ export const transferAmount = async (req, res) => {
         return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
       }
 
-      const transferRecordDebit = {
-        transactionType: 'debit',
-        amount: Math.round(parsedTransferAmount),
-        transferFromUserAccount: senderAdmin.userName,
-        transferToUserAccount: receiverAdmin.userName,
-        userName: senderAdmin.userName,
-        date: new Date(),
-        remarks,
-      };
+      // const transferRecordDebit = {
+      //   transactionType: 'debit',
+      //   amount: Math.round(parsedTransferAmount),
+      //   transferFromUserAccount: senderAdmin.userName,
+      //   transferToUserAccount: receiverAdmin.userName,
+      //   userName: senderAdmin.userName,
+      //   date: new Date(),
+      //   remarks,
+      // };
+
+
+      const senderBalance = senderAdmin.balance - parsedTransferAmount;
+      const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
 
       const transferRecordCredit = {
         transactionType: 'credit',
@@ -171,19 +177,17 @@ export const transferAmount = async (req, res) => {
         userName: receiverAdmin.userName,
         date: new Date(),
         remarks,
-      };
-
-      const senderBalance = senderAdmin.balance - parsedTransferAmount;
-      const receiverBalance = receiverAdmin.balance + parsedTransferAmount;
+        currentBalance: receiverBalance
+      }
 
       await receiverAdmin.update({ balance: receiverBalance });
       await senderAdmin.update({ balance: senderBalance });
 
-      await transaction.create({
-        transactionId: uuidv4(),
-        adminId,
-        ...transferRecordDebit,
-      });
+      // await transaction.create({
+      //   transactionId: uuidv4(),
+      //   adminId,
+      //   ...transferRecordDebit,
+      // });
 
       await transaction.create({
         transactionId: uuidv4(),
@@ -223,7 +227,6 @@ export const transferAmount = async (req, res) => {
   }
 };
 
-
 export const transactionView = async (req, res) => {
   try {
     const userName = req.params.userName;
@@ -231,73 +234,81 @@ export const transactionView = async (req, res) => {
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
     endDate.setDate(endDate.getDate() + 1);
-    const pageSize = parseInt(req.query.pageSize) || 5;
-
-    let balances = 0;
-    let debitBalances = 0;
-    let withdrawalBalances = 0;
+    const pageSize = parseInt(req.query.pageSize) || 10;
 
     const admin = await admins.findOne({ where: { userName } });
-  
+
     if (!admin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
     }
 
-    const adminuserName = admin.userName;
+    const adminUserName = admin.userName;
+
     let transactionQuery = {
       where: {
-        userName : adminuserName
-      }
+        [Sequelize.Op.or]: [
+          { transferFromUserAccount: adminUserName },
+          { transferToUserAccount: adminUserName },
+        ],
+      },
+      order: [['date', 'DESC']],
     };
 
     if (startDate && endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.between]: [startDate, endDate]
+        [Sequelize.Op.between]: [startDate, endDate],
       };
     } else if (startDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.gte]: startDate
+        [Sequelize.Op.gte]: startDate,
       };
     } else if (endDate) {
       transactionQuery.where.date = {
-        [Sequelize.Op.lte]: endDate
+        [Sequelize.Op.lte]: endDate,
       };
     }
-    
-    transactionQuery.order = [['date', 'DESC']];
-    
 
     const transactionData = await transaction.findAll(transactionQuery);
-
+    if (transactionData.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
     const totalItems = transactionData.length;
+    let allData = JSON.parse(JSON.stringify(transactionData));
+
+    const reversedData = [...allData].reverse();
+
+    let runningBalance = 0;
+
+    reversedData.forEach((data) => {
+      if (data.transferFromUserAccount === adminUserName) {
+        runningBalance = data.currentBalance;
+      } else if (data.transferToUserAccount === adminUserName) {
+        runningBalance = data.currentBalance;
+      }
+      data.balance = runningBalance;
+    });
+
+    allData = reversedData.reverse();
+
     const totalPages = Math.ceil(totalItems / pageSize);
 
     const skip = (page - 1) * pageSize;
-    const endIndex = page * pageSize;
+    const paginatedData = allData.slice(skip, skip + pageSize);
 
-    const paginatedData = transactionData.slice(skip, endIndex);
+    const paginationData = apiResponsePagination(page, totalPages, totalItems, pageSize);
 
-    let allData = JSON.parse(JSON.stringify(paginatedData));
-
-    allData.forEach((data) => {
-      if (data.transactionType === 'credit') {
-        balances += data.amount;
-        data.balance = balances || 0;
-      } else if (data.transactionType === 'debit') {
-        debitBalances += data.amount;
-        data.debitBalance = debitBalances || 0;
-      } else if (data.transactionType === 'withdrawal') {
-        withdrawalBalances += data.withdraw;
-        data.withdrawalBalance = withdrawalBalances || 0;
-      }
-    });
-
-    const paginationData = apiResponsePagination(page, totalPages, totalItems);
-    return res.status(statusCode.success).send(apiResponseSuccess(allData, true, statusCode.success, messages.success, paginationData));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        null,
+        false,
+        statusCode.internalServerError,
+        error.message
+      )
+    );
   }
 };
 
@@ -310,31 +321,64 @@ export const accountStatement = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
 
     if (!admin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, statusCode.notFound, false, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, statusCode.badRequest, false, messages.adminNotFound));
     }
-    let transactionQuery = {
+
+    const adminUserName = admin.userName;
+    const adminMainBalance = admin.balance;  
+
+    const transactionQuery = {
       where: {
-        adminId
+        [Sequelize.Op.or]: [
+          { adminId },
+          { transferToUserAccount: adminUserName },
+        ],
       },
-      order: [['date', 'DESC']] 
+      order: [['date', 'DESC']]
     };
+
     const transferAmount = await transaction.findAll(transactionQuery);
-  
-    const selfTransaction = await selfTransactions.findAll(transactionQuery);
 
-    const mergedData = transferAmount.concat(selfTransaction);
+    if (transferAmount.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
 
-    const totalCount = mergedData.length; 
+    const totalCount = transferAmount.length;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    const paginatedData = mergedData.slice((page - 1) * pageSize, page * pageSize);
+    const paginatedData = transferAmount.slice((page - 1) * pageSize, page * pageSize);
+
+    let runningBalance = adminMainBalance;  
+
+    const dataWithBalance = paginatedData.map((transaction) => {
+      if (transaction.transactionType === 'credit') {
+        runningBalance = transaction.currentBalance;
+      } else if (transaction.transactionType === 'withdrawal') {
+        runningBalance = transaction.currentBalance;
+      }
+
+      let adminBalanceForTransaction = null;
+      if (transaction.transferFromUserAccount === adminUserName) {
+        adminBalanceForTransaction = adminMainBalance;
+      }
+
+      return {
+        ...transaction.toJSON(),
+        balance: runningBalance, 
+        adminMainBalance: adminBalanceForTransaction  
+      };
+    });
 
     const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
-    return res.status(statusCode.success).send(apiResponseSuccess(paginatedData, true, statusCode.success, messages.success, paginationData));
+
+    return res.status(statusCode.success)
+      .send(apiResponseSuccess(dataWithBalance, true, statusCode.success, messages.success, paginationData));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res.status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 
 export const viewBalance = async (req, res) => {
   try {
@@ -355,36 +399,36 @@ export const viewBalance = async (req, res) => {
 export const viewAddBalance = async (req, res) => {
   try {
     const { adminId } = req.params;
-    let { page = 1, limit = 10} = req.query; 
+    let { page = 1, limit = 10 } = req.query;
     page = parseInt(page)
     limit = parseInt(limit)
     const offset = (page - 1) * limit;
-    const allTransactions = await selfTransactions.findAll({ where: { adminId } }); 
+    const allTransactions = await selfTransactions.findAll({ where: { adminId } });
     if (allTransactions.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess({transactions:[]},true, statusCode.success, 'Data Not Found'));
+        .send(apiResponseSuccess({ transactions: [] }, true, statusCode.success, 'Data Not Found'));
     }
     const paginatedTransactions = await selfTransactions.findAll({
       where: { adminId },
       order: [['createdAt', 'DESC']],
       offset,
-      limit,  
+      limit,
     });
     const totalItems = await selfTransactions.count({ where: { adminId } });
     const totalPages = Math.ceil(totalItems / limit)
     const balanceInfo = {
       transactions: paginatedTransactions.map((transaction) => ({
-        amount: transaction.amount, 
-        date: transaction.date 
-      })),  
+        amount: transaction.amount,
+        date: transaction.date
+      })),
     };
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!',{ 
-        page ,
+      .send(apiResponseSuccess(balanceInfo, true, statusCode.success, 'Balance Retrieved Successfully!', {
+        page,
         limit,
-        totalItems,  
+        totalItems,
         totalPages,
       }));
   } catch (error) {
