@@ -261,13 +261,13 @@ export const transactionView = async (req, res) => {
     } else {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
     }
 
     const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
+      return res.status(statusCode.badRequest).send(apiResponseErr([], false, statusCode.badRequest, messages.adminNotFound));
     }
 
     const adminUserName = admin.userName;
@@ -372,7 +372,7 @@ export const accountStatement = async (req, res) => {
       }
     } else {
       return res.status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
     }
 
     const admin = await admins.findOne({ where: { adminId } });
