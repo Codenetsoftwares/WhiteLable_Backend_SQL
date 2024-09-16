@@ -235,32 +235,41 @@ export const transactionView = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const dataType = req.query.dataType; 
 
-    console.log('Received dataType:', dataType);
-
     let startDate, endDate;
 
     if (dataType === 'live') {
       const today = new Date();
-      startDate = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      endDate = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
     } else if (dataType === 'olddata') {
+      if(req.query.startDate && req.query.endDate){
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate   ).setHours(23, 59, 59, 999); 
+      }else{
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      startDate = new Date(oneYearAgo.setHours(0, 0, 0, 0)).toISOString();
-      endDate = new Date().toISOString(); 
+      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+      endDate = new Date().setHours(23, 59, 59, 999);
+      }   
     } else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
-        startDate = new Date(req.query.startDate).toISOString();
-        endDate = new Date(req.query.endDate).toISOString();
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+        const maxAllowedDate = new Date(startDate);
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+        if (endDate > maxAllowedDate) {
+          return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
       } else {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)).toISOString();
-        endDate = new Date().toISOString(); 
+        const today = new Date();
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(today.getMonth() - 2); 
+    startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
+    endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
     } else {
-      return res
-        .status(statusCode.badRequest)
+      return res.status(statusCode.badRequest)
         .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
     }
 
@@ -369,7 +378,7 @@ export const accountStatement = async (req, res) => {
         maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
         if (endDate > maxAllowedDate) {
           return res.status(statusCode.badRequest)
-            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+          .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
         }
       } else {
         const today = new Date();
