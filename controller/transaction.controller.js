@@ -346,9 +346,6 @@ export const accountStatement = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.page) || 1;
     const dataType = req.query.dataType; 
-
-    console.log('Received dataType:', dataType);
-
     let startDate, endDate;
     if (dataType === 'live') {
       const today = new Date();
@@ -377,13 +374,9 @@ export const accountStatement = async (req, res) => {
       } else {
         const today = new Date();
     const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(today.getMonth() - 2); // Go back 3 months
-
-    startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); // Start of day 3 months ago
-    endDate = new Date(today.setHours(23, 59, 59, 999)); // End of today
-
-    // Log the final start and end dates for debugging
-
+    threeMonthsAgo.setMonth(today.getMonth() - 2); 
+    startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
+    endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
     } else {
       return res.status(statusCode.badRequest)
@@ -415,9 +408,6 @@ export const accountStatement = async (req, res) => {
     };
 
     const transferAmount = await transaction.findAndCountAll(transactionQuery);
-
-   // console.log("transferAmount...............",transferAmount)
-
     if (transferAmount.rows.length === 0) {
       return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
     }
