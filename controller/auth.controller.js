@@ -15,6 +15,9 @@ export const adminLogin = async (req, res) => {
         if (!existingAdmin) {
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
+        if (existingAdmin.isActive === false || existingAdmin.locked === false) {
+            throw apiResponseErr(null, false, statusCode.badRequest, 'Account is not active');
+          }
 
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {

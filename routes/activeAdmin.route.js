@@ -41,6 +41,7 @@ console.log("password....ttt",password)
 
         return res.status(statusCode.success).send(adminActive);
       } catch (error) {
+        
         res
           .status(statusCode.internalServerError)
           .send(

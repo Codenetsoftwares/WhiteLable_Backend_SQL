@@ -49,8 +49,8 @@ export const getLiveBetGames = async (req, res) => {
     try {
         const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveGamesBet`,{
-             headers: {
+        const response = await axios.get(`http://localhost:7000/api/user-external-liveGamesBet`, {
+            headers: {
                 Authorization: `Bearer ${token}`,
             },
         });
