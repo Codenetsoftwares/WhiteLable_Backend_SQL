@@ -319,31 +319,25 @@ export const getUserBetHistory = async (req, res) => {
 export const getColorGameProfitLoss = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const { page = 1, pageSize = 10, search = '' } = req.query;
+    const { page = 1, pageSize = 10, search = '', startDate, endDate } = req.query;
     const limit = parseInt(pageSize);
-    const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
-    const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
     const dataType = req.query.dataType; 
-
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
     const params = {
       userName,
       search,
       startDate,
       endDate,
-      page,
+      page, 
       limit,
       dataType
     };
-
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
-      params,
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`,{
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      params,
     });
-
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)

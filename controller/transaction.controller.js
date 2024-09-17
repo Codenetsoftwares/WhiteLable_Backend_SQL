@@ -263,10 +263,10 @@ export const transactionView = async (req, res) => {
         }
       } else {
         const today = new Date();
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(today.getMonth() - 2); 
-    startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
-    endDate = new Date(today.setHours(23, 59, 59, 999)); 
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 2); 
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
+        endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
     } else {
       return res.status(statusCode.badRequest)
