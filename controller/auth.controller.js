@@ -4,6 +4,7 @@ import admins from '../models/admin.model.js';
 import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
 import { messages, string } from '../constructor/string.js';
 import { statusCode } from '../helper/statusCodes.js';
+import CustomError from '../helper/extendError.js';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -16,8 +17,8 @@ export const adminLogin = async (req, res) => {
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
         if (existingAdmin.isActive === false || existingAdmin.locked === false) {
-            throw apiResponseErr(null, false, statusCode.badRequest, 'Account is not active');
-          }
+            throw new CustomError('Account is not active', null, statusCode.badRequest,);
+        }
 
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
@@ -128,7 +129,7 @@ export const adminPasswordResetCode = async (req, res) => {
         if (!existingUser) {
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.adminNotFound));
         }
-        if(admin.adminId !== existingUser.createdById){
+        if (admin.adminId !== existingUser.createdById) {
 
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does not have permission to reset Password'));
         }
@@ -146,7 +147,7 @@ export const adminPasswordResetCode = async (req, res) => {
 
         return res.status(statusCode.success).send(apiResponseSuccess(existingUser, true, statusCode.success, 'Password Reset Successful!'));
     } catch (error) {
-        res.status(statusCode.internalServerError).send(apiResponseErr( null, false,  statusCode.internalServerError,  error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 };
 
@@ -156,13 +157,13 @@ export const resetPassword = async (req, res) => {
         const { userName, oldPassword } = req.body;
 
         const existingAdmin = await admins.findOne({ where: { userName } });
-         
+
         if (!existingAdmin) {
             return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
 
         const passwordValid = await bcrypt.compare(oldPassword, existingAdmin.password);
-        
+
         if (!passwordValid) {
             return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
@@ -173,7 +174,7 @@ export const resetPassword = async (req, res) => {
             balance: existingAdmin.balance,
             authenticate: true
         }
-        
+
         return res.status(statusCode.success).send(
             apiResponseSuccess(
                 result,
