@@ -268,7 +268,7 @@ export const getUserBetHistory = async (req, res) => {
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch bet history'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch bet history'));
     }
 
     const { data, pagination } = response.data;
@@ -290,7 +290,7 @@ export const getUserBetHistory = async (req, res) => {
       ));
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -344,7 +344,7 @@ export const getColorGameProfitLoss = async (req, res) => {
       );
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -454,6 +454,6 @@ export const runnerProfitLoss = async (req, res) => {
       );
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
