@@ -253,3 +253,20 @@ export const betHistorySchema = [
     .notEmpty()
     .withMessage("Game Id is required.")
 ];
+
+export const activeInactive = [
+  param('adminId').trim().notEmpty().withMessage('admin id is required'),
+  body('isActive')
+    .notEmpty()
+    .withMessage('isActive is required')
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  body('locked')
+    .notEmpty()
+    .withMessage('locked is required')
+    .isBoolean()
+    .withMessage('locked must be a boolean'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+];

@@ -221,7 +221,6 @@ export const addBalanceToColorGameUser = async (req, res) => {
 export const userGame = async (req, res) => {
   try {
     const response = await axios.get('https://cg.server.dummydoma.in/api/user-games');
-    console.log("response from API", response.data);
 
     if (!response.data.success) {
       return res
