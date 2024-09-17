@@ -246,43 +246,18 @@ export const userGame = async (req, res) => {
 export const getUserBetHistory = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
-    const { startDate, endDate, page = 1, limit = 5 } = req.query;
-
-    let start = null;
-    let end = null;
-
-    if (startDate) {
-      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!start.isValid()) {
-        throw new Error('startDate is not a valid date');
-      }
-    }
-
-    if (endDate) {
-      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!end.isValid()) {
-        throw new Error('endDate is not a valid date');
-      }
-      if (end.isAfter(moment())) {
-        throw new Error('Invalid End Date');
-      }
-    }
-
-    if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
-    }
+    const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
     const params = {
       gameId,
       userName,
-      startDate: start ? start.format('YYYY-MM-DD') : undefined,
-      endDate: end ? end.format('YYYY-MM-DD') : undefined,
+      startDate,
+      endDate,
       page,
-      limit
+      limit,
+      dataType
     };
-
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
+    const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -292,13 +267,16 @@ export const getUserBetHistory = async (req, res) => {
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch bet history'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch bet history'));
     }
 
     const { data, pagination } = response.data;
-
-    const totalPages = pagination ? pagination.totalPages : 1;
-    const totalItems = pagination ? pagination.totalItems : 0;
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit || limit
+    };
 
     return res
       .status(statusCode.success)
@@ -307,42 +285,36 @@ export const getUserBetHistory = async (req, res) => {
         true,
         statusCode.success,
         'Success',
-        { totalPages, limit: parseInt(limit), totalItems, page: parseInt(page) }
+       paginationData
       ));
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
 export const getColorGameProfitLoss = async (req, res) => {
   try {
     const userName = req.params.userName;
-    const { page = 1, pageSize = 10, search = '' } = req.query;
+    const { page = 1, pageSize = 10, search = '', startDate, endDate } = req.query;
     const limit = parseInt(pageSize);
-    const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
-    const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
     const dataType = req.query.dataType; 
-
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
     const params = {
       userName,
       search,
       startDate,
       endDate,
-      page,
+      page, 
       limit,
       dataType
     };
-
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
-      params,
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`,{
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      params,
     });
-
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -371,7 +343,7 @@ export const getColorGameProfitLoss = async (req, res) => {
       );
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -481,6 +453,6 @@ export const runnerProfitLoss = async (req, res) => {
       );
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };

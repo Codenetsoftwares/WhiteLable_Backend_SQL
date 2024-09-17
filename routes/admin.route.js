@@ -1,4 +1,4 @@
-import { Authorize } from '../middleware/auth.js';
+  import { Authorize } from '../middleware/auth.js';
 
 import customErrorHandler from '../helper/customErrorHandler.js';
 import {
