@@ -257,7 +257,7 @@ export const getUserBetHistory = async (req, res) => {
       limit,
       dataType
     };
-    const response = await axios.get(`http://localhost:7000/api/external-user-betHistory/${userName}/${gameId}`, {
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -309,7 +309,7 @@ export const getColorGameProfitLoss = async (req, res) => {
       limit,
       dataType
     };
-    const response = await axios.get(`http://localhost:7000/api/external-profit_loss/${userName}`,{
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`,{
       headers: {
         Authorization: `Bearer ${token}`,
       },
