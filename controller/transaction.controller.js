@@ -233,7 +233,7 @@ export const transactionView = async (req, res) => {
     const userName = req.params.userName;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
-    const dataType = req.query.dataType; 
+    const dataType = req.query.dataType;
 
     let startDate, endDate;
 
@@ -242,15 +242,15 @@ export const transactionView = async (req, res) => {
       startDate = new Date(today).setHours(0, 0, 0, 0);
       endDate = new Date(today).setHours(23, 59, 59, 999);
     } else if (dataType === 'olddata') {
-      if(req.query.startDate && req.query.endDate){
+      if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
-        endDate = new Date(req.query.endDate   ).setHours(23, 59, 59, 999); 
-      }else{
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
-      endDate = new Date().setHours(23, 59, 59, 999);
-      }   
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
+      }
     } else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -264,13 +264,13 @@ export const transactionView = async (req, res) => {
       } else {
         const today = new Date();
         const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(today.getMonth() - 2); 
-        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
-        endDate = new Date(today.setHours(23, 59, 59, 999)); 
+        threeMonthsAgo.setMonth(today.getMonth() - 2);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0));
+        endDate = new Date(today.setHours(23, 59, 59, 999));
       }
     } else {
-      return res.status(statusCode.badRequest)
-        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
     const admin = await admins.findOne({ where: { userName } });
@@ -316,7 +316,7 @@ export const transactionView = async (req, res) => {
 
     let runningBalance = 0;
 
-    reversedData.forEach((data) => {    
+    reversedData.forEach((data) => {
       if (data.transferFromUserAccount === adminUserName) {
         runningBalance = data.currentBalance;
       } else if (data.transferToUserAccount === adminUserName) {
@@ -354,22 +354,22 @@ export const accountStatement = async (req, res) => {
     const adminId = req.params.adminId;
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.page) || 1;
-    const dataType = req.query.dataType; 
+    const dataType = req.query.dataType;
     let startDate, endDate;
     if (dataType === 'live') {
       const today = new Date();
       startDate = new Date(today).setHours(0, 0, 0, 0);
       endDate = new Date(today).setHours(23, 59, 59, 999);
     } else if (dataType === 'olddata') {
-      if(req.query.startDate && req.query.endDate){
+      if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
-        endDate = new Date(req.query.endDate   ).setHours(23, 59, 59, 999); 
-      }else{
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
-      endDate = new Date().setHours(23, 59, 59, 999);
-      }   
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
+      }
     } else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -378,18 +378,18 @@ export const accountStatement = async (req, res) => {
         maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
         if (endDate > maxAllowedDate) {
           return res.status(statusCode.badRequest)
-          .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
         }
       } else {
         const today = new Date();
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(today.getMonth() - 2); 
-    startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
-    endDate = new Date(today.setHours(23, 59, 59, 999)); 
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 2);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0));
+        endDate = new Date(today.setHours(23, 59, 59, 999));
       }
     } else {
-      return res.status(statusCode.badRequest)
-        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
     const admin = await admins.findOne({ where: { adminId } });
@@ -424,7 +424,7 @@ export const accountStatement = async (req, res) => {
     const totalCount = transferAmount.count;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    let runningBalance = adminMainBalance;  
+    let runningBalance = adminMainBalance;
 
     const dataWithBalance = transferAmount.rows.map((transaction) => {
       if (transaction.transactionType === 'credit' || transaction.transactionType === 'withdrawal') {
