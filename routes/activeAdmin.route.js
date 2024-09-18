@@ -44,8 +44,9 @@ export const activeAdminRoute = (app) => {
         // Activate or suspend admin
         const adminActive = await activateAdmin(adminId, isActive, locked);
 
+        // Check if the admin has subordinates
         let hasSubordinates = false;
-    
+
         const subordinates = await admins.findAll({ where: { createdById: adminId } });
         if (subordinates.length > 0) {
           hasSubordinates = true;
@@ -54,7 +55,7 @@ export const activeAdminRoute = (app) => {
         // Construct response message based on subordinates
         let message = "";
         if (hasSubordinates) {
-          message = message = adminActive?.message ?? "Admin Activated/Deactivated successfully.";
+          message = adminActive?.message ?? "Admin Activated/Deactivated successfully.";
         } else {
           message = "Admin Activated/Deactivated successfully. No agents under this admin.";
         }
