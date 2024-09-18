@@ -121,6 +121,10 @@ const admins = sequelize.define('admins', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  userActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
   path: {
     type: DataTypes.JSON,
     allowNull: true,

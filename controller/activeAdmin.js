@@ -3,73 +3,80 @@ import { string } from "../constructor/string.js";
 import admins from "../models/admin.model.js";
 import CustomError from "../helper/extendError.js";
 
-export const activateAdmin = async (adminId,isActive, locked ) => {
+export const activateAdmin = async (adminId, isActive, locked) => {
   try {
     console.log("adminId:", adminId);
 
     const admin = await admins.findOne({ where: { adminId } });
 
     const whiteLabel = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.whiteLabel}"}')`)
-        }
-      });
-      
-      const hyperAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.hyperAgent}"}')`)
-        }
-      });
-      
-      const masterAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.masterAgent}"}')`)
-        }
-      });
-      
-      const superAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.superAgent}"}')`)
-        }
-      });
-      
-      const subWhiteLabel = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subWhiteLabel}"}')`)
-        }
-      });
-      
-      const subHyperAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subHyperAgent}"}')`)
-        }
-      });
-      
-      const subMasterAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subMasterAgent}"}')`)
-        }
-      });
-      
-      const subSuperAgent = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subSuperAgent}"}')`)
-        }
-      });
-      
-      const subAdmin = await admins.findAll({
-        where: {
-          createdById: adminId,
-          [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subAdmin}"}')`)
-        }
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.whiteLabel}"}')`)
+      }
+    });
+
+    const hyperAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.hyperAgent}"}')`)
+      }
+    });
+
+    const masterAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.masterAgent}"}')`)
+      }
+    });
+
+    const superAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.superAgent}"}')`)
+      }
+    });
+
+    const subWhiteLabel = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subWhiteLabel}"}')`)
+      }
+    });
+
+    const subHyperAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subHyperAgent}"}')`)
+      }
+    });
+
+    const subMasterAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subMasterAgent}"}')`)
+      }
+    });
+
+    const subSuperAgent = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subSuperAgent}"}')`)
+      }
+    });
+
+    const subAdmin = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.subAdmin}"}')`)
+      }
+    });
+
+    const user = await admins.findAll({
+      where: {
+        createdById: adminId,
+        [Op.and]: Sequelize.literal(`JSON_CONTAINS(roles, '{"role": "${string.user}"}')`)
+      }
     });
 
     if (
@@ -106,10 +113,12 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
       await Promise.all(subWhiteLabel.map((data) => data.save()));
       await Promise.all(subSuperAgent.map((data) => data.save()));
       await Promise.all(subAdmin.map((data) => data.save()));
+      await Promise.all(user.map((data) => data.save()));
+
       return;
     }
     if (!admin) {
-      throw new CustomError("Admin not found" , null, statusCode.badRequest);
+      throw new CustomError("Admin not found", null, statusCode.badRequest);
     }
     if (isActive === true) {
       admin.isActive = true;
@@ -430,6 +439,40 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         } //checked
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+      user.forEach((data) => {
+        if (
+          data.isActive === false &&
+          data.locked === false &&
+          data.userActive === true &&
+          data.checkActive === true
+        ) {
+          data.isActive = true;
+          data.locked = true;
+          data.userActive = false;
+          data.checkActive = false;
+        } //checked
+        else if (
+          data.isActive === false &&
+          data.locked === false &&
+          data.userActive === true &&
+          data.checkActive === false
+        ) {
+          data.locked = true;
+          data.userActive = false;
+        } //checked
+        else if (
+          data.isActive === false &&
+          data.locked === true &&
+          data.userActive === true &&
+          data.checkActive === true
+        ) {
+          data.isActive = true;
+          data.locked = true;
+          data.userActive = false;
+          data.checkActive = false;
+        } //checked
+        activateAdmin(data.adminId, data.isActive, data.locked);
+      });
 
       await admin.save();
       await Promise.all(hyperAgent.map((data) => data.save()));
@@ -441,6 +484,8 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
       await Promise.all(subWhiteLabel.map((data) => data.save()));
       await Promise.all(subSuperAgent.map((data) => data.save()));
       await Promise.all(subAdmin.map((data) => data.save()));
+      await Promise.all(user.map((data) => data.save()));
+
       return { message: "Admin Activated Successfully" };
     } else if (isActive === false) {
       if (locked === false) {
@@ -907,6 +952,59 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
 
+        user.forEach((data) => {
+          if (
+            data.isActive === true &&
+            data.locked === true &&
+            data.userActive === false &&
+            data.checkActive === false
+          ) {
+            data.isActive = false;
+            data.locked = false;
+            data.userActive = true;
+            data.checkActive = true;
+          } //checked
+          else if (
+            data.isActive === false &&
+            data.locked === true &&
+            data.userActive === true
+          ) {
+            ///not use
+            data.isActive = false;
+            data.locked = false;
+            data.checkActive = true;
+          } else if (
+            data.isActive === false &&
+            data.locked === true &&
+            data.userActive === false &&
+            data.checkActive === false
+          ) {
+            data.locked = false;
+            data.userActive = true;
+          } //checked
+          else if (
+            data.isActive === false &&
+            data.locked === true &&
+            data.userActive === true &&
+            data.checkActive === true
+          ) {
+            ///not use
+            data.locked = false;
+          } //checked
+          else if (
+            data.isActive === false &&
+            data.locked === false &&
+            data.userActive === true &&
+            data.checkActive === true
+          ) {
+            data.isActive = true;
+            data.locked = true;
+            data.userActive = false;
+            data.checkActive === false;
+          }
+          activateAdmin(data.adminId, data.isActive, data.locked);
+        });
+
         await admin.save();
         await Promise.all(hyperAgent.map((data) => data.save()));
         await Promise.all(masterAgent.map((data) => data.save()));
@@ -917,6 +1015,8 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         await Promise.all(subWhiteLabel.map((data) => data.save()));
         await Promise.all(subSuperAgent.map((data) => data.save()));
         await Promise.all(subAdmin.map((data) => data.save()));
+        await Promise.all(user.map((data) => data.save()));
+
         return { message: "Admin Locked Successfully" };
       } else {
         admin.isActive = false;
@@ -1179,6 +1279,35 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
 
+        user.forEach((data) => {
+          if (
+            data.isActive === true &&
+            data.locked === true &&
+            data.userActive === false
+          ) {
+            data.isActive = false;
+            data.locked = true;
+            data.userActive = true;
+            data.checkActive = true;
+          } else if (
+            data.isActive === false &&
+            data.locked === false &&
+            data.userActive === true &&
+            data.checkActive === false
+          ) {
+            data.locked = true;
+            data.userActive = false;
+          } else if (
+            data.isActive === false &&
+            data.locked === false &&
+            data.userActive === true &&
+            data.checkActive === true
+          ) {
+            data.locked = true;
+          }
+          activateAdmin(data.adminId, data.isActive, data.locked);
+        });
+
         await admin.save();
         await Promise.all(hyperAgent.map((data) => data.save()));
         await Promise.all(masterAgent.map((data) => data.save()));
@@ -1189,6 +1318,7 @@ export const activateAdmin = async (adminId,isActive, locked ) => {
         await Promise.all(subMasterAgent.map((data) => data.save()));
         await Promise.all(subWhiteLabel.map((data) => data.save()));
         await Promise.all(subSuperAgent.map((data) => data.save()));
+        await Promise.all(user.map((data) => data.save()));
 
         return { message: "Admin Suspended Successfully" };
       }

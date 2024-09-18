@@ -31,8 +31,8 @@ export const Authorize = (roles) => {
       }
 
       const userRoles = existingUser.roles;
-      if (!existingUser.isActive && existingUser.locked) {
-        return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Account is inactive or locked'));
+      if (existingUser.locked === false) {
+        return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Account is locked'));
       }
 
       if (roles && roles.length > 0) {

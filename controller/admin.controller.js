@@ -36,8 +36,12 @@ export const createAdmin = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.exist, errorMessage);
     }
 
-    if (user.isActive === false || user.locked === false) {
-      throw apiResponseErr(null, false, statusCode.unauthorize, messages.accountInactive);
+    if (user.isActive === false) {
+      throw apiResponseErr(null, false, statusCode.badRequest, "Account is inactive");
+    }
+
+    if (user.locked === false) {
+      throw apiResponseErr(null, false, statusCode.unauthorize, "Account is locked");
     }
 
     const defaultPermission = ['all-access'];
@@ -450,9 +454,11 @@ export const editCreditRef = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
-
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, messages.inActiveAdmin));
+    if (!admin.isActive) {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, "Account is suspend"));
+    }
+    if (admin.locked === false) {
+      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, "Account is locked"));
     }
 
     const newCreditRefEntry = {
@@ -513,8 +519,11 @@ export const editPartnership = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
     }
 
-    if (!admin.isActive || admin.locked) {
-      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, messages.inActiveAdmin));
+    if (!admin.isActive) {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, "Account is suspend"));
+    }
+    if (admin.locked === false) {
+      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, "Account is locked"));
     }
 
     const newPartnershipEntry = {

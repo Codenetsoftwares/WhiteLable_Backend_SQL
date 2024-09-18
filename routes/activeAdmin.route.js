@@ -26,32 +26,50 @@ export const activeAdminRoute = (app) => {
       try {
         const { adminId } = req.params;
         const { isActive, locked, password } = req.body;
+
+        // Find the admin by adminId
         const admin = await admins.findOne({ where: { adminId } });
-console.log("password....ttt",password)
+
+        // Check if admin exists
+        if (!admin) {
+          throw new CustomError("Admin not found", null, statusCode.notFound);
+        }
+
+        // Validate password
         const isPasswordValid = await bcrypt.compare(password, admin.password);
         if (!isPasswordValid) {
-          throw new CustomError(
-            "Invalid password",
-            null,
-            statusCode.badRequest
-          );
+          throw new CustomError("Invalid password", null, statusCode.badRequest);
         }
-        console.log("Password......", isPasswordValid);
+
+        // Activate or suspend admin
         const adminActive = await activateAdmin(adminId, isActive, locked);
 
-        return res.status(statusCode.success).send(adminActive);
+        let hasSubordinates = false;
+    
+        const subordinates = await admins.findAll({ where: { createdById: adminId } });
+        if (subordinates.length > 0) {
+          hasSubordinates = true;
+        }
+
+        // Construct response message based on subordinates
+        let message = "";
+        if (hasSubordinates) {
+          message = message = adminActive?.message ?? "Admin Activated/Deactivated successfully.";
+        } else {
+          message = "Admin Activated/Deactivated successfully. No agents under this admin.";
+        }
+
+        return res.status(statusCode.success).send({ message, adminActive });
       } catch (error) {
-        
-        res
-          .status(statusCode.internalServerError)
-          .send(
-            apiResponseErr(
-              error.data ?? null,
-              false,
-              error.responseCode ?? statusCode.internalServerError,
-              error.errMessage ?? error.message
-            )
-          );
+        // Handle errors
+        res.status(error.responseCode ?? statusCode.internalServerError).send(
+          apiResponseErr(
+            error.data ?? null,
+            false,
+            error.responseCode ?? statusCode.internalServerError,
+            error.errMessage ?? error.message
+          )
+        );
       }
     }
   );

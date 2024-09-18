@@ -78,12 +78,20 @@ export const transferAmount = async (req, res) => {
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin not found'));
     }
 
-    if (!senderAdmin.isActive) {
-      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Sender Admin is inactive'));
+    if (senderAdmin.isActive === false) {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Sender Admin is inactive'));
     }
 
-    if (!receiverAdmin.isActive) {
-      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Receiver Admin is inactive'));
+    if (receiverAdmin.isActive === false) {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Receiver Admin is inactive'));
+    }
+
+    if (senderAdmin.locked === false) {
+      return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, "Sender Account is locked"));
+    }
+
+    if (receiverAdmin.locked === false) {
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, "Receiver Account is locked"));
     }
 
     if (transferAmount !== undefined && typeof transferAmount !== 'number') {
