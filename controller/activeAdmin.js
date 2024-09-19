@@ -88,7 +88,8 @@ export const activateAdmin = async (adminId, isActive, locked) => {
       subHyperAgent.length == 0 &&
       subMasterAgent.length == 0 &&
       subSuperAgent.length == 0 &&
-      subAdmin.length === 0
+      subAdmin.length === 0 &&
+      user.length === 0
     ) {
       if (isActive === true) {
         admin.isActive = true;
@@ -193,6 +194,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+      
       masterAgent.forEach((data) => {
         if (
           data.isActive === false &&
@@ -228,6 +230,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+
       whiteLabel.forEach((data) => {
         if (
           data.isActive === false &&
@@ -297,8 +300,6 @@ export const activateAdmin = async (adminId, isActive, locked) => {
         } //checked
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
-
-      // added sub
 
       subSuperAgent.map((data) => {
         if (
@@ -370,6 +371,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+
       subMasterAgent.forEach((data) => {
         if (
           data.isActive === false &&
@@ -405,6 +407,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+
       subWhiteLabel.forEach((data) => {
         if (
           data.isActive === false &&
@@ -439,6 +442,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
         } //checked
         activateAdmin(data.adminId, data.isActive, data.locked);
       });
+
       user.forEach((data) => {
         if (
           data.isActive === false &&
@@ -542,6 +546,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         hyperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -592,6 +597,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         masterAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -642,6 +648,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         whiteLabel.forEach((data) => {
           if (
             data.isActive === true &&
@@ -694,6 +701,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subAdmin.forEach((data) => {
           if (
             data.isActive === true &&
@@ -747,8 +755,6 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
 
-        // added sub
-
         subSuperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -799,6 +805,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subHyperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -849,6 +856,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subMasterAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -899,6 +907,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subWhiteLabel.forEach((data) => {
           if (
             data.isActive === true &&
@@ -969,7 +978,6 @@ export const activateAdmin = async (adminId, isActive, locked) => {
             data.locked === true &&
             data.userActive === true
           ) {
-            ///not use
             data.isActive = false;
             data.locked = false;
             data.checkActive = true;
@@ -988,7 +996,6 @@ export const activateAdmin = async (adminId, isActive, locked) => {
             data.userActive === true &&
             data.checkActive === true
           ) {
-            ///not use
             data.locked = false;
           } //checked
           else if (
@@ -1049,6 +1056,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         hyperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1078,6 +1086,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         masterAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1106,6 +1115,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         whiteLabel.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1134,6 +1144,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subAdmin.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1163,8 +1174,6 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
 
-        // added sub
-
         subSuperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1193,6 +1202,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subHyperAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1222,6 +1232,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
 
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+
         subMasterAgent.forEach((data) => {
           if (
             data.isActive === true &&
@@ -1250,6 +1261,7 @@ export const activateAdmin = async (adminId, isActive, locked) => {
           }
           activateAdmin(data.adminId, data.isActive, data.locked);
         });
+        
         subWhiteLabel.forEach((data) => {
           if (
             data.isActive === true &&
