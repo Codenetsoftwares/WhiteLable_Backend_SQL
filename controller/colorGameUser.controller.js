@@ -1,5 +1,5 @@
 import colorGameUserSchema from '../models/colorGameUser.model.js';
-import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
+import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../helper/errorHandler.js';
 import { statusCode } from '../helper/statusCodes.js';
 import axios from 'axios';
 import { v4 as uuid4 } from 'uuid';
@@ -10,6 +10,9 @@ import colorGameTransactionRecord from '../models/colorGameTransactions.model.js
 import moment from 'moment';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { Op } from 'sequelize';
+import transaction from '../models/transactions.model.js';
+import { messages } from '../constructor/string.js';
 dotenv.config();
 
 export const userCreateColorGame = async (req, res) => {
@@ -454,5 +457,110 @@ export const runnerProfitLoss = async (req, res) => {
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
     res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+export const userAccountStatement = async (req, res) => {
+  try {
+    const adminId = req.params.adminId;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const dataType = req.query.dataType;
+    let startDate, endDate;
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    } else if (dataType === 'olddata') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
+      }
+    } else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+        const maxAllowedDate = new Date(startDate);
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+        if (endDate > maxAllowedDate) {
+          return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
+      } else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 2);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0));
+        endDate = new Date(today.setHours(23, 59, 59, 999));
+      }
+    } else {
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
+    }
+
+    const admin = await admins.findOne({ where: { adminId } });
+
+    if (!admin) {
+      return res.status(statusCode.badRequest).send(apiResponseErr([], false, statusCode.badRequest, messages.adminNotFound));
+    }
+
+    const adminUserName = admin.userName;
+    const adminMainBalance = admin.balance;
+
+    const transactionQuery = {
+      where: {
+        [Op.or]: [
+          { adminId },
+          { transferToUserAccount: adminUserName },
+        ],
+        date: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+      order: [['date', 'DESC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    };
+
+    const transferAmount = await transaction.findAndCountAll(transactionQuery);
+    if (transferAmount.rows.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, "No Data Found"));
+    }
+
+    const totalCount = transferAmount.count;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    let runningBalance = adminMainBalance;
+
+    const dataWithBalance = transferAmount.rows.map((transaction) => {
+      if (transaction.transactionType === 'credit' || transaction.transactionType === 'withdrawal') {
+        runningBalance = transaction.currentBalance;
+      }
+
+      let adminBalanceForTransaction = null;
+      if (transaction.transferFromUserAccount === adminUserName) {
+        adminBalanceForTransaction = adminMainBalance;
+      }
+
+      return {
+        ...transaction.toJSON(),
+        balance: runningBalance,
+        adminMainBalance: adminBalanceForTransaction
+      };
+    });
+
+    const paginationData = apiResponsePagination(page, totalPages, totalCount, pageSize);
+
+    return res.status(statusCode.success)
+      .send(apiResponseSuccess(dataWithBalance, true, statusCode.success, messages.success, paginationData));
+
+  } catch (error) {
+    res.status(statusCode.internalServerError)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
