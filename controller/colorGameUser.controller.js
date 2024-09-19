@@ -420,7 +420,7 @@ export const runnerProfitLoss = async (req, res) => {
       limit
     };
 
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_runner/${userName}/${marketId}`, {
+    const response = await axios.get(`http://localhost:7000/api/external-profit_loss_runner/${userName}/${marketId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
