@@ -288,7 +288,7 @@ export const getUserBetHistory = async (req, res) => {
         true,
         statusCode.success,
         'Success',
-       paginationData
+        paginationData
       ));
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
@@ -301,18 +301,18 @@ export const getColorGameProfitLoss = async (req, res) => {
     const userName = req.params.userName;
     const { page = 1, pageSize = 10, search = '', startDate, endDate } = req.query;
     const limit = parseInt(pageSize);
-    const dataType = req.query.dataType; 
+    const dataType = req.query.dataType;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
     const params = {
       userName,
       search,
       startDate,
       endDate,
-      page, 
+      page,
       limit,
       dataType
     };
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`,{
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -564,3 +564,45 @@ export const userAccountStatement = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+
+export const getUserBetList = async (req, res) => {
+  try {
+    const { userName, runnerId } = req.params;
+
+    const params = {
+      userName,
+      runnerId
+    };
+
+    const response = await axios.get(`https://cg.server.dummydoma.in/api/user-external-betList/${userName}/${runnerId}`, { params });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+    }
+
+    const { data } = response.data;
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      data,
+      true,
+      statusCode.success,
+      'Success',
+    ));
+  } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}

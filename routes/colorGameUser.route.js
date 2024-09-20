@@ -1,7 +1,7 @@
 import { Authorize } from '../middleware/auth.js';
 import customErrorHandler from '../helper/customErrorHandler.js';
 import { betHistorySchema, calculateProfitLossSchema, createdUserSchema, marketProfitLossSchema, runnerProfitLossSchema, sendBalanceSchema } from '../schema/commonSchema.js';
-import { userCreateColorGame, viewColorGameUser, addBalanceToColorGameUser, userGame, getUserBetHistory, getColorGameProfitLoss, marketProfitLoss, runnerProfitLoss, userAccountStatement } from '../controller/colorGameUser.controller.js';
+import { userCreateColorGame, viewColorGameUser, addBalanceToColorGameUser, userGame, getUserBetHistory, getColorGameProfitLoss, marketProfitLoss, runnerProfitLoss, userAccountStatement, getUserBetList } from '../controller/colorGameUser.controller.js';
 import { string } from '../constructor/string.js';
 
 
@@ -81,4 +81,7 @@ export const colorGameUserRoute = (app) => {
     '/api/user-colorGame-account-statement/:adminId',
     userAccountStatement,
   );
+
+  app.get('/api/get-colorGame-user-betList/:userName/:runnerId', getUserBetList)
+
 }
