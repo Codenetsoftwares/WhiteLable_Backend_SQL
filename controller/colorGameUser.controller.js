@@ -546,6 +546,9 @@ export const userAccountStatement = async (req, res) => {
       if (transaction.transferFromUserAccount === adminUserName) {
         adminBalanceForTransaction = adminMainBalance;
       }
+      else if (transaction.transferToUserAccount === adminUserName) {
+        adminBalanceForTransaction = adminMainBalance;
+      }
 
       return {
         ...transaction.toJSON(),
