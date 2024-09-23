@@ -78,7 +78,7 @@ export const colorGameUserRoute = (app) => {
     runnerProfitLoss);
 
   app.get(
-    '/api/user-colorGame-account-statement/:adminId',
+    '/api/user-colorGame-account-statement/:userName',
     userAccountStatement,
   );
 

@@ -462,10 +462,13 @@ export const runnerProfitLoss = async (req, res) => {
 
 export const userAccountStatement = async (req, res) => {
   try {
-    const adminId = req.params.adminId;
+    const userName = req.params.userName;
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.page) || 1;
     const dataType = req.query.dataType;
+    console.log("adminIdadminId",userName)
+    console.log("dataTypedataType",dataType)
+
     let startDate, endDate;
     if (dataType === 'live') {
       const today = new Date();
@@ -503,7 +506,7 @@ export const userAccountStatement = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
-    const admin = await admins.findOne({ where: { adminId } });
+    const admin = await admins.findOne({ where: { userName } });
 
     if (!admin) {
       return res.status(statusCode.badRequest).send(apiResponseErr([], false, statusCode.badRequest, messages.adminNotFound));
@@ -515,7 +518,7 @@ export const userAccountStatement = async (req, res) => {
     const transactionQuery = {
       where: {
         [Op.or]: [
-          { adminId },
+          { userName },
           { transferToUserAccount: adminUserName },
         ],
         date: {
