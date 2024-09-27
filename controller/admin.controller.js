@@ -202,6 +202,7 @@ export const getIpDetail = async (req, res) => {
         country: collect.country,
         region: collect.regionName,
         timezone: collect.timezone,
+        isp: collect.isp
       },
       lastLoginTime : admin.lastLoginTime,
       loginStatus : admin.loginStatus,
