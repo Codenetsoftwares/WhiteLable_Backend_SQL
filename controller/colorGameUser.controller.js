@@ -612,3 +612,34 @@ export const getUserBetList = async (req, res) => {
       );
   }
 }
+
+export const userLastLogin = async (req, res) => {
+  try {
+    const { userName, loginTime, loginStatus } = req.body
+    const users = await admins.findOne({ where: { userName } })
+    await users.update({ lastLoginTime: loginTime, loginStatus: loginStatus });
+    res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          'success',
+        ),
+      );
+  } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}
