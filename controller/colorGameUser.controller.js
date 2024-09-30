@@ -249,7 +249,7 @@ export const userGame = async (req, res) => {
 export const getUserBetHistory = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
-    const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
+    const { startDate, endDate, page = 1, limit = 10, dataType, type } = req.query;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
     const params = {
       gameId,
@@ -258,7 +258,8 @@ export const getUserBetHistory = async (req, res) => {
       endDate,
       page,
       limit,
-      dataType
+      dataType,
+      type
     };
     const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
