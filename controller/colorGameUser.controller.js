@@ -261,6 +261,8 @@ export const getUserBetHistory = async (req, res) => {
       dataType,
       type
     };
+    console.log("type..", type)
+
     const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
@@ -354,10 +356,10 @@ export const getColorGameProfitLoss = async (req, res) => {
 export const marketProfitLoss = async (req, res) => {
   try {
     const { gameId, userName, } = req.params;
-    const { page = 1, pageSize = 10 , search = ''} = req.query;
+    const { page = 1, pageSize = 10, search = '' } = req.query;
     const limit = parseInt(pageSize);
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-console.log("first",search)
+    console.log("first", search)
     const params = {
       userName,
       gameId,
@@ -467,8 +469,8 @@ export const userAccountStatement = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.page) || 1;
     const dataType = req.query.dataType;
-    console.log("adminIdadminId",userName)
-    console.log("dataTypedataType",dataType)
+    console.log("adminIdadminId", userName)
+    console.log("dataTypedataType", dataType)
 
     let startDate, endDate;
     if (dataType === 'live') {
