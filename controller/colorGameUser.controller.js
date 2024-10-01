@@ -249,7 +249,7 @@ export const userGame = async (req, res) => {
 export const getUserBetHistory = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
-    const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
+    const { startDate, endDate, page = 1, limit = 10, dataType, type } = req.query;
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
     const params = {
       gameId,
@@ -258,8 +258,11 @@ export const getUserBetHistory = async (req, res) => {
       endDate,
       page,
       limit,
-      dataType
+      dataType,
+      type
     };
+    console.log("type..", type)
+
     const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
@@ -353,10 +356,10 @@ export const getColorGameProfitLoss = async (req, res) => {
 export const marketProfitLoss = async (req, res) => {
   try {
     const { gameId, userName, } = req.params;
-    const { page = 1, pageSize = 10 , search = ''} = req.query;
+    const { page = 1, pageSize = 10, search = '' } = req.query;
     const limit = parseInt(pageSize);
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-console.log("first",search)
+    console.log("first", search)
     const params = {
       userName,
       gameId,
@@ -466,8 +469,8 @@ export const userAccountStatement = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.page) || 1;
     const dataType = req.query.dataType;
-    console.log("adminIdadminId",userName)
-    console.log("dataTypedataType",dataType)
+    console.log("adminIdadminId", userName)
+    console.log("dataTypedataType", dataType)
 
     let startDate, endDate;
     if (dataType === 'live') {
@@ -597,6 +600,37 @@ export const getUserBetList = async (req, res) => {
       statusCode.success,
       'Success',
     ));
+  } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}
+
+export const userLastLogin = async (req, res) => {
+  try {
+    const { userName, loginTime, loginStatus } = req.body
+    const users = await admins.findOne({ where: { userName } })
+    await users.update({ lastLoginTime: loginTime, loginStatus: loginStatus });
+    res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          'success',
+        ),
+      );
   } catch (error) {
     console.error("Error from API:", error.response ? error.response.data : error.message);
 

@@ -14,19 +14,23 @@ export const adminLogin = async (req, res) => {
         const existingAdmin = await admins.findOne({ where: { userName } });
 
         if (!existingAdmin) {
+            await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
         }
         if (existingAdmin.locked === false) {
+            await existingAdmin.update({ loginStatus: 'login failed' });
             throw new CustomError('Account is locked', null, statusCode.badRequest);
         }
 
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
+            await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
 
         const roles = existingAdmin.roles.map((role) => role.role);
         if (roles.includes('user')) {
+            await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.unauthorize).send(apiResponseErr(null, false, statusCode.unauthorize, 'User does not exist'));
         }
         let adminIdToSend;
@@ -77,8 +81,8 @@ export const adminLogin = async (req, res) => {
         };
 
         const loginTime = new Date();
-        await existingAdmin.update({ lastLoginTime: loginTime });
-
+        await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });
+        
         return res.status(statusCode.success).send(
             apiResponseSuccess(
                 accessTokenResponse,

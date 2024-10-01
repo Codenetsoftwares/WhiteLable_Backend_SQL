@@ -139,6 +139,10 @@ const admins = sequelize.define('admins', {
     allowNull: true,
     defaultValue: [],
   },
+  loginStatus :{
+    type: DataTypes.STRING,
+    allowNull: true,
+  }
 }, {
   timestamps: true,
 });
