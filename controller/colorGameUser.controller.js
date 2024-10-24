@@ -13,6 +13,7 @@ import dotenv from 'dotenv';
 import { Op } from 'sequelize';
 import transaction from '../models/transactions.model.js';
 import { messages } from '../constructor/string.js';
+import { API_URL } from '../helper/manageUrl.js';
 dotenv.config();
 
 export const userCreateColorGame = async (req, res) => {
@@ -367,8 +368,10 @@ export const marketProfitLoss = async (req, res) => {
       page,
       limit
     };
+    const baseURL = API_URL();
+    console.log("baseURl...............",baseURL)
 
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_market/${userName}/${gameId}`, {
+    const response = await axios.get(`${baseURL}/api/external-profit_loss_market/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
