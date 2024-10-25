@@ -10,6 +10,7 @@ import trash from '../models/trash.model.js';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { API_URL } from '../helper/manageUrl.js';
 dotenv.config();
 
 /**
@@ -73,7 +74,8 @@ export const createAdmin = async (req, res) => {
       };
 
       try {
-        const response = await axios.post('https://cg.server.dummydoma.in/api/user-create', dataToSend, {
+        const baseURL = API_URL().colorUrl
+        const response = await axios.post(`${baseURL}/api/user-create`, dataToSend, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

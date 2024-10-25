@@ -13,7 +13,9 @@ import dotenv from 'dotenv';
 import { Op } from 'sequelize';
 import transaction from '../models/transactions.model.js';
 import { messages } from '../constructor/string.js';
+import { API_URL } from '../helper/manageUrl.js';
 dotenv.config();
+
 
 export const userCreateColorGame = async (req, res) => {
   try {
@@ -71,8 +73,8 @@ export const userCreateColorGame = async (req, res) => {
       createdById: user.adminId,
       createdByUser: user.userName,
     };
-
-    const createUserResponse = await axios.post('http://localhost:8080/api/user-create', data);
+    const baseURL = API_URL().lotteryUrl
+    const createUserResponse = await axios.post(`${baseURL}/api/user-create`, data);
 
     if (createUserResponse.status !== statusCode.create) {
       return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, 'Failed to create user in external backend'));
@@ -91,8 +93,8 @@ export const viewColorGameUser = async (req, res) => {
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-
-    const externalApiResponse = await axios.get("http://localhost:8080/api/all-user");
+    const baseURL = API_URL().lotteryUrl
+    const externalApiResponse = await axios.get(`${baseURL}/api/all-user`);
 
     if (!externalApiResponse || !externalApiResponse.data.data) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch external data'));
@@ -146,7 +148,8 @@ export const addBalanceToColorGameUser = async (req, res) => {
     // Fetch external user data
     let externalApiResponse;
     try {
-      externalApiResponse = await axios.get("http://localhost:8080/api/all-user");
+      const baseURL = API_URL().lotteryUrl
+      externalApiResponse = await axios.get(`${baseURL}/api/all-user`);
     } catch (err) {
       console.error('Failed to fetch external data:', err);
       return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch external data'));
@@ -202,7 +205,8 @@ export const addBalanceToColorGameUser = async (req, res) => {
 
         // Send balance update to external API (assuming this is necessary)
         try {
-          await axios.post("http://localhost:8080/api/sendBalance-user", {
+          const baseURL = API_URL().lotteryUrl
+          await axios.post(`${baseURL}/api/sendBalance-user`, {
             userId: user.userId,
             balance: user.balance + parsedDepositAmount,
           });
@@ -223,7 +227,8 @@ export const addBalanceToColorGameUser = async (req, res) => {
 
 export const userGame = async (req, res) => {
   try {
-    const response = await axios.get('https://cg.server.dummydoma.in/api/user-games');
+    const baseURL = API_URL().colorUrl
+    const response = await axios.get(`${baseURL}/api/user-games`);
 
     if (!response.data.success) {
       return res
@@ -262,8 +267,9 @@ export const getUserBetHistory = async (req, res) => {
       type
     };
     console.log("type..", type)
+    const baseURL = API_URL().colorUrl
 
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`, {
+    const response = await axios.get(`${baseURL}/api/external-user-betHistory/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -315,7 +321,8 @@ export const getColorGameProfitLoss = async (req, res) => {
       limit,
       dataType
     };
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
+    const baseURL = API_URL().colorUrl
+    const response = await axios.get(`${baseURL}/api/external-profit_loss/${userName}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -367,8 +374,8 @@ export const marketProfitLoss = async (req, res) => {
       page,
       limit
     };
-
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_market/${userName}/${gameId}`, {
+    const baseURL = API_URL().colorUrl
+    const response = await axios.get(`${baseURL}/api/external-profit_loss_market/${userName}/${gameId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -422,8 +429,8 @@ export const runnerProfitLoss = async (req, res) => {
       page,
       limit
     };
-
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss_runner/${userName}/${marketId}`, {
+    const baseURL = API_URL().colorUrl
+    const response = await axios.get(`${baseURL}/api/external-profit_loss_runner/${userName}/${marketId}`, {
       params,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -583,8 +590,9 @@ export const getUserBetList = async (req, res) => {
       userName,
       runnerId
     };
+    const baseURL = API_URL().colorUrl
 
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/user-external-betList/${userName}/${runnerId}`, { params });
+    const response = await axios.get(`${baseURL}/api/user-external-betList/${userName}/${runnerId}`, { params });
 
     if (!response.data.success) {
       return res

@@ -10,6 +10,7 @@ import { messages } from '../constructor/string.js';
 import axios from 'axios';
 import { calculateLoadBalance } from './admin.controller.js';
 import { Op } from 'sequelize'
+import { API_URL } from '../helper/manageUrl.js';
 
 export const depositTransaction = async (req, res) => {
   try {
@@ -143,7 +144,8 @@ export const transferAmount = async (req, res) => {
 
       let message = '';
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const baseURL = API_URL().colorUrl
+        const { data: response } = await axios.post(`${baseURL}/api/extrnal/balance-update`, dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {
@@ -213,7 +215,8 @@ export const transferAmount = async (req, res) => {
 
       let message = '';
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const baseURL = API_URL().colorUrl
+        const { data: response } = await axios.post(`${baseURL}/api/extrnal/balance-update`, dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {

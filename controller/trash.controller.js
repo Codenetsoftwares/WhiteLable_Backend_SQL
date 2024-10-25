@@ -5,6 +5,7 @@ import trash from '../models/trash.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import axios from 'axios';
 import { string } from '../constructor/string.js';
+import { API_URL } from '../helper/manageUrl.js';
 
 export const moveAdminToTrash = async (req, res) => {
   try {
@@ -69,8 +70,8 @@ export const moveAdminToTrash = async (req, res) => {
       const dataToSend = {
         userId: requestId,
       };
-
-      const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrernal/trash-user', dataToSend);
+      const baseURL = API_URL().colorUrl
+      const { data: response } = await axios.post(`${baseURL}/api/extrernal/trash-user`, dataToSend);
       if (!response.success) {
         message = 'Failed to move user data to trash';
       } else {
@@ -159,8 +160,8 @@ export const restoreAdminUser = async (req, res) => {
     const dataToSend = {
       userId : adminId,
     };
-   
-    const { data: response }  = await axios.post('https://cg.server.dummydoma.in/api/extrernal/restore-trash-user', dataToSend);
+    const baseURL = API_URL().colorUrl
+    const { data: response }  = await axios.post(`${baseURL}/api/extrernal/restore-trash-user`, dataToSend);
 
     if(!response.success) {
       message = 'Failed restored user';

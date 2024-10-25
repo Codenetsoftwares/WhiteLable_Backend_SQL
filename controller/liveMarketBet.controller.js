@@ -18,8 +18,9 @@ export const getUserBetMarket = async (req, res) => {
         const params = {
             marketId
         };
+        const baseURL = API_URL().colorUrl
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}/${userName}`, {
+        const response = await axios.get(`${baseURL}/api/user-external-liveBet/${marketId}/${userName}`, {
             params,
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -48,8 +49,9 @@ export const getUserBetMarket = async (req, res) => {
 export const getLiveBetGames = async (req, res) => {
     try {
         const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        const baseURL = API_URL().colorUrl
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveGamesBet`, {
+        const response = await axios.get(`${baseURL}/api/user-external-liveGamesBet`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
