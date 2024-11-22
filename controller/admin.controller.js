@@ -204,8 +204,8 @@ export const getIpDetail = async (req, res) => {
         timezone: collect.timezone,
         isp: collect.isp
       },
-      lastLoginTime : admin.lastLoginTime,
-      loginStatus : admin.loginStatus,
+      lastLoginTime: admin.lastLoginTime,
+      loginStatus: admin.loginStatus,
       isActive: admin.isActive,
       locked: admin.locked,
       lastLoginTime: loginTime,
@@ -313,7 +313,8 @@ export const viewAllCreates = async (req, res) => {
         createdById: admin.createdById,
         createdByUser: admin.createdByUser,
         partnerships,
-        status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : ""
+        status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : "",
+        exposure : admin.exposure
       };
     });
 
@@ -412,7 +413,8 @@ export const viewAllSubAdminCreates = async (req, res) => {
         createdById: admin.createdById,
         createdByUser: admin.createdByUser,
         partnerships,
-        status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : ""
+        status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : "",
+        exposure : admin.exposure
       };
     });
 
@@ -974,7 +976,7 @@ export const userStatus = async (req, res) => {
 
 export const syncWithUserBackend = async (req, res) => {
   try {
-    const { amount, userId } = req.body;
+    const { amount, userId, exposure } = req.body;
 
     const user = await admins.findOne({ where: { adminId: userId } });
     if (!user) {
@@ -985,7 +987,7 @@ export const syncWithUserBackend = async (req, res) => {
 
 
     await admins.update(
-      { balance: amount },
+      { balance: amount, exposure },
       { where: { adminId: userId } },
     );
 
