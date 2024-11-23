@@ -7,7 +7,7 @@ dotenv.config();
 
 export const getUserBetMarket = async (req, res) => {
     try {
-        const { marketId, userName } = req.params;
+        const { marketId } = req.params;
 
         if (!marketId) {
             return res
@@ -19,7 +19,7 @@ export const getUserBetMarket = async (req, res) => {
             marketId
         };
 
-        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}/${userName}`, {
+        const response = await axios.get(`http://localhost:7000/api/user-external-liveBet/${marketId}`, {
             params,
             headers: {
                 Authorization: `Bearer ${token}`,
