@@ -88,6 +88,7 @@ export const getLiveBetGames = async (req, res) => {
         },
       }
     );
+
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -100,12 +101,23 @@ export const getLiveBetGames = async (req, res) => {
           )
         );
     }
+    const lotteryResponse = await axios.get(`http://localhost:8080/api/get-live-markets`);
 
-    const { data } = response.data;
+    const liveGames = response.data.data || [];
+    const lotteryData = lotteryResponse.data.data[0] || {};
 
-    res
+    const combinedData = [
+      {
+        marketId: lotteryData.marketId,
+        marketName: lotteryData.marketName,
+        gameName: lotteryData.gameName,
+      },
+      ...liveGames,
+    ];
+
+    return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(data, true, statusCode.success, "Success"));
+      .send(apiResponseSuccess(combinedData, true, statusCode.success, "Success"));
   } catch (error) {
     console.error(
       "Error from API:",
@@ -165,8 +177,8 @@ export const getLiveUserBet = async (req, res) => {
         hierarchy.unshift({
           adminId: admin.adminId,
           userName: admin.userName,
-        //   createdById: admin.createdById,
-        //   createdByUser: admin.createdByUser,
+          //   createdById: admin.createdById,
+          //   createdByUser: admin.createdByUser,
         });
 
         createdById = admin.createdById;
