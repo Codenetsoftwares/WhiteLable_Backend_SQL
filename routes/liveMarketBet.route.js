@@ -1,10 +1,14 @@
 import { string } from "../constructor/string.js";
-import { getLiveBetGames, getUserBetMarket } from "../controller/liveMarketBet.controller.js";
+import {
+  getLiveBetGames,
+  getLiveUserBet,
+  getUserBetMarket,
+} from "../controller/liveMarketBet.controller.js";
 import { Authorize } from "../middleware/auth.js";
 
 export const liveMarketBetRoute = (app) => {
   app.get(
-    '/api/get-userBetMarket/:marketId',
+    "/api/get-userBetMarket/:marketId",
     Authorize([
       string.superAdmin,
       string.whiteLabel,
@@ -12,11 +16,11 @@ export const liveMarketBetRoute = (app) => {
       string.superAgent,
       string.masterAgent,
     ]),
-    getUserBetMarket,
+    getUserBetMarket
   );
 
   app.get(
-    '/api/get-live-betGames',
+    "/api/get-live-betGames",
     Authorize([
       string.superAdmin,
       string.whiteLabel,
@@ -24,6 +28,18 @@ export const liveMarketBetRoute = (app) => {
       string.superAgent,
       string.masterAgent,
     ]),
-    getLiveBetGames,
+    getLiveBetGames
   );
-}
+
+  app.get(
+    "/api/get-live-users/:marketId",
+    // Authorize([
+    //   string.superAdmin,
+    //   string.whiteLabel,
+    //   string.hyperAgent,
+    //   string.superAgent,
+    //   string.masterAgent,
+    // ]),
+    getLiveUserBet
+  );
+};
