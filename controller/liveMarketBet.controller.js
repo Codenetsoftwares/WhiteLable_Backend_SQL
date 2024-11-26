@@ -80,6 +80,7 @@ export const getLiveBetGames = async (req, res) => {
       { expiresIn: "1h" }
     );
 
+    // Fetch live games data
     const response = await axios.get(
       `http://localhost:7000/api/user-external-liveGamesBet`,
       {
@@ -101,23 +102,34 @@ export const getLiveBetGames = async (req, res) => {
           )
         );
     }
-    const lotteryResponse = await axios.get(`http://localhost:8080/api/get-live-markets`);
+        
+    const lotteryResponse = await axios.get(
+      `http://localhost:8080/api/get-live-markets`
+    );
+
+    const lotteryData =
+      lotteryResponse.data?.data && lotteryResponse.data.data.length > 0
+        ? lotteryResponse.data.data[0]
+        : null;
 
     const liveGames = response.data.data || [];
-    const lotteryData = lotteryResponse.data.data[0] || {};
 
-    const combinedData = [
-      {
-        marketId: lotteryData.marketId,
-        marketName: lotteryData.marketName,
-        gameName: lotteryData.gameName,
-      },
-      ...liveGames,
-    ];
+    const combinedData = lotteryData
+      ? [
+          {
+            marketId: lotteryData.marketId,
+            marketName: lotteryData.marketName,
+            gameName: lotteryData.gameName,
+          },
+          ...liveGames,
+        ]
+      : liveGames;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(combinedData, true, statusCode.success, "Success"));
+      .send(
+        apiResponseSuccess(combinedData, true, statusCode.success, "Success")
+      );
   } catch (error) {
     console.error(
       "Error from API:",
@@ -135,6 +147,7 @@ export const getLiveBetGames = async (req, res) => {
       );
   }
 };
+
 
 export const getLiveUserBet = async (req, res) => {
   try {

@@ -11,6 +11,7 @@ import { trashRoute } from './routes/trash.route.js';
 import { colorGameUserRoute } from './routes/colorGameUser.route.js';
 import { liveMarketBetRoute } from './routes/liveMarketBet.route.js';
 import { activeAdminRoute } from './routes/activeAdmin.route.js';
+import { lotteryGameModule } from './routes/lotteryGame.route.js';
 
 dotenv.config();
 const app = express();
@@ -31,7 +32,8 @@ transactionRoute(app);
 trashRoute(app);
 colorGameUserRoute(app);
 liveMarketBetRoute(app);
-activeAdminRoute(app)
+activeAdminRoute(app);
+lotteryGameModule(app);
 
 sequelize.sync({ alter: true })
   .then(() => {
