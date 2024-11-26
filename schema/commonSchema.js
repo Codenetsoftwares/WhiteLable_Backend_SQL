@@ -263,3 +263,13 @@ export const activeInactive = [
     .notEmpty()
     .withMessage('Password is required')
 ];
+
+
+export const validateGetLiveUserBetMarket = [
+    param("marketId")
+    .trim() 
+    .notEmpty()
+    .withMessage("Market ID is required.")
+    .isUUID()
+    .withMessage("Market ID must be a valid UUID."),
+];

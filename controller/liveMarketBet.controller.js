@@ -30,9 +30,9 @@ export const getUserBetMarket = async (req, res) => {
     const params = {
       marketId,
     };
-
+     const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `http://localhost:7000/api/user-external-liveBet/${marketId}`,
+      `${baseUrl}/api/user-external-liveBet/${marketId}`,
       {
         params,
         headers: {
@@ -154,8 +154,9 @@ export const getLiveUserBet = async (req, res) => {
     const { marketId } = req.params;
 
     // Fetch data from external API
+    const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `http://localhost:7000/api/users-liveBet/${marketId}`
+      `${baseUrl}/api/users-liveBet/${marketId}`
     );
 
     if (!response.data.success) {
@@ -258,10 +259,9 @@ export const getLiveUserBetMarket = async (req, res) => {
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
-
-    // Fetch data from external API
+  const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `http://localhost:7000/api/users-liveBet/${marketId}`,
+      `${baseUrl}/api/users-liveBet/${marketId}`,
       {
         params: { marketId },
         headers: {
@@ -284,7 +284,7 @@ export const getLiveUserBetMarket = async (req, res) => {
     }
 
     const { data } = response.data;
-    console.log("Testing.....", data);
+   
 
     // Fetch user details from the database
     const userDetails = await admins.findAll({
