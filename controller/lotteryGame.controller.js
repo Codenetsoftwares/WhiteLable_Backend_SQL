@@ -55,3 +55,31 @@ export const lotteryMarketAnalysis = async (req, res) => {
         return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 }
+
+
+export const getLotteryP_L = async (req, res) => {
+    try {
+        const { userName } = req.params
+
+        const baseURL = process.env.COLOR_GAME_URL;
+
+        const response = await axios.post(`${baseURL}/api/external-lottery-profit-loss/${userName}`);
+
+        if (!response.data.success) {
+            return res
+                .status(statusCode.badRequest)
+                .send(
+                    apiResponseErr(
+                        null,
+                        false,
+                        statusCode.badRequest,
+                        "Failed to fetch data"
+                    )
+                );
+        }
+
+        return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Success'));
+    } catch (error) {
+        return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
+}
