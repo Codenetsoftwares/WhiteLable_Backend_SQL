@@ -30,7 +30,7 @@ export const getUserBetMarket = async (req, res) => {
     const params = {
       marketId,
     };
-     const baseUrl = process.env.COLOR_GAME_URL
+    const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
       `${baseUrl}/api/user-external-liveBet/${marketId}`,
       {
@@ -102,7 +102,7 @@ export const getLiveBetGames = async (req, res) => {
           )
         );
     }
-        
+
     const lotteryResponse = await axios.get(
       `http://localhost:8080/api/get-live-markets`
     );
@@ -116,13 +116,13 @@ export const getLiveBetGames = async (req, res) => {
 
     const combinedData = lotteryData
       ? [
-          {
-            marketId: lotteryData.marketId,
-            marketName: lotteryData.marketName,
-            gameName: lotteryData.gameName,
-          },
-          ...liveGames,
-        ]
+        {
+          marketId: lotteryData.marketId,
+          marketName: lotteryData.marketName,
+          gameName: lotteryData.gameName,
+        },
+        ...liveGames,
+      ]
       : liveGames;
 
     return res
@@ -253,13 +253,13 @@ export const getLiveUserBet = async (req, res) => {
 export const getLiveUserBetMarket = async (req, res) => {
   try {
     const { marketId } = req.params;
-    const loggedInAdminId = req.user.adminId; // Logged-in user's adminId
+    const loggedInAdminId = req.user.adminId; 
     const token = jwt.sign(
       { roles: req.user.roles },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
-  const baseUrl = process.env.COLOR_GAME_URL
+    const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
       `${baseUrl}/api/users-liveBet/${marketId}`,
       {
@@ -284,18 +284,16 @@ export const getLiveUserBetMarket = async (req, res) => {
     }
 
     const { data } = response.data;
-   
 
-    // Fetch user details from the database
+
     const userDetails = await admins.findAll({
       where: {
         userName: data.usersDetails.map((user) => user.userName),
-        createdById: loggedInAdminId, // Filter by logged-in admin
+        createdById: loggedInAdminId,
       },
       attributes: ["userName", "createdById", "createdByUser"],
     });
 
-    // Prepare the response
     const users = data.usersDetails
       .filter((user) =>
         userDetails.some((detail) => detail.userName === user.userName)
@@ -304,7 +302,7 @@ export const getLiveUserBetMarket = async (req, res) => {
         userName: user.userName,
         userId: user.userId,
         marketId: user.marketId,
-        runnerBalance: user.runnerBalance, // Include back and lay details
+        runnerBalance: user.runnerBalance,
       }));
 
     res
