@@ -315,7 +315,9 @@ export const getColorGameProfitLoss = async (req, res) => {
       limit,
       dataType
     };
-    const response = await axios.get(`https://cg.server.dummydoma.in/api/external-profit_loss/${userName}`, {
+
+    const baseUrl = process.env.COLOR_GAME_URL
+    const response = await axios.get(`${baseUrl}/api/external-profit_loss/${userName}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
