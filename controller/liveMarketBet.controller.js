@@ -30,9 +30,9 @@ export const getUserBetMarket = async (req, res) => {
     const params = {
       marketId,
     };
-
+     const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `http://localhost:7000/api/user-external-liveBet/${marketId}`,
+      `${baseUrl}/api/user-external-liveBet/${marketId}`,
       {
         params,
         headers: {
@@ -154,8 +154,9 @@ export const getLiveUserBet = async (req, res) => {
     const { marketId } = req.params;
 
     // Fetch data from external API
+    const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `http://localhost:7000/api/users-liveBet/${marketId}`
+      `${baseUrl}/api/users-liveBet/${marketId}`
     );
 
     if (!response.data.success) {
@@ -247,3 +248,80 @@ export const getLiveUserBet = async (req, res) => {
       );
   }
 };
+
+
+export const getLiveUserBetMarket = async (req, res) => {
+  try {
+    const { marketId } = req.params;
+    const loggedInAdminId = req.user.adminId; // Logged-in user's adminId
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+  const baseUrl = process.env.COLOR_GAME_URL
+    const response = await axios.get(
+      `${baseUrl}/api/users-liveBet/${marketId}`,
+      {
+        params: { marketId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
+    }
+
+    const { data } = response.data;
+   
+
+    // Fetch user details from the database
+    const userDetails = await admins.findAll({
+      where: {
+        userName: data.usersDetails.map((user) => user.userName),
+        createdById: loggedInAdminId, // Filter by logged-in admin
+      },
+      attributes: ["userName", "createdById", "createdByUser"],
+    });
+
+    // Prepare the response
+    const users = data.usersDetails
+      .filter((user) =>
+        userDetails.some((detail) => detail.userName === user.userName)
+      )
+      .map((user) => ({
+        userName: user.userName,
+        userId: user.userId,
+        marketId: user.marketId,
+        runnerBalance: user.runnerBalance, // Include back and lay details
+      }));
+
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(users, true, statusCode.success, "Success"));
+  } catch (error) {
+    console.error("Error from API:", error.response?.data || error.message);
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
+
