@@ -7,14 +7,6 @@ export const getLotteryBetHistory = async (req, res) => {
     const { userName } = req.params;
     const baseURL = process.env.LOTTERY_URL;
     const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
-    console.log(
-      "userName dataType, startDate endDate ",
-      userName,
-      dataType,
-      startDate,
-      endDate
-    );
-
     const params = {
       dataType,
       startDate,
@@ -100,10 +92,19 @@ export const lotteryMarketAnalysis = async (req, res) => {
 export const getLotteryP_L = async (req, res) => {
     try {
         const { userName } = req.params
-
+        const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
+        const params = {
+          dataType,
+          startDate,
+          endDate,
+          page,
+          limit,
+        };
         const baseURL = process.env.COLOR_GAME_URL;
 
-        const response = await axios.post(`${baseURL}/api/external-lottery-profit-loss/${userName}`);
+        const response = await axios.get(`${baseURL}/api/external-lottery-profit-loss/${userName}`,
+          { params }
+        );
 
         if (!response.data.success) {
             return res
@@ -117,9 +118,11 @@ export const getLotteryP_L = async (req, res) => {
                     )
                 );
         }
-
-        return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Success'));
+        const { data, pagination } = response.data;
+        console.log()
+        return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success',pagination));
     } catch (error) {
+      console.log("error......", error)
         return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 }
