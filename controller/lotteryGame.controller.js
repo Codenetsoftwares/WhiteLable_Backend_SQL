@@ -92,11 +92,8 @@ export const lotteryMarketAnalysis = async (req, res) => {
 export const getLotteryP_L = async (req, res) => {
     try {
         const { userName } = req.params
-        const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const params = {
-          dataType,
-          startDate,
-          endDate,
           page,
           limit,
         };
