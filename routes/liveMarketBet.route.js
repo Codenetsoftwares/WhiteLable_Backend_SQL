@@ -38,6 +38,13 @@ export const liveMarketBetRoute = (app) => {
     "/api/get-live-users/:marketId",
     validateGetLiveUserBetMarket,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+    ]),
     getLiveUserBet
   );
 

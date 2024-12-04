@@ -148,104 +148,104 @@ export const getLiveBetGames = async (req, res) => {
   }
 };
 
-
 export const getLiveUserBet = async (req, res) => {
   try {
     const { marketId } = req.params;
+    const loggedInAdminId = req.user.adminId;
+    const baseUrl = process.env.COLOR_GAME_URL;
 
-    // Fetch data from external API
-    const baseUrl = process.env.COLOR_GAME_URL
-    const response = await axios.get(
-      `${baseUrl}/api/users-liveBet/${marketId}`
-    );
+    const response = await axios.get(`${baseUrl}/api/users-liveBet/${marketId}`);
 
     if (!response.data.success) {
-      return res
-        .status(statusCode.badRequest)
-        .send(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.badRequest,
-            "Failed to fetch data"
-          )
-        );
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to fetch data"));
     }
 
     const { data } = response.data;
 
-    const userDetails = await admins.findAll({
-      where: { userName: data.usersDetails.map((user) => user.userName) },
-      attributes: ["userName", "createdById", "createdByUser"],
-    });
-
-    const buildHierarchy = async (createdById) => {
-      const hierarchy = [];
-      while (createdById) {
-        const admin = await admins.findOne({
-          where: { adminId: createdById },
-          attributes: ["adminId", "userName", "createdById", "createdByUser"],
-        });
-        if (!admin) break;
-
-        hierarchy.unshift({
-          adminId: admin.adminId,
-          userName: admin.userName,
-          //   createdById: admin.createdById,
-          //   createdByUser: admin.createdByUser,
-        });
-
-        createdById = admin.createdById;
-      }
-      return hierarchy;
-    };
-
-    const usersByCreator = {};
-    for (const userDetail of data.usersDetails) {
-      const userInfo = userDetails.find(
-        (admin) => admin.userName === userDetail.userName
-      );
-
-      const createdById = userInfo?.createdById || "No Creator";
-      const createdByHierarchy = userInfo?.createdById
-        ? await buildHierarchy(userInfo.createdById)
-        : [];
-
-      if (!usersByCreator[createdById]) {
-        usersByCreator[createdById] = {
-          createdByHierarchy,
-          users: [],
-        };
-      }
-
-      usersByCreator[createdById].users.push({
-        userName: userDetail.userName,
-        userId: userDetail.userId,
-        marketId: userDetail.marketId,
-        runnerBalance: userDetail.runnerBalance,
-      });
+    if (!data || !Array.isArray(data.runners) || data.runners.length === 0) {
+      return res
+        .status(statusCode.notFound)
+        .send(apiResponseErr(null, false, statusCode.notFound, "No data found"));
     }
 
-    const finalData = Object.entries(usersByCreator).map(([_, group]) => ({
-      createdByHierarchy: group.createdByHierarchy,
-      users: group.users,
-    }));
+    if (data && Array.isArray(data.usersDetails)) {
+      // Recursive function to build hierarchy with users under their respective createdById
+      const buildHierarchy = async (adminId) => {
+        const subAdmins = await admins.findAll({
+          where: { createdById: adminId },
+          attributes: ["adminId", "createdById", "createdByUser"],
+        });
 
-    res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(finalData, true, statusCode.success, "Success"));
-  } catch (error) {
-    console.error("Error from API:", error.response?.data || error.message);
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
+        // If no subAdmins exist, return an empty object
+        if (subAdmins.length === 0) return [];
+
+        const hierarchy = [];
+
+        // Iterate over each subAdmin to create the nested structure
+        for (let subAdmin of subAdmins) {
+          const relevantUsers = data.usersDetails.filter(
+            (user) => user.userId === subAdmin.adminId
+          );
+
+          // Get the subAdmin's own users or their subAdmins
+          const subHierarchy = await buildHierarchy(subAdmin.adminId);
+
+          // Include subAdmin in hierarchy if there are relevant users or subAdmins
+          if (relevantUsers.length > 0 || subHierarchy.length > 0) {
+            // Prepare the subAdmin information
+            const adminInfo = {
+              // adminId: subAdmin.adminId,
+              createdById: subAdmin.createdById,
+              createdByUser: subAdmin.createdById === loggedInAdminId ? undefined : subAdmin.createdByUser,
+              users: relevantUsers.length > 0 ? relevantUsers : undefined,
+              subAdmins: subHierarchy.length > 0 ? subHierarchy : undefined, // Include subAdmins if any
+            };
+
+            // Add subAdmin to the hierarchy
+            hierarchy.push(adminInfo);
+          }
+        }
+
+        return hierarchy;
+      };
+
+      // Build the hierarchy starting from the logged-in admin
+      const hierarchy = await buildHierarchy(loggedInAdminId);
+
+      // Filter the relevant users for the logged-in admin
+      const relevantUsers = data.usersDetails.filter(
+        (user) => user.userId === loggedInAdminId
       );
+
+      // Combine the hierarchy and relevant users under the main admin
+      const result = {
+        admin: {
+          adminId: loggedInAdminId,
+          createdById: null, // Root admin has no parent
+          createdByUser: req.user.userName, // Assuming req.user contains username
+        },
+        users: relevantUsers.length > 0 ? relevantUsers : undefined,
+        subAdminsAndUsers: [...hierarchy, ...relevantUsers], // Include both sub-admins and users directly under the main admin
+      };
+
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess(result, true, statusCode.success, "Success"));
+    } else {
+      return res
+        .status(statusCode.internalServerError)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.internalServerError,
+            "Invalid data structure received from API"
+          )
+        );
+    }
+  } catch (error) {
+    console.error("Error from API:", error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(error, false, statusCode.internalServerError, "An error occurred"));
   }
 };
 
@@ -253,7 +253,7 @@ export const getLiveUserBet = async (req, res) => {
 export const getLiveUserBetMarket = async (req, res) => {
   try {
     const { marketId } = req.params;
-    const loggedInAdminId = req.user.adminId; 
+    const loggedInAdminId = req.user.adminId;
     const token = jwt.sign(
       { roles: req.user.roles },
       process.env.JWT_SECRET_KEY,
