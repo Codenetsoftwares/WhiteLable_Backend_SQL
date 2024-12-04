@@ -14,25 +14,25 @@ export const adminLogin = async (req, res) => {
         const existingAdmin = await admins.findOne({ where: { userName } });
 
         if (!existingAdmin) {
-            await existingAdmin.update({ loginStatus: 'login failed' });
-            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid User Name or password'));
+            // await existingAdmin.update({ loginStatus: 'login failed' });
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.notFound, 'Admin doesn`t exist'));
         }
         if (existingAdmin.locked === false) {
             await existingAdmin.update({ loginStatus: 'login failed' });
             throw new CustomError('Account is locked', null, statusCode.badRequest);
         }
-
+        const roles = existingAdmin.roles.map((role) => role.role);
+        if (roles.includes('user')) {
+            await existingAdmin.update({ loginStatus: 'login failed' });
+            return res.status(statusCode.unauthorize).send(apiResponseErr(null, false, statusCode.unauthorize, 'User does not exist'));
+        }
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
             await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
 
-        const roles = existingAdmin.roles.map((role) => role.role);
-        if (roles.includes('user')) {
-            await existingAdmin.update({ loginStatus: 'login failed' });
-            return res.status(statusCode.unauthorize).send(apiResponseErr(null, false, statusCode.unauthorize, 'User does not exist'));
-        }
+  
         let adminIdToSend;
 
         if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
@@ -92,7 +92,7 @@ export const adminLogin = async (req, res) => {
             ),
         );
     } catch (error) {
-        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.errMessage));
     }
 };
 
