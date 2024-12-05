@@ -65,7 +65,7 @@ export const lotteryMarketAnalysis = async (req, res) => {
   try {
     const { marketId } = req.params
     const baseURL = process.env.LOTTERY_URL;
-    const response = await axios.post(`${baseURL}/api/lottery-external-marketAnalysis/${marketId}`);
+    const response = await axios.get(`${baseURL}/api/lottery-external-marketAnalysis/${marketId}`);
 
     if (!response.data.success) {
       return res

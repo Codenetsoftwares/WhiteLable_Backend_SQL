@@ -5,7 +5,7 @@ import { validateGetExternalLotteryP_L } from "../schema/commonSchema.js";
 export const lotteryGameModule = (app) => {
     app.post('/api/get-lottery-bet-history/:userName', getLotteryBetHistory);
 
-    app.post('/api/get-lottery-marketAnalysis/:marketId', lotteryMarketAnalysis);
+    app.get('/api/get-lottery-marketAnalysis/:marketId', lotteryMarketAnalysis);
 
     app.get('/api/lottery-profit-loss/:userName', validateGetExternalLotteryP_L, customErrorHandler, getLotteryP_L);
 
