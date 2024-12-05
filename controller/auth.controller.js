@@ -14,13 +14,14 @@ export const adminLogin = async (req, res) => {
         const existingAdmin = await admins.findOne({ where: { userName } });
 
         if (!existingAdmin) {
-            // await existingAdmin.update({ loginStatus: 'login failed' });
-            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.notFound, 'Admin doesn`t exist'));
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin doesn`t exist'));
         }
+
         if (existingAdmin.locked === false) {
             await existingAdmin.update({ loginStatus: 'login failed' });
             throw new CustomError('Account is locked', null, statusCode.badRequest);
         }
+        
         const roles = existingAdmin.roles.map((role) => role.role);
         if (roles.includes('user')) {
             await existingAdmin.update({ loginStatus: 'login failed' });
@@ -92,7 +93,7 @@ export const adminLogin = async (req, res) => {
             ),
         );
     } catch (error) {
-        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.errMessage));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 
