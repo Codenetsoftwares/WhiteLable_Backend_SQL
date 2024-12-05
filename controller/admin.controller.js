@@ -31,6 +31,9 @@ export const createAdmin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
     const existingTrashUser = await trash.findOne({ where: { userName } });
 
+    console.log("existingAdmin", existingAdmin);
+    console.log("existingTrashUser", existingTrashUser);
+
     if (existingAdmin || existingTrashUser) {
       const errorMessage = isUserRole ? messages.userExists : messages.adminExists;
       throw apiResponseErr(null, false, statusCode.exist, errorMessage);
@@ -111,12 +114,13 @@ export const createAdmin = async (req, res) => {
     return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
     console.error("Error during creation:", error.message);
-    await transaction.rollback(); // Rollback on any error
+    await transaction.rollback(); 
     return res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.errMessage));
+  };
   }
-};
+    
 
 // done
 export const createSubAdmin = async (req, res) => {
