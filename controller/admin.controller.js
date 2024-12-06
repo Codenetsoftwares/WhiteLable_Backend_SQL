@@ -372,7 +372,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
     });
 
     if (totalRecords === 0) {
-      return res.status(statusCode.success).json(apiResponseSuccess([], true, statusCode.success, messages.noRecordsFound));
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, messages.noRecordsFound));
     }
 
     const offset = (page - 1) * pageSize;
