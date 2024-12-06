@@ -114,13 +114,13 @@ export const createAdmin = async (req, res) => {
     return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, successMessage + " " + message));
   } catch (error) {
     console.error("Error during creation:", error.message);
-    await transaction.rollback(); 
+    await transaction.rollback();
     return res
       .status(statusCode.internalServerError)
       .send(apiResponseErr(null, false, statusCode.internalServerError, error.errMessage));
   };
-  }
-    
+}
+
 
 // done
 export const createSubAdmin = async (req, res) => {
@@ -318,7 +318,7 @@ export const viewAllCreates = async (req, res) => {
         createdByUser: admin.createdByUser,
         partnerships,
         status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : "",
-        exposure : admin.exposure
+        exposure: admin.exposure
       };
     });
 
@@ -418,7 +418,7 @@ export const viewAllSubAdminCreates = async (req, res) => {
         createdByUser: admin.createdByUser,
         partnerships,
         status: admin.isActive ? "Active" : !admin.locked ? "Locked" : !admin.isActive ? "Suspended" : "",
-        exposure : admin.exposure
+        exposure: admin.exposure
       };
     });
 
@@ -771,9 +771,8 @@ export const buildRootPath = async (req, res) => {
             creditRef: creditRef,
             refProfitLoss: refProfitLoss,
             partnership: partnership,
-            status: createdUser.isActive ? "Active" : !createdUser.locked ? "Locked" : !createdUser.isActive ? "Suspended" : ""
-
-
+            status: createdUser.isActive ? "Active" : !createdUser.locked ? "Locked" : !createdUser.isActive ? "Suspended" : "",
+            exposure: createdUser.exposure
           };
         }),
       };
