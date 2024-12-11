@@ -223,12 +223,13 @@ export const addBalanceToColorGameUser = async (req, res) => {
 
 export const userGame = async (req, res) => {
   try {
-    const response = await axios.get('https://cg.server.dummydoma.in/api/user-games');
+    const response = await axios.get('http://localhost:7000/api/user-games');
+
+    console.log("response", response.data)
 
     if (!response.data.success) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch games'));
+        .status(statusCode.success).json(response.data)
     }
 
     const { data, success, message, pagination } = response.data;
