@@ -286,3 +286,46 @@ export const validateGetExternalLotteryP_L = [
     .withMessage("page must be a positive integer."),
   
 ]
+
+export const validateViewColorGameUser = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('pageSize').optional().isInt({ min: 1 }).withMessage('Limit must be a positive integer'),
+  query('search').optional().isString().trim().escape().withMessage('Search must be a valid string')
+];
+
+
+export const validateUserAccountStatement = [
+  param('userName')
+    .exists()
+    .withMessage('userName is required')
+    .isString()
+    .withMessage('userName must be a string'),
+
+  query('pageSize')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('pageSize must be a positive integer')
+    .toInt(),
+
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('page must be a positive integer')
+    .toInt(),
+
+  query('dataType')
+    .exists()
+    .withMessage('dataType is required')
+    .isIn(['live', 'olddata', 'backup'])
+    .withMessage('dataType must be one of "live", "olddata", or "backup"'),
+
+  query('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('startDate must be a valid date (IST format)'),
+
+  query('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('endDate must be a valid date (IST format)'),
+];
