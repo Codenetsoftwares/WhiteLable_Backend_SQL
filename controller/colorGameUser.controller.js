@@ -375,15 +375,7 @@ export const userGame = async (req, res) => {
 
     if (!response.data.success) {
       return res
-        .status(statusCode.badRequest)
-        .json(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.badRequest,
-            "Failed to fetch games"
-          )
-        );
+        .status(statusCode.success).json(response.data)
     }
 
     const { data, success, message, pagination } = response.data;
@@ -403,7 +395,6 @@ export const userGame = async (req, res) => {
         )
       );
   } catch (error) {
-    if (error.response) {
       return res
         .status(statusCode.internalServerError)
         .json(
@@ -415,19 +406,6 @@ export const userGame = async (req, res) => {
               "An error occurred while revoking the market"
           )
         );
-    } else {
-      console.log("Unexpected Error:", error.message);
-      return res
-        .status(statusCode.internalServerError)
-        .json(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.internalServerError,
-            error.message
-          )
-        );
-    }
   }
 };
 
