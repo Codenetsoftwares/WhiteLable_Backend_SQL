@@ -855,16 +855,24 @@ export const userAccountStatement = async (req, res) => {
 export const getUserBetList = async (req, res) => {
   try {
     const { userName, runnerId } = req.params;
-
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
     const params = {
       userName,
       runnerId,
     };
-
+      const baseUrl = process.env.COLOR_GAME_URL
     const response = await axios.get(
-      `https://cg.server.dummydoma.in/api/user-external-betList/${userName}/${runnerId}`,
-      { params }
-    );
+      `${baseUrl}/api/user-external-betList/${userName}/${runnerId}`,
+      { params },
+      {headers}
+    );   
 
     if (!response.data.success) {
       return res
