@@ -372,7 +372,7 @@ export const getUserMasterBook = async (req, res) => {
 
     let users = [];
 
-    if (type === "User Book") {
+    if (type === "user-book") {
 
       if (role === 'superAdmin') {
         return res
@@ -398,7 +398,7 @@ export const getUserMasterBook = async (req, res) => {
           runnerBalance: user.runnerBalance,
         }));
 
-    } else if (type === "Master Book") {
+    } else if (type === "master-book") {
 
       const subAdmins = await admins.findAll({
         where: {
