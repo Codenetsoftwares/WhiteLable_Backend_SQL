@@ -256,7 +256,13 @@ export const adminRoute = (app) => {
   );
 
   // Root Path API ("DONE")
-  app.post('/api/Root-Path/:userName/:action', rootPathSchema, customErrorHandler, buildRootPath);
+  app.post('/api/Root-Path/:userName/:action', rootPathSchema, customErrorHandler, Authorize([
+    string.superAdmin,
+    string.whiteLabel,
+    string.hyperAgent,
+    string.superAgent,
+    string.masterAgent
+  ]), buildRootPath);
 
   // view-sub-admins ("DONE")
   app.get('/api/admin/view-sub-admins/:adminId',
@@ -302,7 +308,13 @@ export const adminRoute = (app) => {
   );
 
   // user-status ("DONE")
-  app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, userStatus);
+  app.get('/api/user-status/:userName', userStatusSchema, customErrorHandler, Authorize([
+    string.superAdmin,
+    string.whiteLabel,
+    string.hyperAgent,
+    string.superAgent,
+    string.masterAgent
+  ]), userStatus);
 
   app.post('/api/admin/extrnal/balance-update', exUpdateBalanceSchema, customErrorHandler, syncWithUserBackend);
   

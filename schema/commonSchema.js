@@ -127,6 +127,20 @@ export const viewAllSubAdminCreatesSchema = [
 
 export const viewBalanceSchema = [param('adminId').exists().withMessage('Admin Id is required.')];
 
+export const validateViewAddBalance = [
+  param("adminId")
+    .isUUID()
+    .withMessage("adminId must be a valid UUID."),
+
+  query("page")
+    .isInt({ min: 1 })
+    .withMessage("Page must be a positive integer."),
+  
+  query("limit")
+    .isInt({ min: 1 })
+    .withMessage("Limit must be a positive integer."),
+]
+
 export const creditRefSchema = [
   param('adminId').exists().withMessage('Admin Id is required.'),
   body('creditRef').isNumeric().withMessage('CreditRef must be a number'),
@@ -193,10 +207,21 @@ export const accountStatementSchema = [
 
 export const userStatusSchema = [param('userName').exists().withMessage('User Name is required.')];
 
-export const exUpdateBalanceSchema = [body('userId').notEmpty().withMessage('user ID is required'),
-  body('amount').notEmpty().withMessage('amount is required'),
-  // body('type').notEmpty().withMessage('type is required').isIn(['credit', 'debit'])
-  // .withMessage('type must be either "credit" or "debit".'),
+export const exUpdateBalanceSchema = [body('amount')
+  .isNumeric()
+  .withMessage('Amount must be a numeric value.')
+  .notEmpty()
+  .withMessage('Amount is required.'),
+body('userId')
+  .isUUID()
+  .withMessage('User ID must be a valid UUID.')
+  .notEmpty()
+  .withMessage('User ID is required.'),
+body('exposure')
+  .isNumeric()
+  .withMessage('Exposure must be a numeric value.')
+  .notEmpty()
+  .withMessage('Exposure is required.'),
 ];
 
 export const createdUserSchema = [
@@ -275,6 +300,15 @@ export const validateGetLiveUserBetMarket = [
 ];
 
 export const validateGetExternalLotteryP_L = [
+  param("userName")
+    .isString()
+    .withMessage("userName must be a string.")
+    .notEmpty()
+    .withMessage("userName is required.")
+    .trim()
+    .escape()
+    .isLength({ min: 3, max: 50 })
+    .withMessage("userName must be between 3 and 50 characters long."),
   query("limit")
     .optional()
     .isInt({ min: 1 })
@@ -285,6 +319,18 @@ export const validateGetExternalLotteryP_L = [
     .isInt({ min: 1 })
     .withMessage("page must be a positive integer."),
   
+]
+
+export const validateGetBetHistoryP_L = [
+  param("userName")
+  .isString()
+  .withMessage("userName must be a string.")
+  .notEmpty()
+  .withMessage("userName is required.")
+  .trim()
+  .escape()
+  .isLength({ min: 3, max: 50 })
+  .withMessage("userName must be between 3 and 50 characters long."),
 ]
 
 export const validateViewColorGameUser = [
@@ -329,3 +375,63 @@ export const validateUserAccountStatement = [
     .isISO8601()
     .withMessage('endDate must be a valid date (IST format)'),
 ];
+
+export const validateGetUserBetList = [
+  param('userName')
+    .isString()
+    .withMessage('userName must be a string.')
+    .notEmpty()
+    .withMessage('userName is required.')
+    .trim()
+    .escape()
+    .isLength({ min: 3, max: 50 })
+    .withMessage('userName must be between 3 and 50 characters long.'),
+
+  param('runnerId')
+    .isUUID()
+    .withMessage('runnerId must be a valid UUID.')
+    .notEmpty()
+    .withMessage('runnerId is required.'),
+]
+
+export const validateGetLotteryBetHistory = [
+  param("userName")
+    .isString()
+    .withMessage("userName must be a string.")
+    .notEmpty()
+    .withMessage("userName is required.")
+    .trim()
+    .escape()
+    .isLength({ min: 3, max: 50 })
+    .withMessage("userName must be between 3 and 50 characters long."),
+
+  query("startDate")
+    .isISO8601()
+    .withMessage("startDate must be a valid ISO 8601 date string."),
+
+  query("endDate")
+    .isISO8601()
+    .withMessage("endDate must be a valid ISO 8601 date string."),
+
+  query("page")
+    .isInt({ min: 1 })
+    .withMessage("page must be a positive integer."),
+
+  query("limit")
+    .isInt({ min: 1, max: 100 })
+    .withMessage("limit must be a positive integer between 1 and 100."),
+
+  query("dataType")
+    .isString()
+    .withMessage("dataType must be a string.")
+    .isIn(["live", "olddata", "backup"]) 
+    .withMessage("dataType must be one of the valid types: live, olddata, backup."),
+];
+
+export const validateLotteryMarketAnalysis = [
+  param("marketId")
+    .isUUID()
+    .withMessage("marketId must be a valid UUID.")
+    .notEmpty()
+    .withMessage("marketId is required."),
+]

@@ -13,6 +13,7 @@ import {
   depositAmountSchema,
   transactionViewSchema,
   transferAmountSchema,
+  validateViewAddBalance,
   viewBalanceSchema,
 } from '../schema/commonSchema.js';
 import { string } from '../constructor/string.js';
@@ -113,7 +114,7 @@ export const transactionRoute = (app) => {
 
   //view the main Balance
   app.get(
-    '/api/view-main-balance/:adminId',
+    '/api/view-main-balance/:adminId',validateViewAddBalance,customErrorHandler,
     Authorize([
       string.superAdmin,
     ]),

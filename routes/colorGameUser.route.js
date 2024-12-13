@@ -1,6 +1,6 @@
 import { Authorize } from '../middleware/auth.js';
 import customErrorHandler from '../helper/customErrorHandler.js';
-import { betHistorySchema, calculateProfitLossSchema, createdUserSchema, marketProfitLossSchema, runnerProfitLossSchema, sendBalanceSchema, validateUserAccountStatement, validateViewColorGameUser } from '../schema/commonSchema.js';
+import { betHistorySchema, calculateProfitLossSchema, createdUserSchema, marketProfitLossSchema, runnerProfitLossSchema, sendBalanceSchema, validateGetUserBetList, validateUserAccountStatement, validateViewColorGameUser } from '../schema/commonSchema.js';
 import { userCreateColorGame, viewColorGameUser, addBalanceToColorGameUser, userGame, getUserBetHistory, getColorGameProfitLoss, marketProfitLoss, runnerProfitLoss, userAccountStatement, getUserBetList, userLastLogin } from '../controller/colorGameUser.controller.js';
 import { string } from '../constructor/string.js';
 
@@ -87,10 +87,17 @@ export const colorGameUserRoute = (app) => {
     '/api/user-colorGame-account-statement/:userName',
     validateUserAccountStatement,
     customErrorHandler,
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent
+    ]),
     userAccountStatement,
   );
 
-  app.get('/api/get-colorGame-user-betList/:userName/:runnerId', Authorize([
+  app.get('/api/get-colorGame-user-betList/:userName/:runnerId',validateGetUserBetList,customErrorHandler, Authorize([
     string.superAdmin,
     string.whiteLabel,
     string.hyperAgent,

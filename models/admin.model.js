@@ -147,6 +147,13 @@ const admins = sequelize.define('admins', {
       type: DataTypes.INTEGER,
       defaultValue: 0.0,
     },
+    isReset: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+  token: {
+      type: DataTypes.STRING,
+    },
 }, {
   timestamps: true,
 });
