@@ -32,35 +32,57 @@ export const adminLogin = async (req, res) => {
             await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
-
-  
-        let adminIdToSend;
-
-        if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
-            adminIdToSend = existingAdmin.adminId;
-        } else if ([string.subWhiteLabel, string.subAdmin, string.subHyperAgent, string.subSuperAgent, string.subMasterAgent].includes(roles[0])) {
-            adminIdToSend = existingAdmin.createdById;
-        } else {
-            adminIdToSend = existingAdmin.adminId;
+        if (existingAdmin.isReset === true) {
+            const resetTokenResponse = {
+                id: null,
+                userName: null,
+                userType: null,
+                isReset: existingAdmin.isReset,
+                roles: []
+            };
+            return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            {
+              ...resetTokenResponse,
+            },
+            true,
+            statusCode.success,
+            'Password reset required.',
+          ),
+        );
         }
+        else {
+            let adminIdToSend;
+  
+            if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
+                adminIdToSend = existingAdmin.adminId;
+            } else if ([string.subWhiteLabel, string.subAdmin, string.subHyperAgent, string.subSuperAgent, string.subMasterAgent].includes(roles[0])) {
+                adminIdToSend = existingAdmin.createdById;
+            } else {
+                adminIdToSend = existingAdmin.adminId;
+            }
 
-        const accessTokenResponse = {
-            adminId: adminIdToSend,
-            createdById: existingAdmin.createdById,
-            createdByUser: existingAdmin.createdByUser,
-            userName: existingAdmin.userName,
-            roles: existingAdmin.roles.map((role) => ({
-                role: role.role,
-                permission: role.permission,
-            })),
-            status: existingAdmin.isActive
-                ? 'active'
-                : !existingAdmin.locked
-                    ? 'locked'
-                    : !existingAdmin.isActive
-                        ? 'suspended'
-                        : '',
-            accessToken: jwt.sign({
+            const accessTokenResponse = {
+                adminId: adminIdToSend,
+                createdById: existingAdmin.createdById,
+                createdByUser: existingAdmin.createdByUser,
+                userName: existingAdmin.userName,
+                roles: existingAdmin.roles.map((role) => ({
+                    role: role.role,
+                    permission: role.permission,
+                })),
+                status: existingAdmin.isActive
+                    ? 'active'
+                    : !existingAdmin.locked
+                        ? 'locked'
+                        : !existingAdmin.isActive
+                            ? 'suspended'
+                            : '',
+            };
+
+            const accessToken = jwt.sign({
                 adminId: adminIdToSend,
                 createdById: existingAdmin.createdById,
                 createdByUser: existingAdmin.createdByUser,
@@ -79,19 +101,23 @@ export const adminLogin = async (req, res) => {
             }, process.env.JWT_SECRET_KEY, {
                 expiresIn: persist ? '1y' : '8h',
             })
-        };
 
-        const loginTime = new Date();
-        await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });
-        
-        return res.status(statusCode.success).send(
-            apiResponseSuccess(
-                accessTokenResponse,
-                true,
-                statusCode.success,
-                'Admin login successfully',
-            ),
-        );
+            existingAdmin.token = accessToken
+            const loginTime = new Date();
+
+            await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });
+            await existingAdmin.save()
+
+            return res.status(statusCode.success).send(
+                apiResponseSuccess(
+                    { accessToken, ...accessTokenResponse },
+                    true,
+                    statusCode.success,
+                    'Admin login successfully',
+                ),
+            );
+        }
+
     } catch (error) {
         res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
@@ -192,4 +218,64 @@ export const resetPassword = async (req, res) => {
         res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
+
+export const loginResetPassword = async (req, res) => {
+    try {
+        const { userName, oldPassword, newPassword } = req.body;
+
+        const existingUser = await admins.findOne({ where: { userName } });
+        console.log('existingUser', existingUser)
+       
+        const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
+        if (!isPasswordMatch) {
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
+        }
+        if(oldPassword === newPassword){
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Old password and New password can not be same'));
+
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await existingUser.update({ password: hashedPassword, isReset: false });
+
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    }
+};
+
+export const logout = async (req, res) => {
+    try {
+        const { adminId } = req.body;
+
+        const users = await admins.findOne({ where: { adminId } });
+
+        if (!users) {
+            return res
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+        }
+
+        users.token = null;
+        await users.save();
+
+        return res
+            .status(statusCode.success)
+            .send(apiResponseSuccess(null, true, statusCode.success, 'Logged out successfully'));
+    } catch (error) {
+        return res
+            .status(statusCode.internalServerError)
+            .send(
+                apiResponseErr(
+                    null,
+                    false,
+                    statusCode.internalServerError,
+                    error.message
+                )
+            );
+    }
+};
+
 

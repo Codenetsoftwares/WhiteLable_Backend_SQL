@@ -35,6 +35,12 @@ export const Authorize = (roles) => {
         return res.status(statusCode.unauthorize).json(apiResponseErr(null, false, statusCode.unauthorize, 'Account is locked'));
       }
 
+      if(existingUser.token !== tokenParts[1]) {
+        return res
+          .status(statusCode.unauthorize)
+          .send(apiResponseErr(null, false, statusCode.unauthorize, 'Unauthorized access'));
+      }
+
       if (roles && roles.length > 0) {
         let userHasRequiredRole = false;
         let userHasRequiredPermission = false;
