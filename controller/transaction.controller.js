@@ -143,7 +143,8 @@ export const transferAmount = async (req, res) => {
 
       let message = '';
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const baseUrl = process.env.COLOR_GAME_URL
+        const { data: response } = await axios.post(`${baseUrl}/api/extrnal/balance-update`, dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {
@@ -213,7 +214,8 @@ export const transferAmount = async (req, res) => {
 
       let message = '';
       try {
-        const { data: response } = await axios.post('https://cg.server.dummydoma.in/api/extrnal/balance-update', dataToSend);
+        const baseUrl = process.env.COLOR_GAME_URL
+        const { data: response } = await axios.post(`${baseUrl}/api/extrnal/balance-update`, dataToSend);
         console.log('Balance update response:', response);
 
         if (!response.success) {

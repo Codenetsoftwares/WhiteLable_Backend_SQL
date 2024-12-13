@@ -76,7 +76,8 @@ export const createAdmin = async (req, res) => {
       };
 
       try {
-        const response = await axios.post('https://cg.server.dummydoma.in/api/user-create', dataToSend, {
+        const base_URL =process.env.COLOR_GAME_URL
+        const response = await axios.post(`${base_URL}/api/user-create`, dataToSend, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -87,9 +87,9 @@ export const userCreateColorGame = async (req, res) => {
       createdById: user.adminId,
       createdByUser: user.userName,
     };
-
+    const base_URL = process.env.LOTTERY_URL
     const createUserResponse = await axios.post(
-      "http://localhost:8080/api/user-create",
+      `${base_URL}/api/user-create`,
       data
     );
 
@@ -227,8 +227,9 @@ export const addBalanceToColorGameUser = async (req, res) => {
     // Fetch external user data
     let externalApiResponse;
     try {
+      const base_URL = process.env.LOTTERY_URL
       externalApiResponse = await axios.get(
-        "http://localhost:8080/api/all-user"
+        `${base_URL}/api/all-user`
       );
     } catch (err) {
       console.error("Failed to fetch external data:", err);
@@ -323,7 +324,8 @@ export const addBalanceToColorGameUser = async (req, res) => {
 
         // Send balance update to external API (assuming this is necessary)
         try {
-          await axios.post("http://localhost:8080/api/sendBalance-user", {
+          const base_URL = process.env.LOTTERY_URL
+          await axios.post(`${base_URL}/api/sendBalance-user`, {
             userId: user.userId,
             balance: user.balance + parsedDepositAmount,
           });
@@ -438,8 +440,10 @@ export const getUserBetHistory = async (req, res) => {
     };
     console.log("type..", type);
 
+    const base_URL = process.env.COLOR_GAME_URL
+
     const response = await axios.get(
-      `https://cg.server.dummydoma.in/api/external-user-betHistory/${userName}/${gameId}`,
+      `${base_URL}/api/external-user-betHistory/${userName}/${gameId}`,
       {
         params,
         headers: {
@@ -604,9 +608,9 @@ export const marketProfitLoss = async (req, res) => {
       page,
       limit,
     };
-
+    const base_URL = process.env.COLOR_GAME_URL;
     const response = await axios.get(
-      `https://cg.server.dummydoma.in/api/external-profit_loss_market/${userName}/${gameId}`,
+      `${base_URL}/api/external-profit_loss_market/${userName}/${gameId}`,
       {
         params,
         headers: {
@@ -684,9 +688,9 @@ export const runnerProfitLoss = async (req, res) => {
       page,
       limit,
     };
-
+    const base_URL = process.env.COLOR_GAME_URL;
     const response = await axios.get(
-      `https://cg.server.dummydoma.in/api/external-profit_loss_runner/${userName}/${marketId}`,
+      `${base_URL}/api/external-profit_loss_runner/${userName}/${marketId}`,
       {
         params,
         headers: {
