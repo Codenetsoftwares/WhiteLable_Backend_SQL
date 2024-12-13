@@ -305,3 +305,7 @@ export const loginResetPasswordSchema = [
     .isAlphanumeric()
     .withMessage("New Password must be alphanumeric"),
 ];
+
+export const logOutValidate = [
+  body("adminId").notEmpty().withMessage("Admin ID is required.").isUUID(4).withMessage("Admin Id is not a valid."),
+];

@@ -102,12 +102,8 @@ export const adminLogin = async (req, res) => {
             }, process.env.JWT_SECRET_KEY, {
                 expiresIn: persist ? '1y' : '8h',
             })
-            
-            console.log("accessTokenResponse",accessTokenResponse)
 
             existingAdmin.token = accessToken
-
-            console.log("existingAdmin.token...",existingAdmin.token)
             const loginTime = new Date();
 
             await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });
@@ -248,4 +244,37 @@ export const loginResetPassword = async (req, res) => {
       res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
   };
+
+  export const logout = async (req, res) => {
+    try {
+      const { adminId } = req.body;
+  
+      const users = await admins.findOne({ where: { adminId } });
+  
+      if (!users) {
+        return res
+          .status(statusCode.badRequest)
+          .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+      }
+  
+      users.token = null;
+      await users.save();
+  
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess(null, true, statusCode.success, 'Logged out successfully'));
+    } catch (error) {
+      return res
+        .status(statusCode.internalServerError)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.internalServerError,
+            error.message
+          )
+        );
+    }
+  };
+  
 
