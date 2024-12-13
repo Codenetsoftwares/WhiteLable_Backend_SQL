@@ -300,8 +300,8 @@ export const loginResetPasswordSchema = [
     .trim()
     .notEmpty()
     .withMessage("New Password is required")
-    .isLength({ min: 8 })
-    .withMessage("New Password must be at least 8 characters long")
+    //.isLength({ min: 8 })
+    // .withMessage("New Password must be at least 8 characters long")
     .isAlphanumeric()
     .withMessage("New Password must be alphanumeric"),
 ];
