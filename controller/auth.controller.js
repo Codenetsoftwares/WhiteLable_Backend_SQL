@@ -107,9 +107,12 @@ export const adminLogin = async (req, res) => {
               });
         
             existingAdmin.token = accessToken
-    
+
+    console.log("existingAdmin.token...",existingAdmin.token)
             const loginTime = new Date();
+
             await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });
+            await existingAdmin.save()
 
             return res.status(statusCode.success).send(
                 apiResponseSuccess(

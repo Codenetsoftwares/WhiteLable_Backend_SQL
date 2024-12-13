@@ -150,7 +150,10 @@ const admins = sequelize.define('admins', {
   isReset: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
-    }
+    },
+  token: {
+      type: DataTypes.STRING,
+    },
 }, {
   timestamps: true,
 });
