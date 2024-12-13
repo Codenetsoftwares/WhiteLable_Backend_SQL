@@ -36,10 +36,9 @@ export const adminLogin = async (req, res) => {
             const resetTokenResponse = {
               id: null,
               userName: null,
-              isEighteen: null,
               userType: null,
-              wallet: null,
               isReset: existingAdmin.isReset,
+              roles : []
             };
             return res
         .status(statusCode.success)
