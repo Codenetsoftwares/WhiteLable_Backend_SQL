@@ -81,34 +81,33 @@ export const adminLogin = async (req, res) => {
                         : !existingAdmin.isActive
                             ? 'suspended'
                             : '',
-                accessToken: jwt.sign({
-                    adminId: adminIdToSend,
-                    createdById: existingAdmin.createdById,
-                    createdByUser: existingAdmin.createdByUser,
-                    userName: existingAdmin.userName,
-                    roles: existingAdmin.roles.map((role) => ({
-                        role: role.role,
-                        permission: role.permission,
-                    })),
-                    status: existingAdmin.isActive
-                        ? 'active'
-                        : !existingAdmin.locked
-                            ? 'locked'
-                            : !existingAdmin.isActive
-                                ? 'suspended'
-                                : '',
-                }, process.env.JWT_SECRET_KEY, {
-                    expiresIn: persist ? '1y' : '8h',
-                })
             };
 
-            const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-                expiresIn: '1d',
-              });
-        
+           const accessToken = jwt.sign({
+                adminId: adminIdToSend,
+                createdById: existingAdmin.createdById,
+                createdByUser: existingAdmin.createdByUser,
+                userName: existingAdmin.userName,
+                roles: existingAdmin.roles.map((role) => ({
+                    role: role.role,
+                    permission: role.permission,
+                })),
+                status: existingAdmin.isActive
+                    ? 'active'
+                    : !existingAdmin.locked
+                        ? 'locked'
+                        : !existingAdmin.isActive
+                            ? 'suspended'
+                            : '',
+            }, process.env.JWT_SECRET_KEY, {
+                expiresIn: persist ? '1y' : '8h',
+            })
+            
+            console.log("accessTokenResponse",accessTokenResponse)
+
             existingAdmin.token = accessToken
 
-    console.log("existingAdmin.token...",existingAdmin.token)
+            console.log("existingAdmin.token...",existingAdmin.token)
             const loginTime = new Date();
 
             await existingAdmin.update({ lastLoginTime: loginTime, loginStatus: 'login success' });

@@ -286,3 +286,22 @@ export const validateGetExternalLotteryP_L = [
     .withMessage("page must be a positive integer."),
   
 ]
+
+export const loginResetPasswordSchema = [
+  body("userName")
+    .trim()
+    .notEmpty()
+    .withMessage("Username is required"),
+  body("oldPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("Old Password is required"),
+  body("newPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("New Password is required")
+    .isLength({ min: 8 })
+    .withMessage("New Password must be at least 8 characters long")
+    .isAlphanumeric()
+    .withMessage("New Password must be alphanumeric"),
+];
