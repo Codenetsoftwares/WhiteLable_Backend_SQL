@@ -38,7 +38,10 @@ export const adminLogin = async (req, res) => {
               userName: null,
               userType: null,
               isReset: existingAdmin.isReset,
-              roles : []
+              roles: existingAdmin.roles.map((role) => ({
+                    role: null,
+                    permission: null,
+                })),
             };
             return res
         .status(statusCode.success)
