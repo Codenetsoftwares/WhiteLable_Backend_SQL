@@ -649,3 +649,41 @@ export const userLastLogin = async (req, res) => {
       );
   }
 }
+
+
+
+export const getActiveLockedAdmins = async (req, res) => {
+  try {
+    const activeOrLockedAdmins = await admins.findAll({
+      where: {
+        [Op.or]: [
+          { isActive: false },
+          { locked: false },
+        ],
+      },
+      attributes: ['adminId', 'userName','isActive','locked',], 
+    });
+
+    res
+    .status(statusCode.success)
+    .send(
+      apiResponseSuccess(
+        activeOrLockedAdmins,
+        true,
+        statusCode.success,
+        'success',
+      ),
+    );
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+};
