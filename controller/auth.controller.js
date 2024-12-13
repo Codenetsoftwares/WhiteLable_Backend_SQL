@@ -34,14 +34,11 @@ export const adminLogin = async (req, res) => {
         }
         if (existingAdmin.isReset === true) {
             const resetTokenResponse = {
-              id: null,
-              userName: null,
-              userType: null,
-              isReset: existingAdmin.isReset,
-              roles: existingAdmin.roles.map((role) => ({
-                    role: null,
-                    permission: null,
-                })),
+                id: null,
+                userName: null,
+                userType: null,
+                isReset: existingAdmin.isReset,
+                roles: []
             };
             return res
         .status(statusCode.success)
@@ -66,7 +63,7 @@ export const adminLogin = async (req, res) => {
             } else {
                 adminIdToSend = existingAdmin.adminId;
             }
-    
+
             const accessTokenResponse = {
                 adminId: adminIdToSend,
                 createdById: existingAdmin.createdById,
@@ -85,7 +82,7 @@ export const adminLogin = async (req, res) => {
                             : '',
             };
 
-           const accessToken = jwt.sign({
+            const accessToken = jwt.sign({
                 adminId: adminIdToSend,
                 createdById: existingAdmin.createdById,
                 createdByUser: existingAdmin.createdByUser,
@@ -113,14 +110,14 @@ export const adminLogin = async (req, res) => {
 
             return res.status(statusCode.success).send(
                 apiResponseSuccess(
-                    {accessToken, ...accessTokenResponse},
+                    { accessToken, ...accessTokenResponse },
                     true,
                     statusCode.success,
                     'Admin login successfully',
                 ),
             );
-          }
-      
+        }
+
     } catch (error) {
         res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
@@ -224,59 +221,59 @@ export const resetPassword = async (req, res) => {
 
 export const loginResetPassword = async (req, res) => {
     try {
-      const { userName, oldPassword, newPassword } = req.body;
-  
-      const existingUser = await admins.findOne({ where: { userName } });
-      console.log('existingUser', existingUser)
-  
-      const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
-      if (!isPasswordMatch) {
-        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
-      }
-      console.log('existingUser', existingUser)
-  
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-  
-      await existingUser.update({ password: hashedPassword, isReset: false });
-  
-      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
-    }
-  };
+        const { userName, oldPassword, newPassword } = req.body;
 
-  export const logout = async (req, res) => {
-    try {
-      const { adminId } = req.body;
-  
-      const users = await admins.findOne({ where: { adminId } });
-  
-      if (!users) {
-        return res
-          .status(statusCode.badRequest)
-          .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
-      }
-  
-      users.token = null;
-      await users.save();
-  
-      return res
-        .status(statusCode.success)
-        .send(apiResponseSuccess(null, true, statusCode.success, 'Logged out successfully'));
+        const existingUser = await admins.findOne({ where: { userName } });
+        console.log('existingUser', existingUser)
+
+        const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
+        if (!isPasswordMatch) {
+            return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
+        }
+        console.log('existingUser', existingUser)
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await existingUser.update({ password: hashedPassword, isReset: false });
+
+        return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
     } catch (error) {
-      return res
-        .status(statusCode.internalServerError)
-        .send(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.internalServerError,
-            error.message
-          )
-        );
+        console.error('Error resetting password:', error);
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
-  };
-  
+};
+
+export const logout = async (req, res) => {
+    try {
+        const { adminId } = req.body;
+
+        const users = await admins.findOne({ where: { adminId } });
+
+        if (!users) {
+            return res
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+        }
+
+        users.token = null;
+        await users.save();
+
+        return res
+            .status(statusCode.success)
+            .send(apiResponseSuccess(null, true, statusCode.success, 'Logged out successfully'));
+    } catch (error) {
+        return res
+            .status(statusCode.internalServerError)
+            .send(
+                apiResponseErr(
+                    null,
+                    false,
+                    statusCode.internalServerError,
+                    error.message
+                )
+            );
+    }
+};
+
 
