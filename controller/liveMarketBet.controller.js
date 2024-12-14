@@ -366,8 +366,8 @@ export const getUserMasterBook = async (req, res) => {
 
     if (!data || !Array.isArray(data.runners) || data.runners.length === 0) {
       return res
-        .status(statusCode.notFound)
-        .send(apiResponseErr(null, false, statusCode.notFound, "No data found"));
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, "No data found"));
     }
 
     let users = [];
