@@ -4,6 +4,7 @@ import {
   getLiveUserBet,
   getLiveUserBetMarket,
   getUserBetMarket,
+  getUserMasterBook,
 } from "../controller/liveMarketBet.controller.js";
 import customErrorHandler from "../helper/customErrorHandler.js";
 import { Authorize } from "../middleware/auth.js";
@@ -60,5 +61,17 @@ export const liveMarketBetRoute = (app) => {
       string.masterAgent,
     ]),
     getLiveUserBetMarket
+  );
+
+  app.post(
+    "/api/get-user-master-book",
+    Authorize([
+      string.superAdmin,
+      string.whiteLabel,
+      string.hyperAgent,
+      string.superAgent,
+      string.masterAgent,
+    ]),
+    getUserMasterBook
   );
 };

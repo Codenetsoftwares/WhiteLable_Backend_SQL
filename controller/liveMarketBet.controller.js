@@ -4,6 +4,8 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import admins from "../models/admin.model.js";
+import { string } from "../constructor/string.js";
+import { Op } from "sequelize";
 dotenv.config();
 
 export const getUserBetMarket = async (req, res) => {
@@ -244,8 +246,20 @@ export const getLiveUserBet = async (req, res) => {
         );
     }
   } catch (error) {
-    console.error("Error from API:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(error, false, statusCode.internalServerError, "An error occurred"));
+    console.error(
+      "Error from API:",
+      error.response ? error.response.data : error.message
+    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -320,6 +334,130 @@ export const getLiveUserBetMarket = async (req, res) => {
           error.message
         )
       );
+  }
+};
+
+export const getUserMasterBook = async (req, res) => {
+  try {
+    const { marketId, adminId, role, type } = req.body;
+
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    const baseUrl = process.env.COLOR_GAME_URL;
+    const response = await axios.get(
+      `${baseUrl}/api/users-liveBet/${marketId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to fetch data"));
+    }
+
+    const { data } = response.data;
+
+    if (!data || !Array.isArray(data.runners) || data.runners.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, "No data found"));
+    }
+
+    let users = [];
+
+    if (type === "user-book") {
+
+      if (role === 'superAdmin') {
+        return res
+          .status(statusCode.forbidden)
+          .send(apiResponseErr(null, false, statusCode.forbidden, "Don't have users"));
+      }
+
+      const userDetails = await admins.findAll({
+        where: {
+          createdById: adminId,
+        },
+        attributes: ["userName", "createdById", "createdByUser"],
+      });
+
+      users = data.usersDetails
+        .filter((user) =>
+          userDetails.some((detail) => detail.userName === user.userName)
+        )
+        .map((user) => ({
+          userName: user.userName,
+          userId: user.userId,
+          marketId: user.marketId,
+          runnerBalance: user.runnerBalance,
+        }));
+
+    } else if (type === "master-book") {
+
+      const subAdmins = await admins.findAll({
+        where: {
+          createdById: adminId,
+        },
+        attributes: ["userName", "adminId", "createdById", "createdByUser", "roles"],
+      });
+
+      const allUsers = data.usersDetails
+        .filter(user =>
+          user.createdById === adminId ||
+          subAdmins.some(subAdmin => subAdmin.userName === user.userName)
+        )
+        .map(user => ({
+          userName: user.userName,
+          roles: string.user,
+          userId: user.userId,
+          marketId: user.marketId,
+          runnerBalance: user.runnerBalance,
+        }));
+
+      const userIds = data.usersDetails.map(user => user.userId);
+
+      const subAdminsDetails = await admins.findAll({
+        where: { adminId: { [Op.in]: userIds } },
+        attributes: ["userName", "adminId", "createdById", "createdByUser", "roles"],
+      });
+
+      const filteredSubAdmins = subAdmins.filter(
+        subAdmin => !subAdmin.roles.some(role => role.role === "user")
+      );
+
+      const formattedSubAdmins = await Promise.all(
+        filteredSubAdmins.map(async subAdmin => {
+          const matchingUser = subAdminsDetails.find(
+            userDetail => userDetail.createdById === subAdmin.adminId
+          );
+
+          if (matchingUser) {
+            return {
+              adminId: subAdmin.adminId,
+              userName: subAdmin.userName,
+              roles: subAdmin.roles[0]?.role || null,
+            };
+          }
+
+          return null;
+        })
+      );
+
+      users = [...allUsers, ...formattedSubAdmins.filter(subAdmin => subAdmin !== null)];
+    }
+
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(users, true, statusCode.success, "Success"));
+
+  } catch (error) {
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
