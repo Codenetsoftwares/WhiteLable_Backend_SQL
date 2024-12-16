@@ -23,15 +23,21 @@ export const adminLogin = async (req, res) => {
         }
         
         const roles = existingAdmin.roles.map((role) => role.role);
-        if (roles.includes('user')) {
+        if (roles.includes(string.user)) {
             await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.unauthorize).send(apiResponseErr(null, false, statusCode.unauthorize, 'User does not exist'));
         }
+
         const passwordValid = await bcrypt.compare(password, existingAdmin.password);
         if (!passwordValid) {
             await existingAdmin.update({ loginStatus: 'login failed' });
             return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, messages.invalidPassword));
         }
+
+        if (roles.includes(string.superAdmin)) {
+            existingAdmin.isReset = false;
+        }
+
         if (existingAdmin.isReset === true) {
             const resetTokenResponse = {
                 id: null,
