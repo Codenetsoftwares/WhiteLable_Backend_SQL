@@ -5,6 +5,7 @@ import { apiResponseErr, apiResponseSuccess } from '../helper/errorHandler.js';
 import { messages, string } from '../constructor/string.js';
 import { statusCode } from '../helper/statusCodes.js';
 import CustomError from '../helper/extendError.js';
+import axios from 'axios';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -61,7 +62,7 @@ export const adminLogin = async (req, res) => {
         }
         else {
             let adminIdToSend;
-  
+
             if ([string.superAdmin, string.whiteLabel, string.hyperAgent, string.superAgent].includes(roles[0])) {
                 adminIdToSend = existingAdmin.adminId;
             } else if ([string.subWhiteLabel, string.subAdmin, string.subHyperAgent, string.subSuperAgent, string.subMasterAgent].includes(roles[0])) {
@@ -159,7 +160,6 @@ export const adminLogin = async (req, res) => {
 
 export const adminPasswordResetCode = async (req, res) => {
     try {
-
         const admin = req.user
         const { userName, adminPassword, password } = req.body;
         const existingUser = await admins.findOne({ where: { userName } });
@@ -180,6 +180,32 @@ export const adminPasswordResetCode = async (req, res) => {
         }
         const passwordSalt = await bcrypt.genSalt();
         const encryptedPassword = await bcrypt.hash(password, passwordSalt);
+
+        const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY);
+
+        const baseUrl = process.env.COLOR_GAME_URL;
+
+        const dataToSend = {
+            userName,
+            password
+        }
+
+        const response = await axios.post(
+            `${baseUrl}/api/external-reset-password`,
+            dataToSend,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        if (!response.data.success) {
+            return res
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to fetch data"));
+        }
+
         await admins.update({ password: encryptedPassword }, { where: { userName } });
 
         return res.status(statusCode.success).send(apiResponseSuccess(existingUser, true, statusCode.success, 'Password Reset Successful!'));
