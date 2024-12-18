@@ -125,6 +125,7 @@ export const adminRoute = (app) => {
       string.restoreAdmin,
       string.moveToTrash,
       string.trashView,
+      string.viewBalance
     ]),
     viewAllCreates,
   );
@@ -161,6 +162,7 @@ export const adminRoute = (app) => {
       string.restoreAdmin,
       string.moveToTrash,
       string.trashView,
+      string.viewBalance
     ]),
     viewAllSubAdminCreates,
   );
