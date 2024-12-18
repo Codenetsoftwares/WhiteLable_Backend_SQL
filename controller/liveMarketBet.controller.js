@@ -81,10 +81,11 @@ export const getLiveBetGames = async (req, res) => {
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
+    const baseUrl = process.env.COLOR_GAME_URL
 
     // Fetch live games data
     const response = await axios.get(
-      `http://localhost:7000/api/user-external-liveGamesBet`,
+      `${baseUrl}/api/user-external-liveGamesBet`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -105,8 +106,14 @@ export const getLiveBetGames = async (req, res) => {
         );
     }
 
+    const BaseURL = process.env.LOTTERY_URL
+
     const lotteryResponse = await axios.get(
-      `http://localhost:8080/api/get-live-markets`
+      `${BaseURL}/api/get-live-markets`,
+      {headers: {
+        Authorization: `Bearer ${token}`,
+      }
+    }
     );
 
     const lotteryData =
