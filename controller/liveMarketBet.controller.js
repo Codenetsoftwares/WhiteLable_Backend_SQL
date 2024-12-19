@@ -81,11 +81,11 @@ export const getLiveBetGames = async (req, res) => {
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
-    const baseUrl = process.env.COLOR_GAME_URL
+    const colorUrl = process.env.COLOR_GAME_URL
 
     // Fetch live games data
     const response = await axios.get(
-      `${baseUrl}/api/user-external-liveGamesBet`,
+      `${colorUrl}/api/user-external-liveGamesBet`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -94,27 +94,22 @@ export const getLiveBetGames = async (req, res) => {
     );
 
     if (!response.data.success) {
-      return res
-        .status(statusCode.badRequest)
-        .send(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.badRequest,
-            "Failed to fetch data"
-          )
-        );
+      return res.status(statusCode.success).send(response.data);
     }
 
-    const BaseURL = process.env.LOTTERY_URL
+    const lotteryUrl = process.env.LOTTERY_URL
 
     const lotteryResponse = await axios.get(
-      `${BaseURL}/api/get-live-markets`,
+      `${lotteryUrl}/api/get-live-markets`,
       {headers: {
         Authorization: `Bearer ${token}`,
       }
     }
     );
+
+    if (!lotteryResponse.data.success) {
+      return res.status(statusCode.success).send(lotteryResponse.data);
+    }
 
     const lotteryData =
       lotteryResponse.data?.data && lotteryResponse.data.data.length > 0
