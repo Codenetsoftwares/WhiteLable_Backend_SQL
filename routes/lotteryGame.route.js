@@ -9,7 +9,7 @@ export const lotteryGameModule = (app) => {
 
     app.get('/api/lottery-profit-loss/:userName', validateGetExternalLotteryP_L, customErrorHandler, getLotteryP_L);
 
-    app.get('/api/lottery-betHistory-profitLoss/:userName', getBetHistoryP_L);
+    app.get('/api/lottery-betHistory-profitLoss/:userName/:marketId', getBetHistoryP_L);
 
 
 }
