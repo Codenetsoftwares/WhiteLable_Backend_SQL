@@ -109,23 +109,18 @@ export const getLiveBetGames = async (req, res) => {
       `http://localhost:8080/api/get-live-markets`
     );
 
-    const lotteryData =
-      lotteryResponse.data?.data && lotteryResponse.data.data.length > 0
-        ? lotteryResponse.data.data[0]
-        : null;
+  const lotteryData = lotteryResponse.data?.data || [];
 
-    const liveGames = response.data.data || [];
+const liveGames = response.data.data || [];
 
-    const combinedData = lotteryData
-      ? [
-        {
-          marketId: lotteryData.marketId,
-          marketName: lotteryData.marketName,
-          gameName: lotteryData.gameName,
-        },
-        ...liveGames,
-      ]
-      : liveGames;
+const combinedData = [
+  ...lotteryData.map(lottery => ({
+    marketId: lottery.marketId,
+    marketName: lottery.marketName,
+    gameName: lottery.gameName,
+  })),
+  ...liveGames,
+];
 
     return res
       .status(statusCode.success)
